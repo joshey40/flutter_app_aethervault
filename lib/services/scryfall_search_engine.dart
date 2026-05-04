@@ -356,7 +356,8 @@ class ScryfallSearchEngine {
       return s.contains('*');
     }
 
-    // Variable P/T (*, *+1, ?) only match exact wildcard queries
+    // Cards with variable P/T (containing *, +, or ?) are excluded from numeric
+    // comparisons and only match when the query value is literally '*'.
     if (s.contains('*') || s.contains('+') || s == '?') {
       return false;
     }
