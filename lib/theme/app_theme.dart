@@ -7,10 +7,9 @@ class AppTheme {
   static const Color vaultSurfaceLight = Color(0xFF1A2D3B);
   static const Color vaultMist = Color(0xFFF4F1EA);
   static const Color vaultFog = Color(0xFFD7E0E7);
-  static const Color vaultCopper = Color(0xFFC98C4A);
-  static const Color vaultTeal = Color(0xFF5FB6B2);
-  static const Color vaultGold = Color(0xFFE2C15B);
-  static const Color vaultRose = Color(0xFFB86C7C);
+  static const Color vaultAmber = Color(0xFFD79334);
+  static const Color vaultBeige = Color(0xFFE6C79C);
+  static const Color vaultGold = Color(0xFFC69C6D);
   static const Color vaultOnDark = Color(0xFFF7FBFD);
   static const Color vaultInkMuted = Color(0xFF8EA3B5);
 
@@ -58,8 +57,8 @@ class AppTheme {
     brightness: Brightness.light,
     scaffoldBackgroundColor: vaultMist,
     colorScheme: const ColorScheme.light(
-      primary: vaultTeal,
-      secondary: vaultCopper,
+      primary: vaultAmber,
+      secondary: vaultBeige,
       tertiary: vaultGold,
       surface: Colors.white,
       onPrimary: vaultInk,
@@ -99,7 +98,7 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: vaultTeal, width: 2),
+        borderSide: const BorderSide(color: vaultAmber, width: 2),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -113,19 +112,19 @@ class AppTheme {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: vaultTeal,
+        foregroundColor: vaultAmber,
         textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w700),
       ),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       type: BottomNavigationBarType.fixed,
       backgroundColor: Colors.white,
-      selectedItemColor: vaultTeal,
+      selectedItemColor: vaultAmber,
       unselectedItemColor: vaultInkMuted,
       elevation: 12,
     ),
     listTileTheme: const ListTileThemeData(
-      iconColor: vaultTeal,
+      iconColor: vaultAmber,
       textColor: vaultInk,
     ),
   );
@@ -135,8 +134,8 @@ class AppTheme {
     brightness: Brightness.dark,
     scaffoldBackgroundColor: vaultInk,
     colorScheme: const ColorScheme.dark(
-      primary: vaultTeal,
-      secondary: vaultCopper,
+      primary: vaultAmber,
+      secondary: vaultBeige,
       tertiary: vaultGold,
       surface: vaultSurface,
       onPrimary: vaultInk,
@@ -176,12 +175,12 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: vaultTeal, width: 2),
+        borderSide: const BorderSide(color: vaultAmber, width: 2),
       ),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: vaultTeal,
+        backgroundColor: vaultAmber,
         foregroundColor: vaultInk,
         minimumSize: const Size.fromHeight(50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -197,12 +196,12 @@ class AppTheme {
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       type: BottomNavigationBarType.fixed,
       backgroundColor: vaultSurface,
-      selectedItemColor: vaultTeal,
+      selectedItemColor: vaultAmber,
       unselectedItemColor: vaultInkMuted,
       elevation: 12,
     ),
     listTileTheme: const ListTileThemeData(
-      iconColor: vaultTeal,
+      iconColor: vaultAmber,
       textColor: vaultOnDark,
     ),
   );

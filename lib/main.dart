@@ -129,6 +129,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     return MaterialApp(
       title: 'Aethervault',
       debugShowCheckedModeBanner: false,
+      
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
