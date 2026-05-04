@@ -14,111 +14,90 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final ScryfallService _scry = ScryfallService();
   final ScryfallSearchEngine _searchEngine = ScryfallSearchEngine();
-  static const ScryfallBulkType _bulkType = ScryfallBulkType.oracleCards;
-  String _status = 'idle';
-  double _progress = 0.0;
   List<dynamic>? _data;
   List<dynamic>? _results;
   final _controller = TextEditingController();
   bool _loadingData = false;
-  DateTime? _lastDownload;
-  int? _fileSizeBytes;
-  bool _isCacheStale = true;
-  String? _errorDetails;
+  // filter state
+  String? _filterColor;
+  String? _filterType;
+  String? _filterRarity;
+  String? _filterSet;
 
   @override
   void initState() {
     super.initState();
-    _loadCacheMetadata();
+    _loadLocalData();
   }
 
-  Future<void> _loadCacheMetadata() async {
-    final lastDownload = await _scry.lastDownload(bulkType: _bulkType);
-    final fileSizeBytes = await _scry.localFileSizeBytes(bulkType: _bulkType);
-    final isCacheStale = await _scry.isCacheStale(bulkType: _bulkType);
-    final hasLocalCache = await _scry.hasLocalCache(bulkType: _bulkType);
-
-    if (!mounted) {
-      return;
+  Future<void> _loadLocalData() async {
+    setState(() => _loadingData = true);
+    // Load all available bulks and merge
+    final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
+    final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
+    final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
+    final merged = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final src in [oracle, defaults, all]) {
+      for (final item in src.cast<Map<String, dynamic>>()) {
+        final id = item['id']?.toString() ?? item['oracle_id']?.toString() ?? item['name']?.toString();
+        if (id == null) continue;
+        if (seen.add(id)) merged.add(item);
+      }
     }
-
+    final loaded = merged;
+    if (!mounted) return;
     setState(() {
-      _lastDownload = lastDownload;
-      _fileSizeBytes = fileSizeBytes;
-      _isCacheStale = isCacheStale;
-      _status = hasLocalCache ? 'ready' : 'empty';
+      _data = loaded;
+      _results = null;
       _loadingData = false;
     });
   }
 
   Future<void> _checkAndLoad({bool forceDownload = false}) async {
-    setState(() {
-      _status = 'checking';
-      _loadingData = true;
-    });
-
-    final hasLocalCache = await _scry.hasLocalCache(bulkType: _bulkType);
-    final stale = await _scry.isCacheStale(bulkType: _bulkType);
-    final shouldDownload = forceDownload || !hasLocalCache || stale;
-
-    if (shouldDownload) {
-      setState(() {
-        _status = 'downloading';
-        _progress = 0;
-        _errorDetails = null;
-      });
-
-      final uri = await _scry.fetchBulkIndexAndChooseUri(bulkType: _bulkType);
-      if (uri != null) {
-        try {
-          await _scry.downloadBulk(uri, bulkType: _bulkType, onProgress: (p) {
-            if (!mounted) {
-              return;
-            }
-            setState(() => _progress = p);
-          });
-        } catch (error) {
-          if (!mounted) {
+    setState(() => _loadingData = true);
+    // check and download each required bulk if necessary
+    final types = [
+      ScryfallBulkType.oracleCards,
+      ScryfallBulkType.defaultCards,
+      ScryfallBulkType.allCards,
+    ];
+    for (final type in types) {
+      final hasLocalCache = await _scry.hasLocalCache(bulkType: type);
+      final stale = await _scry.isCacheStale(bulkType: type);
+      final shouldDownload = forceDownload || !hasLocalCache || stale;
+      if (shouldDownload) {
+        final uri = await _scry.fetchBulkIndexAndChooseUri(bulkType: type);
+        if (uri != null) {
+          try {
+            await _scry.downloadBulk(uri, bulkType: type, onProgress: (_) {});
+          } catch (error) {
+            if (!mounted) return;
+            setState(() => _loadingData = false);
             return;
           }
-          setState(() {
-            _status = 'error';
-            _loadingData = false;
-            _errorDetails = error.toString();
-          });
-          return;
         }
-      } else {
-        setState(() {
-          _status = 'error';
-          _loadingData = false;
-          _errorDetails = appLocalizations.translate('search.statusError');
-        });
-        return;
       }
     }
 
-    setState(() {
-      _status = 'loading_local';
-    });
-
-    final loaded = await _scry.loadLocalData(bulkType: _bulkType);
-    final lastDownload = await _scry.lastDownload(bulkType: _bulkType);
-    final fileSizeBytes = await _scry.localFileSizeBytes(bulkType: _bulkType);
-    final isCacheStale = await _scry.isCacheStale(bulkType: _bulkType);
-
-    if (!mounted) {
-      return;
+    final loaded = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
+    final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
+    final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
+    final merged = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final src in [loaded, defaults, all]) {
+      for (final item in src.cast<Map<String, dynamic>>()) {
+        final id = item['id']?.toString() ?? item['oracle_id']?.toString() ?? item['name']?.toString();
+        if (id == null) continue;
+        if (seen.add(id)) merged.add(item);
+      }
     }
-
+    final allLoaded = merged;
+    if (!mounted) return;
     setState(() {
-      _data = loaded;
+      _data = allLoaded;
       _results = null;
       _loadingData = false;
-      _lastDownload = lastDownload;
-      _fileSizeBytes = fileSizeBytes;
-      _isCacheStale = isCacheStale;
-      _status = (_data != null) ? 'ready' : 'empty';
     });
   }
 
@@ -144,15 +123,209 @@ class _SearchPageState extends State<SearchPage> {
     return '${mb.toStringAsFixed(1)} MB';
   }
 
-  void _onSearchChanged(String q) {
-    if (_data == null || q.trim().isEmpty) {
+  void _executeSearch() {
+    final q = _controller.text.trim();
+    if (_data == null || q.isEmpty && _filterColor == null && _filterType == null && _filterRarity == null && _filterSet == null) {
       setState(() => _results = null);
       return;
     }
-    final matches = _searchEngine.filterCards(_data!, q);
+    // build full query including filters using Scryfall syntax
+    final parts = <String>[];
+    if (q.isNotEmpty) parts.add(q);
+    if (_filterColor != null && _filterColor!.isNotEmpty) parts.add('c:${_filterColor!}');
+    if (_filterType != null && _filterType!.isNotEmpty) parts.add('t:${_filterType!}');
+    if (_filterRarity != null && _filterRarity!.isNotEmpty) parts.add('r:${_filterRarity!}');
+    if (_filterSet != null && _filterSet!.isNotEmpty) parts.add('s:${_filterSet!}');
+    final fullQuery = parts.join(' ');
+    final matches = _searchEngine.filterCards(_data!, fullQuery);
     setState(() => _results = matches.length > 50 ? matches.sublist(0, 50) : matches);
   }
 
+  void _openFilterMenu() async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(context: context, isScrollControlled: true, builder: (ctx) {
+      // Advanced filter modal: name, oracle, type, colors, color identity, rarity, cmc, set, lang, is:
+      String? selId;
+      String? selType = _filterType;
+      String? selRarity = _filterRarity;
+      String? selSet = _filterSet;
+      String? selName;
+      String? selOracle;
+      String? selLang;
+      String cmcOp = '=';
+      String? cmcValue;
+      final colorMap = <String, bool>{'w': false, 'u': false, 'b': false, 'r': false, 'g': false};
+      var selMulticolor = false;
+      var selColorless = false;
+      final selectedIs = <String>{};
+
+      return StatefulBuilder(builder: (context, setModalState) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Advanced Filter', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Name (name:)'),
+                    onChanged: (v) => setModalState(() => selName = v.trim()),
+                  ),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Oracle Text (o:)'),
+                    onChanged: (v) => setModalState(() => selOracle = v.trim()),
+                    minLines: 1,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Type (t:)'),
+                    controller: TextEditingController(text: selType),
+                    onChanged: (v) => setModalState(() => selType = v.trim()),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      const Text('Colors:'),
+                      for (final k in ['w', 'u', 'b', 'r', 'g'])
+                        FilterChip(
+                          label: Text(k.toUpperCase()),
+                          selected: colorMap[k]!,
+                          onSelected: (v) => setModalState(() => colorMap[k] = v),
+                        ),
+                      FilterChip(label: const Text('Multicolor'), selected: selMulticolor, onSelected: (v) => setModalState(() => selMulticolor = v)),
+                      FilterChip(label: const Text('Colorless'), selected: selColorless, onSelected: (v) => setModalState(() => selColorless = v)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Color Identity (id:) e.g. wr'),
+                    onChanged: (v) => setModalState(() => selId = v.trim()),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: selRarity,
+                        items: const [null, 'common', 'uncommon', 'rare', 'mythic'].map((e) => DropdownMenuItem(value: e, child: Text(e == null ? 'Rarity' : e))).toList(),
+                        onChanged: (v) => setModalState(() => selRarity = v),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Row(children: [
+                        DropdownButton<String>(value: cmcOp, items: const ['=', '>', '<', '>=', '<=', '!='].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setModalState(() => cmcOp = v ?? '=')),
+                        const SizedBox(width: 8),
+                        Expanded(child: TextField(decoration: const InputDecoration(labelText: 'CMC'), keyboardType: TextInputType.number, onChanged: (v) => setModalState(() => cmcValue = v.trim()))),
+                      ]),
+                    )
+                  ]),
+                  const SizedBox(height: 8),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Set (s:)'),
+                    controller: TextEditingController(text: selSet),
+                    onChanged: (v) => setModalState(() => selSet = v.trim()),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    decoration: const InputDecoration(labelText: 'Language (lang:) e.g. en, de'),
+                    onChanged: (v) => setModalState(() => selLang = v.trim()),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      const Text('is:'),
+                      for (final kw in ['creature', 'instant', 'sorcery', 'artifact', 'enchantment', 'land', 'planeswalker', 'legendary', 'multicolor', 'colorless', 'spell'])
+                        ChoiceChip(label: Text(kw), selected: selectedIs.contains(kw), onSelected: (v) => setModalState(() => v ? selectedIs.add(kw) : selectedIs.remove(kw))),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(minimumSize: const Size(88, 40)),
+                        onPressed: () {
+                          // build final query map
+                          final colorsSelected = colorMap.entries.where((e) => e.value).map((e) => e.key).join();
+                          final parts = <String, dynamic>{};
+                          if (selName?.isNotEmpty == true) parts['name'] = selName;
+                          if (selOracle?.isNotEmpty == true) parts['oracle'] = selOracle;
+                          if (selType?.isNotEmpty == true) parts['type'] = selType;
+                          if (colorsSelected.isNotEmpty) parts['color'] = colorsSelected;
+                          if (selId?.isNotEmpty == true) parts['id'] = selId;
+                          if (selMulticolor) parts['is_multicolor'] = true;
+                          if (selColorless) parts['is_colorless'] = true;
+                          if (selRarity?.isNotEmpty == true) parts['rarity'] = selRarity;
+                          if (cmcValue?.isNotEmpty == true) parts['cmc'] = {'op': cmcOp, 'val': cmcValue};
+                          if (selSet?.isNotEmpty == true) parts['set'] = selSet;
+                          if (selLang?.isNotEmpty == true) parts['lang'] = selLang;
+                          if (selectedIs.isNotEmpty) parts['is'] = selectedIs.toList();
+                          Navigator.of(context).pop(parts);
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ),
+        );
+      });
+    });
+
+    if (result != null) {
+      // translate the map into saved filter fields and run a search
+      setState(() {
+        _filterType = result['type'] as String?;
+        _filterRarity = result['rarity'] as String?;
+        _filterSet = result['set'] as String?;
+        _filterColor = result['color'] as String?;
+      });
+
+      // construct scryfall-style query
+      final parts = <String>[];
+      if (result['name'] != null) parts.add('name:${_quoteIfNeeded(result['name'])}');
+      if (result['oracle'] != null) parts.add('o:${_quoteIfNeeded(result['oracle'])}');
+      if (_filterType != null && _filterType!.isNotEmpty) parts.add('t:${_filterType}');
+      if (_filterColor != null && _filterColor!.isNotEmpty) parts.add('c:${_filterColor}');
+      if (result['id'] != null) parts.add('id:${result['id']}');
+      if (result['is_multicolor'] == true) parts.add('is:multicolor');
+      if (result['is_colorless'] == true) parts.add('is:colorless');
+      if (_filterRarity != null && _filterRarity!.isNotEmpty) parts.add('r:${_filterRarity}');
+      if (result['cmc'] != null) {
+        final cmc = result['cmc'] as Map<String, dynamic>;
+        parts.add('mv:${cmc['op']}${cmc['val']}');
+      }
+      if (_filterSet != null && _filterSet!.isNotEmpty) parts.add('s:${_filterSet}');
+      if (result['lang'] != null) parts.add('lang:${result['lang']}');
+      if (result['is'] != null) {
+        for (final v in (result['is'] as List)) {
+          parts.add('is:$v');
+        }
+      }
+
+      final built = parts.join(' ');
+      _controller.text = built;
+      _executeSearch();
+    }
+  }
+
+  String _quoteIfNeeded(String? s) {
+    if (s == null) return '';
+    if (s.contains(' ')) return '"${s.replaceAll('"', '')}"';
+    return s;
+  }
+  
   @override
   void dispose() {
     _controller.dispose();
@@ -196,91 +369,55 @@ class _SearchPageState extends State<SearchPage> {
                       appLocalizations.translate('search.defaultCardsSource'),
                       style: theme.textTheme.bodySmall,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      appLocalizations
-                          .translate('search.metaLastDownload')
-                          .replaceAll('{value}', _formatDateTime(_lastDownload)),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      appLocalizations
-                          .translate('search.metaFileSize')
-                          .replaceAll('{value}', _formatBytes(_fileSizeBytes)),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      appLocalizations.translate(_isCacheStale ? 'search.metaStale' : 'search.metaFresh'),
-                    ),
                     if (_data != null) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
                         appLocalizations
                             .translate('search.metaCardsLoaded')
                             .replaceAll('{count}', _data!.length.toString()),
                       ),
                     ],
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      onPressed: _loadingData ? null : () => _checkAndLoad(forceDownload: true),
-                      icon: const Icon(Icons.download),
-                      label: Text(appLocalizations.translate('search.downloadAction')),
-                    ),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 8),
-            if (_status == 'checking') ...[
-              const LinearProgressIndicator(),
-              const SizedBox(height: 8),
-              Text(appLocalizations.translate('search.statusChecking')),
-            ] else if (_status == 'downloading') ...[
-              LinearProgressIndicator(value: _progress),
-              const SizedBox(height: 8),
-              Text(
-                appLocalizations.translate('search.statusDownloading').replaceAll(
-                  '{progress}',
-                  (100 * _progress).toStringAsFixed(0),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    enabled: _data != null,
+                    decoration: InputDecoration(
+                      labelText: appLocalizations.translate('search.placeholder'),
+                      helperText: appLocalizations.translate('search.syntaxExamples'),
+                    ),
+                  ),
                 ),
-              ),
-            ] else if (_status == 'loading_local') ...[
-              const LinearProgressIndicator(),
-              const SizedBox(height: 8),
-              Text(appLocalizations.translate('search.statusLoadingLocal')),
-            ] else if (_status == 'error') ...[
-              Icon(Icons.error, color: theme.colorScheme.error),
-              const SizedBox(height: 8),
-              Text(_errorDetails ?? appLocalizations.translate('search.statusError')),
-            ] else if (_status == 'empty') ...[
-              const SizedBox(height: 8),
-              Text(appLocalizations.translate('search.statusEmpty')),
-            ],
-
-            TextField(
-              controller: _controller,
-              enabled: _data != null,
-              decoration: InputDecoration(
-                labelText: appLocalizations.translate('search.placeholder'),
-                helperText: appLocalizations.translate('search.syntaxExamples'),
-                suffixIcon: _controller.text.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _controller.clear();
-                          _onSearchChanged('');
-                        },
-                      ),
-              ),
-              onChanged: _onSearchChanged,
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 96,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(minimumSize: const Size(88, 48)),
+                    onPressed: _data == null ? null : _executeSearch,
+                    icon: const Icon(Icons.search),
+                    label: const Text('Search'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: _data == null ? null : _openFilterMenu,
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Expanded(
               child: _results == null
                   ? Center(
                       child: _loadingData
-                    ? Text(appLocalizations.translate('search.statusPreparing'))
+                          ? Text(appLocalizations.translate('search.statusPreparing'))
                           : Text(appLocalizations.translate('search.hint')),
                     )
                   : ListView.builder(

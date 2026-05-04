@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
 
 enum ScryfallBulkType {
   oracleCards,
@@ -39,6 +40,10 @@ class ScryfallService {
 
   final http.Client _client;
   static const _bulkIndexUrl = 'https://api.scryfall.com/bulk-data';
+  final Map<String, String> _defaultHeaders = {
+    'User-Agent': 'AetherVault/1.0 (+https://aethervault.joshey.org)',
+    'Accept': 'application/json',
+  };
   final Map<ScryfallBulkType, List<dynamic>> _webCacheData = {};
   final Map<ScryfallBulkType, int?> _webCacheSizeBytes = {};
 
@@ -68,7 +73,8 @@ class ScryfallService {
       return _webCacheData[bulkType] != null;
     }
     final path = await _localFilePath(bulkType: bulkType);
-    return File(path!).exists();
+    final exists = await File(path!).exists();
+    return exists;
   }
 
   Future<int?> localFileSizeBytes({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
@@ -85,31 +91,63 @@ class ScryfallService {
 
   /// Check bulk index and return the chosen download uri (oracle_cards preferred)
   Future<String?> fetchBulkIndexAndChooseUri({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
-    final res = await _client.get(Uri.parse(_bulkIndexUrl));
-    if (res.statusCode != 200) return null;
-    final decoded = json.decode(res.body) as Map<String, dynamic>;
-    final data = decoded['data'] as List<dynamic>?;
-    if (data == null) return null;
-
-    // Prefer the requested bulk type, fall back to first with "download_uri"
-    String? downloadUri;
-    for (final entry in data) {
-      final map = entry as Map<String, dynamic>;
-      if (map['type'] == bulkType.apiValue && map['download_uri'] != null) {
-        downloadUri = map['download_uri'] as String;
-        break;
+    try {
+      final res = await _retry(() => _client.get(Uri.parse(_bulkIndexUrl), headers: _defaultHeaders));
+      if (res.statusCode != 200) {
+        if (kDebugMode) debugPrint('ScryfallService: failed to fetch bulk index HTTP ${res.statusCode}');
+        return null;
       }
-    }
-    if (downloadUri == null) {
+
+      final decoded = json.decode(res.body) as Map<String, dynamic>;
+      final data = decoded['data'] as List<dynamic>?;
+      if (data == null) return null;
+
+      // Log available types for debugging
+      try {
+        // noop: keep original data processing
+        data;
+      } catch (_) {}
+
+      // Prefer the requested bulk type, fall back to first with "download_uri"
+      String? downloadUri;
       for (final entry in data) {
         final map = entry as Map<String, dynamic>;
-        if (map['download_uri'] != null) {
+        if (map['type'] == bulkType.apiValue && map['download_uri'] != null) {
           downloadUri = map['download_uri'] as String;
           break;
         }
       }
+      if (downloadUri == null) {
+        for (final entry in data) {
+          final map = entry as Map<String, dynamic>;
+          if (map['download_uri'] != null) {
+            downloadUri = map['download_uri'] as String;
+            break;
+          }
+        }
+      }
+      if (kDebugMode) debugPrint('ScryfallService: chosen downloadUri for ${bulkType.apiValue}: $downloadUri');
+      return downloadUri;
+    } catch (e) {
+      if (kDebugMode) debugPrint('ScryfallService: fetchBulkIndexAndChooseUri failed after retries: $e');
+      return null;
     }
-    return downloadUri;
+    
+  }
+
+  Future<T> _retry<T>(Future<T> Function() fn, {int attempts = 3, Duration initialDelay = const Duration(milliseconds: 500)}) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        attempt++;
+        return await fn();
+      } catch (e) {
+        if (attempt >= attempts) rethrow;
+        if (kDebugMode) debugPrint('ScryfallService: attempt $attempt failed: $e');
+        final delayMs = initialDelay.inMilliseconds * pow(2, attempt - 1).toInt();
+        await Future.delayed(Duration(milliseconds: delayMs));
+      }
+    }
   }
 
   /// Downloads the bulk file and saves locally while reporting progress via [onProgress] (0..1)
@@ -118,10 +156,12 @@ class ScryfallService {
     required void Function(double) onProgress,
     ScryfallBulkType bulkType = ScryfallBulkType.defaultCards,
   }) async {
+    if (kDebugMode) debugPrint('ScryfallService: starting download for ${bulkType.apiValue} -> $downloadUri');
     if (kIsWeb) {
       onProgress(0);
-      final response = await _client.get(Uri.parse(downloadUri));
+      final response = await _retry(() => _client.get(Uri.parse(downloadUri), headers: _defaultHeaders));
       if (response.statusCode != 200) {
+        if (kDebugMode) debugPrint('ScryfallService: failed to download bulk (web) HTTP ${response.statusCode}');
         throw Exception('Failed to download Scryfall bulk data');
       }
 
@@ -136,8 +176,10 @@ class ScryfallService {
     }
 
     final req = http.Request('GET', Uri.parse(downloadUri));
-    final streamed = await _client.send(req);
+    req.headers.addAll(_defaultHeaders);
+    final streamed = await _retry(() => _client.send(req));
     if (streamed.statusCode != 200) {
+      if (kDebugMode) debugPrint('ScryfallService: failed to download bulk HTTP ${streamed.statusCode}');
       throw Exception('Failed to download Scryfall bulk data: HTTP ${streamed.statusCode}');
     }
 
@@ -166,6 +208,7 @@ class ScryfallService {
       completer.complete();
     }, onError: (e) async {
       await sink.close();
+      if (kDebugMode) debugPrint('ScryfallService: error while downloading/saving bulk: $e');
       completer.completeError(Exception('Failed to save Scryfall bulk data: $e'));
     }, cancelOnError: true);
 
@@ -190,8 +233,7 @@ class ScryfallService {
       // file can be large; do not compute heavy transforms on main isolate
       final raw = await compute(_readAndDecode, file.path);
       return raw as List<dynamic>?;
-    } catch (error) {
-      debugPrint('Scryfall loadLocalData failed: $error');
+    } catch (_) {
       return null;
     }
   }
