@@ -1,0 +1,98 @@
+{
+  "app": {
+    "name": "Aethervault",
+    "subtitle": "Track decks, build the vault, and keep your collection organized."
+  },
+  "auth": {
+    "createAccountTitle": "Create your vault",
+    "createAccountSubtitle": "Create your Firebase account for Aethervault.",
+    "displayName": "Display name",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "signInAction": "Sign in",
+    "signUpAction": "Create account",
+    "switchToSignUp": "Need an account? Create one",
+    "switchToSignIn": "Already have an account? Sign in"
+  },
+  "nav": {
+    "overview": "Overview",
+    "decks": "Decks",
+    "search": "Search",
+    "collection": "Collection",
+    "settings": "Settings"
+  },
+  "overview": {
+    "greeting": "Welcome back, {name}",
+    "subtitle": "A quick overview of the vault before you tune the next deck.",
+    "activeDecks": "Active decks",
+    "collectionSize": "Collection size",
+    "favoriteFormat": "Favorite format",
+    "quickActionsTitle": "Quick actions",
+    "addDeck": "Add deck",
+    "findCards": "Find cards",
+    "syncCollection": "Sync collection"
+  },
+  "decks": {
+    "title": "Decks",
+    "subtitle": "Track decks, formats, and sideboard ideas.",
+    "createDeck": "Create deck"
+  },
+  "search": {
+    "placeholder": "Search card name",
+    "hint": "Search by card name after data has loaded.",
+    "syntaxHint": "Scryfall-style filters: t:, o:, mv:, r:, !name, -term, or",
+    "syntaxExamples": "Examples: t:creature o:draw mv<=3",
+    "defaultCardsSource": "Search uses Default Cards for faster results.",
+    "statusChecking": "Checking remote index...",
+    "statusDownloading": "{progress}% downloaded",
+    "statusLoadingLocal": "Loading local data...",
+    "statusError": "Download failed. Try refresh.",
+    "statusEmpty": "No local data available.",
+    "statusPreparing": "Preparing data...",
+    "downloadAction": "Download or refresh data",
+    "metaTitle": "Scryfall data",
+    "metaLastDownload": "Last download: {value}",
+    "metaFileSize": "File size: {value}",
+    "metaFresh": "Cache status: up to date",
+    "metaStale": "Cache status: stale, update recommended",
+    "metaCardsLoaded": "Cards loaded: {count}",
+    "metaUnknown": "unknown"
+  },
+  "collection": {
+    "title": "Collection",
+    "subtitle": "Keep the binder in sync with your wishlist.",
+    "filtersTitle": "Filter the vault",
+    "filterCreatures": "Creatures",
+    "filterArtifacts": "Artifacts",
+    "filterInstants": "Instants",
+    "filterRares": "Rares",
+    "placeholderTitle": "Collection sources go here",
+    "placeholderBody": "Wire this page to your card database, scanner, or marketplace sync when you are ready."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your app preferences and Firebase account.",
+    "accountSection": "Account",
+    "preferencesSection": "Preferences",
+    "buildSection": "Roadmap",
+    "buildBody": "Next steps: refine Firebase flows, add card search, and persist decks and collection data.",
+    "signOut": "Sign out",
+    "darkMode": "Dark mode",
+    "darkModeHint": "Switch the app between light and dark vault themes.",
+    "language": "Language",
+    "english": "English",
+    "german": "German",
+    "englishShort": "EN",
+    "germanShort": "DE"
+  },
+  "errors": {
+    "emptyFields": "Please fill in all required fields.",
+    "passwordMismatch": "Passwords do not match.",
+    "accountExists": "An account with this email already exists.",
+    "accountMissing": "No account exists for this email yet.",
+    "invalidCredentials": "The email or password is incorrect.",
+    "weakPassword": "The password is too weak.",
+    "reauthRequired": "Please sign in again to continue."
+  }
+}

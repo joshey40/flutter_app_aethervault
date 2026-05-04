@@ -1,0 +1,98 @@
+{
+  "app": {
+    "name": "Aethervault",
+    "subtitle": "Decks tracken, die Vault aufbauen und die Kollektion organisieren."
+  },
+  "auth": {
+    "createAccountTitle": "Erstelle deine Vault",
+    "createAccountSubtitle": "Erstelle dein Firebase-Konto für Aethervault.",
+    "displayName": "Anzeigename",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen",
+    "signInAction": "Anmelden",
+    "signUpAction": "Konto erstellen",
+    "switchToSignUp": "Noch kein Konto? Konto erstellen",
+    "switchToSignIn": "Schon ein Konto? Anmelden"
+  },
+  "nav": {
+    "overview": "Übersicht",
+    "decks": "Decks",
+    "search": "Suche",
+    "collection": "Kollektion",
+    "settings": "Einstellungen"
+  },
+  "overview": {
+    "greeting": "Willkommen zurück, {name}",
+    "subtitle": "Ein schneller Blick auf die Vault, bevor du das nächste Deck feinjustierst.",
+    "activeDecks": "Aktive Decks",
+    "collectionSize": "Sammlungsgröße",
+    "favoriteFormat": "Lieblingsformat",
+    "quickActionsTitle": "Schnellaktionen",
+    "addDeck": "Deck hinzufügen",
+    "findCards": "Karten suchen",
+    "syncCollection": "Kollektion synchronisieren"
+  },
+  "decks": {
+    "title": "Decks",
+    "subtitle": "Decks, Formate und Sideboard-Ideen tracken.",
+    "createDeck": "Deck erstellen"
+  },
+  "search": {
+    "placeholder": "Kartennamen suchen",
+    "hint": "Suche nach Kartennamen, sobald die Daten geladen sind.",
+    "syntaxHint": "Scryfall-Filter: t:, o:, mv:, r:, !Name, -Term, or",
+    "syntaxExamples": "Beispiele: t:creature o:draw mv<=3",
+    "defaultCardsSource": "Die Suche nutzt Default Cards für schnellere Ergebnisse.",
+    "statusChecking": "Remote-Index wird geprüft...",
+    "statusDownloading": "{progress}% heruntergeladen",
+    "statusLoadingLocal": "Lokale Daten werden geladen...",
+    "statusError": "Download fehlgeschlagen. Bitte aktualisieren.",
+    "statusEmpty": "Keine lokalen Daten vorhanden.",
+    "statusPreparing": "Daten werden vorbereitet...",
+    "downloadAction": "Daten herunterladen oder aktualisieren",
+    "metaTitle": "Scryfall-Daten",
+    "metaLastDownload": "Letzter Download: {value}",
+    "metaFileSize": "Dateigröße: {value}",
+    "metaFresh": "Cache-Status: aktuell",
+    "metaStale": "Cache-Status: veraltet, Update empfohlen",
+    "metaCardsLoaded": "Geladene Karten: {count}",
+    "metaUnknown": "unbekannt"
+  },
+  "collection": {
+    "title": "Kollektion",
+    "subtitle": "Halte den Binder mit deiner Wunschliste synchron.",
+    "filtersTitle": "Vault filtern",
+    "filterCreatures": "Kreaturen",
+    "filterArtifacts": "Artefakte",
+    "filterInstants": "Spontanzauber",
+    "filterRares": "Rare Karten",
+    "placeholderTitle": "Hier kommen die Quellen der Kollektion hin",
+    "placeholderBody": "Verbinde diese Seite später mit deiner Kartendatenbank, einem Scanner oder einem Marktplatz-Sync."
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "subtitle": "Verwalte App-Einstellungen und dein Firebase-Konto.",
+    "accountSection": "Konto",
+    "preferencesSection": "Präferenzen",
+    "buildSection": "Roadmap",
+    "buildBody": "Nächste Schritte: Firebase-Flows verfeinern, Kartensuche hinzufügen und Decks sowie Kollektion speichern.",
+    "signOut": "Abmelden",
+    "darkMode": "Dunkler Modus",
+    "darkModeHint": "Wechsle zwischen hellen und dunklen Vault-Themes.",
+    "language": "Sprache",
+    "english": "Englisch",
+    "german": "Deutsch",
+    "englishShort": "EN",
+    "germanShort": "DE"
+  },
+  "errors": {
+    "emptyFields": "Bitte fülle alle Pflichtfelder aus.",
+    "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+    "accountExists": "Zu dieser E-Mail existiert bereits ein Konto.",
+    "accountMissing": "Für diese E-Mail existiert noch kein Konto.",
+    "invalidCredentials": "E-Mail oder Passwort ist falsch.",
+    "weakPassword": "Das Passwort ist zu schwach.",
+    "reauthRequired": "Bitte melde dich erneut an, um fortzufahren."
+  }
+}
