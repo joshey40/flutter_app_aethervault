@@ -83,17 +83,33 @@ class ScryfallSearchEngine {
     }
 
     if (rawToken.startsWith('!') && rawToken.length > 1) {
-      return _SearchTerm(kind: _SearchTermKind.exactName, value: rawToken.substring(1), isNegated: isNegated);
+      return _SearchTerm(
+        kind: _SearchTermKind.exactName,
+        value: rawToken.substring(1),
+        isNegated: isNegated,
+      );
     }
 
-    final colonIndex = rawToken.indexOf(':');
-    if (colonIndex > 0) {
-      final field = rawToken.substring(0, colonIndex).toLowerCase();
-      final value = _stripQuotes(rawToken.substring(colonIndex + 1));
-      return _SearchTerm(kind: _fieldToKind(field), value: value, isNegated: isNegated, field: field);
+    // Match field[operator]value – operators: >=, <=, !=, :, =, >, <
+    final fieldMatch = RegExp(r'^([a-zA-Z]+)(>=|<=|!=|:|=|>|<)(.+)$').firstMatch(rawToken);
+    if (fieldMatch != null) {
+      final field = fieldMatch.group(1)!.toLowerCase();
+      final operator = fieldMatch.group(2)!;
+      final value = _stripQuotes(fieldMatch.group(3)!);
+      return _SearchTerm(
+        kind: _fieldToKind(field),
+        value: value,
+        isNegated: isNegated,
+        field: field,
+        operator: operator,
+      );
     }
 
-    return _SearchTerm(kind: _SearchTermKind.looseText, value: _stripQuotes(rawToken), isNegated: isNegated);
+    return _SearchTerm(
+      kind: _SearchTermKind.looseText,
+      value: _stripQuotes(rawToken),
+      isNegated: isNegated,
+    );
   }
 
   _SearchTermKind _fieldToKind(String field) {
@@ -127,8 +143,44 @@ class ScryfallSearchEngine {
         return _SearchTermKind.language;
       case 'is':
         return _SearchTermKind.isKeyword;
+      case 'has':
+        return _SearchTermKind.hasKeyword;
+      case 'not':
+        return _SearchTermKind.notKeyword;
       case 'name':
+      case 'n':
         return _SearchTermKind.name;
+      case 'pow':
+      case 'power':
+        return _SearchTermKind.power;
+      case 'tou':
+      case 'tough':
+      case 'toughness':
+        return _SearchTermKind.toughness;
+      case 'loy':
+      case 'loyalty':
+        return _SearchTermKind.loyalty;
+      case 'm':
+      case 'mana':
+        return _SearchTermKind.manaCost;
+      case 'a':
+      case 'art':
+      case 'artist':
+        return _SearchTermKind.artist;
+      case 'ft':
+      case 'flavor':
+        return _SearchTermKind.flavorText;
+      case 'kw':
+      case 'keyword':
+        return _SearchTermKind.keyword;
+      case 'f':
+      case 'format':
+      case 'legal':
+        return _SearchTermKind.format;
+      case 'banned':
+        return _SearchTermKind.banned;
+      case 'restricted':
+        return _SearchTermKind.restricted;
       default:
         return _SearchTermKind.looseText;
     }
@@ -167,51 +219,310 @@ class ScryfallSearchEngine {
       case _SearchTermKind.oracleText:
         return oracleText.contains(term.value.toLowerCase());
       case _SearchTermKind.color:
-        return _matchesColorQuery(cardColors, term.value);
+        return _matchesColorQuery(cardColors, term.value, term.operator);
       case _SearchTermKind.colorIdentity:
-        return _matchesColorQuery(colorIdentity, term.value);
+        return _matchesColorQuery(colorIdentity, term.value, term.operator);
       case _SearchTermKind.rarity:
-        return rarity == term.value.toLowerCase();
+        return _matchesRarity(rarity, term.value.toLowerCase(), term.operator);
       case _SearchTermKind.manaValue:
-        return _matchesNumericQuery(manaValue, term.value);
+        return _matchesNumericQuery(manaValue, _opValueQuery(term.operator, term.value));
       case _SearchTermKind.set:
-        return setCode.contains(term.value.toLowerCase()) || setName.contains(term.value.toLowerCase());
+        return setCode == term.value.toLowerCase() || setName.contains(term.value.toLowerCase());
       case _SearchTermKind.language:
         return language.contains(term.value.toLowerCase());
       case _SearchTermKind.isKeyword:
         return _matchesIsKeyword(card, term.value, typeLine, keywords, cardColors);
+      case _SearchTermKind.hasKeyword:
+        return _matchesHasKeyword(card, term.value);
+      case _SearchTermKind.notKeyword:
+        return !_matchesIsKeyword(card, term.value, typeLine, keywords, cardColors);
+      case _SearchTermKind.power:
+        return _matchesPowerToughness(card['power'], term.value, term.operator);
+      case _SearchTermKind.toughness:
+        return _matchesPowerToughness(card['toughness'], term.value, term.operator);
+      case _SearchTermKind.loyalty:
+        return _matchesPowerToughness(card['loyalty'], term.value, term.operator);
+      case _SearchTermKind.manaCost:
+        return _matchesManaCost(card, term.value, term.operator);
+      case _SearchTermKind.artist:
+        return _lowerString(card['artist']).contains(term.value.toLowerCase());
+      case _SearchTermKind.flavorText:
+        return _lowerString(card['flavor_text']).contains(term.value.toLowerCase());
+      case _SearchTermKind.keyword:
+        return keywords.any((kw) => kw.contains(term.value.toLowerCase()));
+      case _SearchTermKind.format:
+        return _matchesFormat(card, term.value.toLowerCase(), 'legal');
+      case _SearchTermKind.banned:
+        return _matchesFormat(card, term.value.toLowerCase(), 'banned');
+      case _SearchTermKind.restricted:
+        return _matchesFormat(card, term.value.toLowerCase(), 'restricted');
       case _SearchTermKind.looseText:
         final loose = term.value.toLowerCase();
-        return name.contains(loose) || oracleText.contains(loose) || typeLine.contains(loose) || keywords.any((keyword) => keyword.contains(loose));
+        return name.contains(loose) ||
+            oracleText.contains(loose) ||
+            typeLine.contains(loose) ||
+            keywords.any((kw) => kw.contains(loose));
     }
   }
 
-  bool _matchesColorQuery(List<String> colors, String value) {
+  // ---------------------------------------------------------------------------
+  // Color matching
+  //
+  // Scryfall semantics:
+  //   c:wu   / c>=wu  – card includes at least W and U (requested ⊆ card)
+  //   c=wu           – card is exactly WU
+  //   c>wu           – card is a proper superset of WU (more colors, includes WU)
+  //   c<=wu          – card uses only colors from {W,U} (card ⊆ requested)
+  //   c<wu           – card uses a proper subset of {W,U}
+  //   c!=wu          – card is not exactly WU
+  // ---------------------------------------------------------------------------
+  bool _matchesColorQuery(List<String> cardColors, String value, String operator) {
     final normalized = value.toLowerCase();
+
     if (normalized == 'colorless' || normalized == 'c') {
-      return colors.isEmpty;
+      return cardColors.isEmpty;
     }
     if (normalized == 'multicolor' || normalized == 'm') {
-      return colors.length > 1;
+      return cardColors.length > 1;
     }
 
-    final requestedColors = normalized.split('').where((char) => 'wubrg'.contains(char)).toSet().toList()..sort();
-    if (requestedColors.isEmpty) {
+    final requested = normalized.split('').where((c) => 'wubrg'.contains(c)).toSet();
+    if (requested.isEmpty) return false;
+    final card = cardColors.map((c) => c.toLowerCase()).toSet();
+
+    switch (operator) {
+      case ':':
+      case '>=':
+        // card ⊇ requested
+        return requested.every(card.contains);
+      case '=':
+        // card == requested
+        return card.length == requested.length && requested.every(card.contains);
+      case '>':
+        // card ⊃ requested (proper superset)
+        return card.length > requested.length && requested.every(card.contains);
+      case '<=':
+        // card ⊆ requested
+        return card.every(requested.contains);
+      case '<':
+        // card ⊂ requested (proper subset)
+        return card.length < requested.length && card.every(requested.contains);
+      case '!=':
+        return !(card.length == requested.length && requested.every(card.contains));
+      default:
+        return requested.every(card.contains);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rarity matching with ordering: common < uncommon < rare < mythic
+  // ---------------------------------------------------------------------------
+  bool _matchesRarity(String cardRarity, String value, String operator) {
+    const order = {'common': 0, 'uncommon': 1, 'rare': 2, 'mythic': 3};
+    final cardRank = order[cardRarity];
+    final queryRank = order[value];
+
+    if (cardRank == null || queryRank == null) {
+      return cardRarity == value;
+    }
+
+    switch (operator) {
+      case ':':
+      case '=':
+        return cardRank == queryRank;
+      case '>':
+        return cardRank > queryRank;
+      case '>=':
+        return cardRank >= queryRank;
+      case '<':
+        return cardRank < queryRank;
+      case '<=':
+        return cardRank <= queryRank;
+      case '!=':
+        return cardRank != queryRank;
+      default:
+        return cardRank == queryRank;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Power / toughness / loyalty matching
+  // ---------------------------------------------------------------------------
+  bool _matchesPowerToughness(dynamic rawValue, String queryValue, String operator) {
+    final s = rawValue?.toString().trim() ?? '';
+    if (s.isEmpty) return false;
+
+    if (queryValue == '*') {
+      return s.contains('*');
+    }
+
+    // Variable P/T (*, *+1, ?) only match exact wildcard queries
+    if (s.contains('*') || s.contains('+') || s == '?') {
       return false;
     }
 
-    final cardColors = colors.map((color) => color.toLowerCase()).toList()..sort();
-    if (cardColors.length != requestedColors.length) {
-      return false;
-    }
+    final value = double.tryParse(s);
+    if (value == null) return false;
 
-    for (var index = 0; index < requestedColors.length; index++) {
-      if (cardColors[index] != requestedColors[index]) {
+    return _matchesNumericQuery(value, _opValueQuery(operator, queryValue));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mana cost matching
+  // ---------------------------------------------------------------------------
+  bool _matchesManaCost(Map<String, dynamic> card, String value, String operator) {
+    final raw = _lowerString(card['mana_cost']);
+    // Normalize by stripping braces so "{2}{W}{W}" becomes "2ww"
+    final normalizedCost = raw.replaceAll('{', '').replaceAll('}', '');
+    final normalizedQuery = value.toLowerCase().replaceAll('{', '').replaceAll('}', '');
+
+    if (operator == '=') {
+      return normalizedCost == normalizedQuery;
+    }
+    return normalizedCost.contains(normalizedQuery);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Format / legality matching
+  // ---------------------------------------------------------------------------
+  bool _matchesFormat(Map<String, dynamic> card, String format, String status) {
+    final legalities = card['legalities'];
+    if (legalities is! Map) return false;
+    return legalities[format]?.toString() == status;
+  }
+
+  // ---------------------------------------------------------------------------
+  // is: keyword matching
+  // ---------------------------------------------------------------------------
+  bool _matchesIsKeyword(
+    Map<String, dynamic> card,
+    String rawValue,
+    String typeLine,
+    List<String> keywords,
+    List<String> colors,
+  ) {
+    final value = rawValue.toLowerCase();
+    switch (value) {
+      // --- Card types ---
+      case 'creature':
+        return typeLine.contains('creature');
+      case 'instant':
+        return typeLine.contains('instant');
+      case 'sorcery':
+        return typeLine.contains('sorcery');
+      case 'artifact':
+        return typeLine.contains('artifact');
+      case 'enchantment':
+        return typeLine.contains('enchantment');
+      case 'land':
+        return typeLine.contains('land');
+      case 'planeswalker':
+        return typeLine.contains('planeswalker');
+      case 'battle':
+        return typeLine.contains('battle');
+      case 'tribal':
+        return typeLine.contains('tribal');
+      // --- Supertypes ---
+      case 'legendary':
+        return typeLine.contains('legendary');
+      case 'basic':
+        return typeLine.contains('basic');
+      case 'snow':
+        return typeLine.contains('snow');
+      case 'world':
+        return typeLine.contains('world');
+      // --- Color properties ---
+      case 'multicolor':
+      case 'multi':
+        return colors.length > 1;
+      case 'colorless':
+        return colors.isEmpty;
+      case 'monocolored':
+      case 'mono':
+        return colors.length == 1;
+      // --- Card categories ---
+      case 'spell':
+        return !typeLine.contains('land');
+      case 'permanent':
+        return typeLine.contains('creature') ||
+            typeLine.contains('artifact') ||
+            typeLine.contains('enchantment') ||
+            typeLine.contains('land') ||
+            typeLine.contains('planeswalker') ||
+            typeLine.contains('battle');
+      case 'historic':
+        return typeLine.contains('legendary') ||
+            typeLine.contains('artifact') ||
+            typeLine.contains('saga');
+      case 'vanilla':
+        // Creature with no oracle text (no abilities)
+        final oracleText = card['oracle_text']?.toString() ?? '';
+        return typeLine.contains('creature') && oracleText.trim().isEmpty;
+      // --- Card flags ---
+      case 'reprint':
+        return card['reprint'] == true;
+      case 'promo':
+        return card['promo'] == true;
+      case 'digital':
+        return card['digital'] == true;
+      case 'foil':
+        return _stringList(card['finishes']).contains('foil');
+      case 'nonfoil':
+        return _stringList(card['finishes']).contains('nonfoil');
+      case 'oversized':
+        return card['oversized'] == true;
+      case 'fullart':
+      case 'full_art':
+        return card['full_art'] == true;
+      case 'textless':
+        return card['textless'] == true;
+      case 'spotlight':
+      case 'story_spotlight':
+        return card['story_spotlight'] == true;
+      case 'booster':
+        return card['booster'] == true;
+      case 'commander':
+        final legalities = card['legalities'];
+        if (legalities is Map) return legalities['commander'] == 'legal';
         return false;
-      }
+      default:
+        return keywords.contains(value);
     }
+  }
 
-    return true;
+  // ---------------------------------------------------------------------------
+  // has: keyword matching
+  // ---------------------------------------------------------------------------
+  bool _matchesHasKeyword(Map<String, dynamic> card, String value) {
+    switch (value.toLowerCase()) {
+      case 'watermark':
+        final wm = card['watermark']?.toString() ?? '';
+        return wm.isNotEmpty;
+      case 'foil':
+        return _stringList(card['finishes']).contains('foil');
+      case 'nonfoil':
+        return _stringList(card['finishes']).contains('nonfoil');
+      case 'flavor':
+      case 'flavortext':
+        final ft = card['flavor_text']?.toString() ?? '';
+        return ft.isNotEmpty;
+      case 'artist':
+        final a = card['artist']?.toString() ?? '';
+        return a.isNotEmpty;
+      default:
+        return false;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Numeric query helpers
+  // ---------------------------------------------------------------------------
+
+  /// Combine operator and value into a single string for _matchesNumericQuery.
+  /// ':' is treated as '=' for numeric fields.
+  String _opValueQuery(String operator, String value) {
+    final op = operator == ':' ? '=' : operator;
+    return '$op$value';
   }
 
   bool _matchesNumericQuery(double value, String rawQuery) {
@@ -240,41 +551,9 @@ class ScryfallSearchEngine {
     }
   }
 
-  bool _matchesIsKeyword(
-    Map<String, dynamic> card,
-    String rawValue,
-    String typeLine,
-    List<String> keywords,
-    List<String> colors,
-  ) {
-    final value = rawValue.toLowerCase();
-    switch (value) {
-      case 'creature':
-        return typeLine.contains('creature');
-      case 'instant':
-        return typeLine.contains('instant');
-      case 'sorcery':
-        return typeLine.contains('sorcery');
-      case 'artifact':
-        return typeLine.contains('artifact');
-      case 'enchantment':
-        return typeLine.contains('enchantment');
-      case 'land':
-        return typeLine.contains('land');
-      case 'planeswalker':
-        return typeLine.contains('planeswalker');
-      case 'legendary':
-        return typeLine.contains('legendary');
-      case 'multicolor':
-        return colors.length > 1;
-      case 'colorless':
-        return colors.isEmpty;
-      case 'spell':
-        return !typeLine.contains('land');
-      default:
-        return keywords.contains(value);
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Utility helpers
+  // ---------------------------------------------------------------------------
 
   String _lowerString(dynamic value) {
     return value?.toString().toLowerCase() ?? '';
@@ -309,12 +588,14 @@ class _SearchTerm {
     required this.value,
     required this.isNegated,
     this.field,
+    this.operator = ':',
   });
 
   final _SearchTermKind kind;
   final String value;
   final bool isNegated;
   final String? field;
+  final String operator;
 }
 
 enum _SearchTermKind {
@@ -330,4 +611,16 @@ enum _SearchTermKind {
   set,
   language,
   isKeyword,
+  hasKeyword,
+  notKeyword,
+  power,
+  toughness,
+  loyalty,
+  manaCost,
+  artist,
+  flavorText,
+  keyword,
+  format,
+  banned,
+  restricted,
 }
