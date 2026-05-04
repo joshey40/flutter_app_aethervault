@@ -4,6 +4,371 @@ import '../../services/scryfall_search_engine.dart';
 import '../../services/scryfall_service.dart';
 import '../../services/localization_service.dart';
 
+// ---------------------------------------------------------------------------
+// Advanced filter modal – separate StatefulWidget so controllers are
+// created once and disposed correctly.
+// ---------------------------------------------------------------------------
+
+class _AdvancedFilterModal extends StatefulWidget {
+  const _AdvancedFilterModal();
+
+  @override
+  State<_AdvancedFilterModal> createState() => _AdvancedFilterModalState();
+}
+
+class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
+  final _nameCtrl = TextEditingController();
+  final _oracleCtrl = TextEditingController();
+  final _typeCtrl = TextEditingController();
+  final _idCtrl = TextEditingController();
+  final _cmcValueCtrl = TextEditingController();
+  final _powCtrl = TextEditingController();
+  final _touCtrl = TextEditingController();
+  final _setCtrl = TextEditingController();
+  final _langCtrl = TextEditingController();
+  final _formatCtrl = TextEditingController();
+
+  String _cmcOp = '=';
+  String _powOp = '=';
+  String _touOp = '=';
+  String? _rarity;
+
+  final _colorMap = <String, bool>{'w': false, 'u': false, 'b': false, 'r': false, 'g': false};
+  var _colorOp = ':';
+  var _selMulticolor = false;
+  var _selColorless = false;
+  final _selectedIs = <String>{};
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _oracleCtrl.dispose();
+    _typeCtrl.dispose();
+    _idCtrl.dispose();
+    _cmcValueCtrl.dispose();
+    _powCtrl.dispose();
+    _touCtrl.dispose();
+    _setCtrl.dispose();
+    _langCtrl.dispose();
+    _formatCtrl.dispose();
+    super.dispose();
+  }
+
+  // Build the Scryfall-syntax query string from current filter state.
+  String _buildQuery() {
+    final parts = <String>[];
+    if (_nameCtrl.text.trim().isNotEmpty) {
+      parts.add('name:${_quoteIfNeeded(_nameCtrl.text.trim())}');
+    }
+    if (_oracleCtrl.text.trim().isNotEmpty) {
+      parts.add('o:${_quoteIfNeeded(_oracleCtrl.text.trim())}');
+    }
+    if (_typeCtrl.text.trim().isNotEmpty) {
+      parts.add('t:${_quoteIfNeeded(_typeCtrl.text.trim())}');
+    }
+    final colorsSelected = _colorMap.entries.where((e) => e.value).map((e) => e.key).join();
+    if (_selColorless) {
+      parts.add('c:colorless');
+    } else if (_selMulticolor) {
+      parts.add('c:m');
+    } else if (colorsSelected.isNotEmpty) {
+      parts.add('c$_colorOp$colorsSelected');
+    }
+    if (_idCtrl.text.trim().isNotEmpty) {
+      parts.add('id:${_idCtrl.text.trim()}');
+    }
+    if (_rarity != null) parts.add('r:$_rarity');
+    if (_cmcValueCtrl.text.trim().isNotEmpty) {
+      parts.add('mv$_cmcOp${_cmcValueCtrl.text.trim()}');
+    }
+    if (_powCtrl.text.trim().isNotEmpty) {
+      parts.add('pow$_powOp${_powCtrl.text.trim()}');
+    }
+    if (_touCtrl.text.trim().isNotEmpty) {
+      parts.add('tou$_touOp${_touCtrl.text.trim()}');
+    }
+    if (_setCtrl.text.trim().isNotEmpty) {
+      parts.add('s:${_setCtrl.text.trim()}');
+    }
+    if (_langCtrl.text.trim().isNotEmpty) {
+      parts.add('lang:${_langCtrl.text.trim()}');
+    }
+    if (_formatCtrl.text.trim().isNotEmpty) {
+      parts.add('f:${_formatCtrl.text.trim()}');
+    }
+    for (final kw in _selectedIs) {
+      parts.add('is:$kw');
+    }
+    return parts.join(' ');
+  }
+
+  String _quoteIfNeeded(String s) {
+    if (s.contains(' ')) return '"${s.replaceAll('"', '')}"';
+    return s;
+  }
+
+  Widget _sectionLabel(String text) => Padding(
+        padding: const EdgeInsets.only(top: 12, bottom: 4),
+        child: Text(text, style: Theme.of(context).textTheme.labelLarge),
+      );
+
+  Widget _opDropdown(String value, ValueChanged<String?> onChanged) =>
+      DropdownButton<String>(
+        value: value,
+        isDense: true,
+        items: const ['=', '>', '<', '>=', '<=', '!=']
+            .map((op) => DropdownMenuItem(value: op, child: Text(op)))
+            .toList(),
+        onChanged: onChanged,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = appLocalizations;
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Expanded(
+                child: Text(
+                  loc.translate('search.advancedFilter'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(null),
+              ),
+            ]),
+
+            // Name / Oracle / Type
+            _sectionLabel(loc.translate('search.filterName')),
+            TextField(controller: _nameCtrl, decoration: const InputDecoration(isDense: true)),
+            _sectionLabel(loc.translate('search.filterOracle')),
+            TextField(controller: _oracleCtrl, decoration: const InputDecoration(isDense: true), minLines: 1, maxLines: 3),
+            _sectionLabel(loc.translate('search.filterType')),
+            TextField(controller: _typeCtrl, decoration: const InputDecoration(isDense: true)),
+
+            // Colors
+            _sectionLabel(loc.translate('search.filterColors')),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final entry in const {
+                  'w': 'W',
+                  'u': 'U',
+                  'b': 'B',
+                  'r': 'R',
+                  'g': 'G',
+                }.entries)
+                  FilterChip(
+                    label: Text(entry.value),
+                    selected: _colorMap[entry.key]!,
+                    onSelected: (v) => setState(() {
+                      _colorMap[entry.key] = v;
+                      if (v) {
+                        _selMulticolor = false;
+                        _selColorless = false;
+                      }
+                    }),
+                  ),
+                FilterChip(
+                  label: const Text('Multicolor'),
+                  selected: _selMulticolor,
+                  onSelected: (v) => setState(() {
+                    _selMulticolor = v;
+                    if (v) {
+                      _selColorless = false;
+                      for (final k in _colorMap.keys) {
+                        _colorMap[k] = false;
+                      }
+                    }
+                  }),
+                ),
+                FilterChip(
+                  label: const Text('Colorless'),
+                  selected: _selColorless,
+                  onSelected: (v) => setState(() {
+                    _selColorless = v;
+                    if (v) {
+                      _selMulticolor = false;
+                      for (final k in _colorMap.keys) {
+                        _colorMap[k] = false;
+                      }
+                    }
+                  }),
+                ),
+              ],
+            ),
+            // Color operator (only relevant when individual colors are selected)
+            if (_colorMap.values.any((v) => v)) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Text('Color match: ', style: TextStyle(fontSize: 12)),
+                const SizedBox(width: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: ':', label: Text('≥ includes')),
+                    ButtonSegment(value: '=', label: Text('= exactly')),
+                    ButtonSegment(value: '<=', label: Text('≤ at most')),
+                  ],
+                  selected: {_colorOp},
+                  onSelectionChanged: (s) => setState(() => _colorOp = s.first),
+                  style: ButtonStyle(
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ]),
+            ],
+
+            // Color identity
+            _sectionLabel(loc.translate('search.filterColorIdentity')),
+            TextField(
+              controller: _idCtrl,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: 'e.g. wr, bgu',
+                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+              ),
+            ),
+
+            // Rarity + CMC
+            _sectionLabel(loc.translate('search.filterRarity')),
+            DropdownButtonFormField<String>(
+              value: _rarity,
+              decoration: const InputDecoration(isDense: true),
+              items: [
+                DropdownMenuItem(value: null, child: Text(loc.translate('search.filterRarityAny'))),
+                ...['common', 'uncommon', 'rare', 'mythic']
+                    .map((r) => DropdownMenuItem(value: r, child: Text(r[0].toUpperCase() + r.substring(1)))),
+              ],
+              onChanged: (v) => setState(() => _rarity = v),
+            ),
+            _sectionLabel(loc.translate('search.filterCmc')),
+            Row(children: [
+              _opDropdown(_cmcOp, (v) => setState(() => _cmcOp = v ?? '=')),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _cmcValueCtrl,
+                  decoration: const InputDecoration(isDense: true, hintText: '0–20'),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ]),
+
+            // Power / Toughness
+            _sectionLabel('${loc.translate('search.filterPower')} / ${loc.translate('search.filterToughness')}'),
+            Row(children: [
+              _opDropdown(_powOp, (v) => setState(() => _powOp = v ?? '=')),
+              const SizedBox(width: 4),
+              Expanded(
+                child: TextField(
+                  controller: _powCtrl,
+                  decoration: InputDecoration(isDense: true, labelText: loc.translate('search.filterPower')),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 12),
+              _opDropdown(_touOp, (v) => setState(() => _touOp = v ?? '=')),
+              const SizedBox(width: 4),
+              Expanded(
+                child: TextField(
+                  controller: _touCtrl,
+                  decoration: InputDecoration(isDense: true, labelText: loc.translate('search.filterToughness')),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ]),
+
+            // Set / Lang / Format
+            _sectionLabel(loc.translate('search.filterSet')),
+            TextField(
+              controller: _setCtrl,
+              decoration: InputDecoration(isDense: true, hintText: 'e.g. one, mkm'),
+              maxLength: 10,
+              buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+            ),
+            _sectionLabel(loc.translate('search.filterLang')),
+            TextField(
+              controller: _langCtrl,
+              decoration: const InputDecoration(isDense: true, hintText: 'en, de, ja, …'),
+            ),
+            _sectionLabel(loc.translate('search.filterFormat')),
+            TextField(
+              controller: _formatCtrl,
+              decoration: const InputDecoration(isDense: true, hintText: 'standard, modern, commander, …'),
+            ),
+
+            // is: chips
+            _sectionLabel(loc.translate('search.filterIs')),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: [
+                for (final kw in const [
+                  'legendary',
+                  'creature',
+                  'instant',
+                  'sorcery',
+                  'artifact',
+                  'enchantment',
+                  'land',
+                  'planeswalker',
+                  'spell',
+                  'permanent',
+                  'historic',
+                  'vanilla',
+                  'multicolor',
+                  'colorless',
+                  'monocolored',
+                  'reprint',
+                  'promo',
+                  'fullart',
+                  'commander',
+                ])
+                  FilterChip(
+                    label: Text(kw),
+                    selected: _selectedIs.contains(kw),
+                    onSelected: (v) => setState(() => v ? _selectedIs.add(kw) : _selectedIs.remove(kw)),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(null),
+                child: Text(loc.translate('search.filterCancel')),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(_buildQuery()),
+                child: Text(loc.translate('search.filterApply')),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Search Page
+// ---------------------------------------------------------------------------
+
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
 
@@ -16,13 +381,11 @@ class _SearchPageState extends State<SearchPage> {
   final ScryfallSearchEngine _searchEngine = ScryfallSearchEngine();
   List<dynamic>? _data;
   List<dynamic>? _results;
+  int _totalResultCount = 0;
+  static const int _maxDisplayed = 250;
+
   final _controller = TextEditingController();
   bool _loadingData = false;
-  // filter state
-  String? _filterColor;
-  String? _filterType;
-  String? _filterRarity;
-  String? _filterSet;
 
   @override
   void initState() {
@@ -32,23 +395,13 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _loadLocalData() async {
     setState(() => _loadingData = true);
-    // Load all available bulks and merge
     final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
     final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
     final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    final merged = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    for (final src in [oracle, defaults, all]) {
-      for (final item in src.cast<Map<String, dynamic>>()) {
-        final id = item['id']?.toString() ?? item['oracle_id']?.toString() ?? item['name']?.toString();
-        if (id == null) continue;
-        if (seen.add(id)) merged.add(item);
-      }
-    }
-    final loaded = merged;
+    final merged = _mergeBulk([oracle, defaults, all]);
     if (!mounted) return;
     setState(() {
-      _data = loaded;
+      _data = merged;
       _results = null;
       _loadingData = false;
     });
@@ -56,7 +409,6 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _checkAndLoad({bool forceDownload = false}) async {
     setState(() => _loadingData = true);
-    // check and download each required bulk if necessary
     final types = [
       ScryfallBulkType.oracleCards,
       ScryfallBulkType.defaultCards,
@@ -65,13 +417,12 @@ class _SearchPageState extends State<SearchPage> {
     for (final type in types) {
       final hasLocalCache = await _scry.hasLocalCache(bulkType: type);
       final stale = await _scry.isCacheStale(bulkType: type);
-      final shouldDownload = forceDownload || !hasLocalCache || stale;
-      if (shouldDownload) {
+      if (forceDownload || !hasLocalCache || stale) {
         final uri = await _scry.fetchBulkIndexAndChooseUri(bulkType: type);
         if (uri != null) {
           try {
             await _scry.downloadBulk(uri, bulkType: type, onProgress: (_) {});
-          } catch (error) {
+          } catch (_) {
             if (!mounted) return;
             setState(() => _loadingData = false);
             return;
@@ -80,275 +431,187 @@ class _SearchPageState extends State<SearchPage> {
       }
     }
 
-    final loaded = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
+    final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
     final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
     final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    final merged = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    for (final src in [loaded, defaults, all]) {
-      for (final item in src.cast<Map<String, dynamic>>()) {
-        final id = item['id']?.toString() ?? item['oracle_id']?.toString() ?? item['name']?.toString();
-        if (id == null) continue;
-        if (seen.add(id)) merged.add(item);
-      }
-    }
-    final allLoaded = merged;
+    final merged = _mergeBulk([oracle, defaults, all]);
     if (!mounted) return;
     setState(() {
-      _data = allLoaded;
+      _data = merged;
       _results = null;
       _loadingData = false;
     });
   }
 
-  String _formatDateTime(DateTime? value) {
-    if (value == null) {
-      return appLocalizations.translate('search.metaUnknown');
+  List<Map<String, dynamic>> _mergeBulk(List<List<dynamic>> sources) {
+    final merged = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final src in sources) {
+      for (final item in src.cast<Map<String, dynamic>>()) {
+        final id = item['id']?.toString() ??
+            item['oracle_id']?.toString() ??
+            item['name']?.toString();
+        if (id == null) continue;
+        if (seen.add(id)) merged.add(item);
+      }
     }
-
-    final day = value.day.toString().padLeft(2, '0');
-    final month = value.month.toString().padLeft(2, '0');
-    final year = value.year.toString();
-    final hour = value.hour.toString().padLeft(2, '0');
-    final minute = value.minute.toString().padLeft(2, '0');
-    return '$day.$month.$year $hour:$minute';
-  }
-
-  String _formatBytes(int? value) {
-    if (value == null) {
-      return appLocalizations.translate('search.metaUnknown');
-    }
-
-    final mb = value / (1024 * 1024);
-    return '${mb.toStringAsFixed(1)} MB';
+    return merged;
   }
 
   void _executeSearch() {
     final q = _controller.text.trim();
-    if (_data == null || q.isEmpty && _filterColor == null && _filterType == null && _filterRarity == null && _filterSet == null) {
-      setState(() => _results = null);
+    if (_data == null || q.isEmpty) {
+      setState(() {
+        _results = null;
+        _totalResultCount = 0;
+      });
       return;
     }
-    // build full query including filters using Scryfall syntax
-    final parts = <String>[];
-    if (q.isNotEmpty) parts.add(q);
-    if (_filterColor != null && _filterColor!.isNotEmpty) parts.add('c:${_filterColor!}');
-    if (_filterType != null && _filterType!.isNotEmpty) parts.add('t:${_filterType!}');
-    if (_filterRarity != null && _filterRarity!.isNotEmpty) parts.add('r:${_filterRarity!}');
-    if (_filterSet != null && _filterSet!.isNotEmpty) parts.add('s:${_filterSet!}');
-    final fullQuery = parts.join(' ');
-    final matches = _searchEngine.filterCards(_data!, fullQuery);
-    setState(() => _results = matches.length > 50 ? matches.sublist(0, 50) : matches);
+    final matches = _searchEngine.filterCards(_data!, q);
+    setState(() {
+      _totalResultCount = matches.length;
+      _results = matches.length > _maxDisplayed ? matches.sublist(0, _maxDisplayed) : matches;
+    });
   }
 
-  void _openFilterMenu() async {
-    final result = await showModalBottomSheet<Map<String, dynamic>>(context: context, isScrollControlled: true, builder: (ctx) {
-      // Advanced filter modal: name, oracle, type, colors, color identity, rarity, cmc, set, lang, is:
-      String? selId;
-      String? selType = _filterType;
-      String? selRarity = _filterRarity;
-      String? selSet = _filterSet;
-      String? selName;
-      String? selOracle;
-      String? selLang;
-      String cmcOp = '=';
-      String? cmcValue;
-      final colorMap = <String, bool>{'w': false, 'u': false, 'b': false, 'r': false, 'g': false};
-      var selMulticolor = false;
-      var selColorless = false;
-      final selectedIs = <String>{};
+  Future<void> _openFilterMenu() async {
+    final built = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _AdvancedFilterModal(),
+    );
 
-      return StatefulBuilder(builder: (context, setModalState) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Advanced Filter', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 12),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Name (name:)'),
-                    onChanged: (v) => setModalState(() => selName = v.trim()),
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Oracle Text (o:)'),
-                    onChanged: (v) => setModalState(() => selOracle = v.trim()),
-                    minLines: 1,
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Type (t:)'),
-                    controller: TextEditingController(text: selType),
-                    onChanged: (v) => setModalState(() => selType = v.trim()),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    children: [
-                      const Text('Colors:'),
-                      for (final k in ['w', 'u', 'b', 'r', 'g'])
-                        FilterChip(
-                          label: Text(k.toUpperCase()),
-                          selected: colorMap[k]!,
-                          onSelected: (v) => setModalState(() => colorMap[k] = v),
-                        ),
-                      FilterChip(label: const Text('Multicolor'), selected: selMulticolor, onSelected: (v) => setModalState(() => selMulticolor = v)),
-                      FilterChip(label: const Text('Colorless'), selected: selColorless, onSelected: (v) => setModalState(() => selColorless = v)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Color Identity (id:) e.g. wr'),
-                    onChanged: (v) => setModalState(() => selId = v.trim()),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: selRarity,
-                        items: const [null, 'common', 'uncommon', 'rare', 'mythic'].map((e) => DropdownMenuItem(value: e, child: Text(e == null ? 'Rarity' : e))).toList(),
-                        onChanged: (v) => setModalState(() => selRarity = v),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Row(children: [
-                        DropdownButton<String>(value: cmcOp, items: const ['=', '>', '<', '>=', '<=', '!='].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(), onChanged: (v) => setModalState(() => cmcOp = v ?? '=')),
-                        const SizedBox(width: 8),
-                        Expanded(child: TextField(decoration: const InputDecoration(labelText: 'CMC'), keyboardType: TextInputType.number, onChanged: (v) => setModalState(() => cmcValue = v.trim()))),
-                      ]),
-                    )
-                  ]),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Set (s:)'),
-                    controller: TextEditingController(text: selSet),
-                    onChanged: (v) => setModalState(() => selSet = v.trim()),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    decoration: const InputDecoration(labelText: 'Language (lang:) e.g. en, de'),
-                    onChanged: (v) => setModalState(() => selLang = v.trim()),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      const Text('is:'),
-                      for (final kw in ['creature', 'instant', 'sorcery', 'artifact', 'enchantment', 'land', 'planeswalker', 'legendary', 'multicolor', 'colorless', 'spell'])
-                        ChoiceChip(label: Text(kw), selected: selectedIs.contains(kw), onSelected: (v) => setModalState(() => v ? selectedIs.add(kw) : selectedIs.remove(kw))),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(onPressed: () => Navigator.of(context).pop(null), child: const Text('Cancel')),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(minimumSize: const Size(88, 40)),
-                        onPressed: () {
-                          // build final query map
-                          final colorsSelected = colorMap.entries.where((e) => e.value).map((e) => e.key).join();
-                          final parts = <String, dynamic>{};
-                          if (selName?.isNotEmpty == true) parts['name'] = selName;
-                          if (selOracle?.isNotEmpty == true) parts['oracle'] = selOracle;
-                          if (selType?.isNotEmpty == true) parts['type'] = selType;
-                          if (colorsSelected.isNotEmpty) parts['color'] = colorsSelected;
-                          if (selId?.isNotEmpty == true) parts['id'] = selId;
-                          if (selMulticolor) parts['is_multicolor'] = true;
-                          if (selColorless) parts['is_colorless'] = true;
-                          if (selRarity?.isNotEmpty == true) parts['rarity'] = selRarity;
-                          if (cmcValue?.isNotEmpty == true) parts['cmc'] = {'op': cmcOp, 'val': cmcValue};
-                          if (selSet?.isNotEmpty == true) parts['set'] = selSet;
-                          if (selLang?.isNotEmpty == true) parts['lang'] = selLang;
-                          if (selectedIs.isNotEmpty) parts['is'] = selectedIs.toList();
-                          Navigator.of(context).pop(parts);
-                        },
-                        child: const Text('Apply'),
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-          ),
-        );
-      });
-    });
-
-    if (result != null) {
-      // translate the map into saved filter fields and run a search
-      setState(() {
-        _filterType = result['type'] as String?;
-        _filterRarity = result['rarity'] as String?;
-        _filterSet = result['set'] as String?;
-        _filterColor = result['color'] as String?;
-      });
-
-      // construct scryfall-style query
-      final parts = <String>[];
-      if (result['name'] != null) parts.add('name:${_quoteIfNeeded(result['name'])}');
-      if (result['oracle'] != null) parts.add('o:${_quoteIfNeeded(result['oracle'])}');
-      if (_filterType != null && _filterType!.isNotEmpty) parts.add('t:${_filterType}');
-      if (_filterColor != null && _filterColor!.isNotEmpty) parts.add('c:${_filterColor}');
-      if (result['id'] != null) parts.add('id:${result['id']}');
-      if (result['is_multicolor'] == true) parts.add('is:multicolor');
-      if (result['is_colorless'] == true) parts.add('is:colorless');
-      if (_filterRarity != null && _filterRarity!.isNotEmpty) parts.add('r:${_filterRarity}');
-      if (result['cmc'] != null) {
-        final cmc = result['cmc'] as Map<String, dynamic>;
-        parts.add('mv:${cmc['op']}${cmc['val']}');
-      }
-      if (_filterSet != null && _filterSet!.isNotEmpty) parts.add('s:${_filterSet}');
-      if (result['lang'] != null) parts.add('lang:${result['lang']}');
-      if (result['is'] != null) {
-        for (final v in (result['is'] as List)) {
-          parts.add('is:$v');
-        }
-      }
-
-      final built = parts.join(' ');
+    if (built != null && built.isNotEmpty) {
       _controller.text = built;
       _executeSearch();
     }
   }
 
-  String _quoteIfNeeded(String? s) {
-    if (s == null) return '';
-    if (s.contains(' ')) return '"${s.replaceAll('"', '')}"';
-    return s;
-  }
-  
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
+  // ---------------------------------------------------------------------------
+  // Result card tile
+  // ---------------------------------------------------------------------------
+
+  Color _rarityColor(String rarity) {
+    switch (rarity) {
+      case 'mythic':
+        return const Color(0xFFE8762D);
+      case 'rare':
+        return const Color(0xFFC69C6D);
+      case 'uncommon':
+        return const Color(0xFF8EA3B5);
+      default:
+        return const Color(0xFF9E9E9E);
+    }
+  }
+
+  String _formatManaCost(String cost) {
+    return cost.replaceAll('{', '').replaceAll('}', '');
+  }
+
+  Widget _buildCardTile(BuildContext context, Map<String, dynamic> item) {
+    final theme = Theme.of(context);
+    final name = item['name']?.toString() ?? '';
+    final typeLine = item['type_line']?.toString() ?? '';
+    final setCode = (item['set']?.toString() ?? '').toUpperCase();
+    final rarity = item['rarity']?.toString() ?? '';
+    final manaCost = item['mana_cost']?.toString() ?? '';
+    final rarityColor = _rarityColor(rarity);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            // Rarity colour bar
+            Container(
+              width: 4,
+              height: 44,
+              decoration: BoxDecoration(
+                color: rarityColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Name + type
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    typeLine,
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Mana cost + set code
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (manaCost.isNotEmpty)
+                  Text(
+                    _formatManaCost(manaCost),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                Text(
+                  setCode,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final loc = appLocalizations;
     return Scaffold(
       appBar: AppBar(
-        title: Text(appLocalizations.translate('nav.search')),
+        title: Text(loc.translate('nav.search')),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
+            tooltip: loc.translate('search.downloadAction'),
             onPressed: _loadingData ? null : () => _checkAndLoad(forceDownload: true),
-          )
+          ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
+            // Data status card
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -356,25 +619,26 @@ class _SearchPageState extends State<SearchPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      appLocalizations.translate('search.metaTitle'),
+                      loc.translate('search.metaTitle'),
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      appLocalizations.translate('search.syntaxHint'),
+                      loc.translate('search.syntaxHint'),
                       style: theme.textTheme.bodySmall,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      appLocalizations.translate('search.defaultCardsSource'),
+                      loc.translate('search.defaultCardsSource'),
                       style: theme.textTheme.bodySmall,
                     ),
                     if (_data != null) ...[
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
-                        appLocalizations
+                        loc
                             .translate('search.metaCardsLoaded')
                             .replaceAll('{count}', _data!.length.toString()),
+                        style: theme.textTheme.bodySmall,
                       ),
                     ],
                   ],
@@ -382,7 +646,8 @@ class _SearchPageState extends State<SearchPage> {
               ),
             ),
             const SizedBox(height: 8),
-            const SizedBox(height: 8),
+
+            // Search bar
             Row(
               children: [
                 Expanded(
@@ -390,46 +655,139 @@ class _SearchPageState extends State<SearchPage> {
                     controller: _controller,
                     enabled: _data != null,
                     decoration: InputDecoration(
-                      labelText: appLocalizations.translate('search.placeholder'),
-                      helperText: appLocalizations.translate('search.syntaxExamples'),
+                      hintText: loc.translate('search.placeholder'),
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _controller.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _controller.clear();
+                                setState(() {
+                                  _results = null;
+                                  _totalResultCount = 0;
+                                });
+                              },
+                            )
+                          : null,
                     ),
+                    onSubmitted: (_) => _executeSearch(),
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.search,
                   ),
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  width: 96,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(minimumSize: const Size(88, 48)),
+                  height: 50,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(72, 50),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                    ),
                     onPressed: _data == null ? null : _executeSearch,
-                    icon: const Icon(Icons.search),
-                    label: const Text('Search'),
+                    child: const Text('Search'),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 IconButton(
-                  icon: const Icon(Icons.filter_list),
+                  icon: const Icon(Icons.tune),
+                  tooltip: loc.translate('search.advancedFilter'),
                   onPressed: _data == null ? null : _openFilterMenu,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+
+            // Result count header
+            if (_results != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _totalResultCount == 0
+                      ? loc.translate('search.noResults')
+                      : _totalResultCount <= _maxDisplayed
+                          ? loc
+                              .translate('search.resultsAll')
+                              .replaceAll('{total}', _totalResultCount.toString())
+                          : loc
+                              .translate('search.resultsShowing')
+                              .replaceAll('{shown}', _results!.length.toString())
+                              .replaceAll('{total}', _totalResultCount.toString()),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 8),
+
+            // Results / placeholder
             Expanded(
               child: _results == null
                   ? Center(
                       child: _loadingData
-                          ? Text(appLocalizations.translate('search.statusPreparing'))
-                          : Text(appLocalizations.translate('search.hint')),
+                          ? Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const CircularProgressIndicator(),
+                                const SizedBox(height: 12),
+                                Text(loc.translate('search.statusPreparing')),
+                              ],
+                            )
+                          : Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.manage_search,
+                                  size: 48,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  loc.translate('search.hint'),
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  loc.translate('search.syntaxExamples'),
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
                     )
-                  : ListView.builder(
-                      itemCount: _results!.length,
-                      itemBuilder: (context, index) {
-                        final item = _results![index] as Map<String, dynamic>;
-                        return ListTile(
-                          title: Text(item['name'] ?? ''),
-                          subtitle: Text(item['set_name'] ?? ''),
-                        );
-                      },
-                    ),
+                  : _results!.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 48,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                loc.translate('search.noResults'),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _results!.length,
+                          itemBuilder: (context, index) {
+                            final item = _results![index] as Map<String, dynamic>;
+                            return _buildCardTile(context, item);
+                          },
+                        ),
             ),
           ],
         ),
