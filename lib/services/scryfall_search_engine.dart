@@ -26,26 +26,8 @@ class ScryfallSearchEngine {
 
   List<List<_SearchTerm>> _parseQueryGroups(String query) {
     final tokens = _tokenize(query);
-    final groups = <List<_SearchTerm>>[];
-    var currentGroup = <_SearchTerm>[];
-
-    for (final token in tokens) {
-      if (token.toLowerCase() == 'or') {
-        if (currentGroup.isNotEmpty) {
-          groups.add(currentGroup);
-          currentGroup = <_SearchTerm>[];
-        }
-        continue;
-      }
-
-      currentGroup.add(_parseToken(token));
-    }
-
-    if (currentGroup.isNotEmpty) {
-      groups.add(currentGroup);
-    }
-
-    return groups;
+    final parsed = _parseGroupsFromTokens(tokens, 0);
+    return parsed['groups'] as List<List<_SearchTerm>>;
   }
 
   List<String> _tokenize(String query) {
@@ -58,6 +40,15 @@ class ScryfallSearchEngine {
       if (character == '"') {
         inQuotes = !inQuotes;
         buffer.write(character);
+        continue;
+      }
+      // Treat parentheses as standalone tokens when not inside quotes
+      if (!inQuotes && (character == '(' || character == ')')) {
+        if (buffer.isNotEmpty) {
+          tokens.add(buffer.toString());
+          buffer.clear();
+        }
+        tokens.add(character);
         continue;
       }
 
@@ -77,6 +68,64 @@ class ScryfallSearchEngine {
     }
 
     return tokens;
+  }
+
+  /// Parses tokens into groups (OR between groups, AND within a group).
+  /// Supports parentheses by returning a map with 'groups' and 'nextIndex'.
+  Map<String, dynamic> _parseGroupsFromTokens(List<String> tokens, int start) {
+    final resultGroups = <List<_SearchTerm>>[];
+    var currentGroups = <List<_SearchTerm>>[<_SearchTerm>[]];
+    var index = start;
+
+    while (index < tokens.length) {
+      final token = tokens[index];
+
+      if (token == ')') {
+        break;
+      }
+
+      if (token.toLowerCase() == 'or') {
+        for (final g in currentGroups) {
+          resultGroups.add(g);
+        }
+        currentGroups = <List<_SearchTerm>>[<_SearchTerm>[]];
+        index++;
+        continue;
+      }
+
+      if (token == '(') {
+        final inner = _parseGroupsFromTokens(tokens, index + 1);
+        final innerGroups = inner['groups'] as List<List<_SearchTerm>>;
+        final nextIndex = inner['nextIndex'] as int;
+
+        final combined = <List<_SearchTerm>>[];
+        for (final cg in currentGroups) {
+          for (final ig in innerGroups) {
+            final newGroup = List<_SearchTerm>.from(cg)..addAll(ig);
+            combined.add(newGroup);
+          }
+        }
+        currentGroups = combined;
+        index = nextIndex + 1;
+        continue;
+      }
+
+      // Regular token -> single-term groups
+      final term = _parseToken(token);
+      final combined = <List<_SearchTerm>>[];
+      for (final cg in currentGroups) {
+        final newGroup = List<_SearchTerm>.from(cg)..add(term);
+        combined.add(newGroup);
+      }
+      currentGroups = combined;
+      index++;
+    }
+
+    for (final g in currentGroups) {
+      resultGroups.add(g);
+    }
+
+    return {'groups': resultGroups, 'nextIndex': index};
   }
 
   _SearchTerm _parseToken(String token) {
