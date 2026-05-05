@@ -13,9 +13,15 @@ class ScryfallSearchEngine {
       return cards.cast<Map<String, dynamic>>();
     }
 
-    return cards.cast<Map<String, dynamic>>().where((card) {
+    final result = cards.cast<Map<String, dynamic>>().where((card) {
       return groups.any((group) => _matchesGroup(card, group));
     }).toList();
+    result.sort((a, b) {
+      final nameA = a['name']?.toString() ?? '';
+      final nameB = b['name']?.toString() ?? '';
+      return nameA.compareTo(nameB);
+    });
+    return result;
   }
 
   List<List<_SearchTerm>> _parseQueryGroups(String query) {
@@ -196,10 +202,39 @@ class ScryfallSearchEngine {
     return true;
   }
 
+  /// Returns oracle text from top-level field, falling back to concatenated
+  /// card_faces oracle texts for double-faced / adventure cards.
+  String _oracleText(Map<String, dynamic> card) {
+    final direct = card['oracle_text']?.toString() ?? '';
+    if (direct.isNotEmpty) return direct.toLowerCase();
+    final faces = card['card_faces'];
+    if (faces is List && faces.isNotEmpty) {
+      return faces
+          .map((f) => (f as Map<String, dynamic>)['oracle_text']?.toString() ?? '')
+          .join('\n')
+          .toLowerCase();
+    }
+    return '';
+  }
+
+  /// Returns type line from top-level field, falling back to card_faces.
+  String _typeLine(Map<String, dynamic> card) {
+    final direct = card['type_line']?.toString() ?? '';
+    if (direct.isNotEmpty) return direct.toLowerCase();
+    final faces = card['card_faces'];
+    if (faces is List && faces.isNotEmpty) {
+      return faces
+          .map((f) => (f as Map<String, dynamic>)['type_line']?.toString() ?? '')
+          .join('\n')
+          .toLowerCase();
+    }
+    return '';
+  }
+
   bool _matchesTerm(Map<String, dynamic> card, _SearchTerm term) {
     final name = _lowerString(card['name']);
-    final oracleText = _lowerString(card['oracle_text']);
-    final typeLine = _lowerString(card['type_line']);
+    final oracleText = _oracleText(card);
+    final typeLine = _typeLine(card);
     final setName = _lowerString(card['set_name']);
     final setCode = _lowerString(card['set']);
     final language = _lowerString(card['lang']);
@@ -217,7 +252,9 @@ class ScryfallSearchEngine {
       case _SearchTermKind.type:
         return typeLine.contains(term.value.toLowerCase());
       case _SearchTermKind.oracleText:
-        return oracleText.contains(term.value.toLowerCase());
+        // Replace ~ with the card's name (Scryfall placeholder convention)
+        final queryText = term.value.toLowerCase().replaceAll('~', name);
+        return oracleText.contains(queryText);
       case _SearchTermKind.color:
         return _matchesColorQuery(cardColors, term.value, term.operator);
       case _SearchTermKind.colorIdentity:
@@ -457,8 +494,7 @@ class ScryfallSearchEngine {
             typeLine.contains('saga');
       case 'vanilla':
         // Creature with no oracle text (no abilities)
-        final oracleText = card['oracle_text']?.toString() ?? '';
-        return typeLine.contains('creature') && oracleText.trim().isEmpty;
+        return typeLine.contains('creature') && _oracleText(card).trim().isEmpty;
       // --- Card flags ---
       case 'reprint':
         return card['reprint'] == true;

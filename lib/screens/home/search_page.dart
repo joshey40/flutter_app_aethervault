@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../services/scryfall_search_engine.dart';
@@ -366,6 +368,25 @@ class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
 }
 
 // ---------------------------------------------------------------------------
+// Search Page – helpers
+// ---------------------------------------------------------------------------
+
+List<Map<String, dynamic>> _mergeBulk(List<List<dynamic>> sources) {
+  final merged = <Map<String, dynamic>>[];
+  final seen = <String>{};
+  for (final src in sources) {
+    for (final item in src.cast<Map<String, dynamic>>()) {
+      final id = item['id']?.toString() ??
+          item['oracle_id']?.toString() ??
+          item['name']?.toString();
+      if (id == null) continue;
+      if (seen.add(id)) merged.add(item);
+    }
+  }
+  return merged;
+}
+
+// ---------------------------------------------------------------------------
 // Search Page
 // ---------------------------------------------------------------------------
 
@@ -380,16 +401,24 @@ class _SearchPageState extends State<SearchPage> {
   final ScryfallService _scry = ScryfallService();
   final ScryfallSearchEngine _searchEngine = ScryfallSearchEngine();
   List<dynamic>? _data;
+  List<Map<String, dynamic>> _allMatches = [];
   List<dynamic>? _results;
-  int _totalResultCount = 0;
-  static const int _maxDisplayed = 250;
+  int _displayedCount = 0;
+  static const int _pageSize = 50;
+  int _searchGeneration = 0;
 
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
   bool _loadingData = false;
+  bool _searching = false;
+  double? _downloadProgress;
+  bool _downloadError = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadLocalData();
   }
 
@@ -398,17 +427,23 @@ class _SearchPageState extends State<SearchPage> {
     final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
     final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
     final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    final merged = _mergeBulk([oracle, defaults, all]);
+    final merged = await Future(() => _mergeBulk([oracle, defaults, all]));
     if (!mounted) return;
     setState(() {
       _data = merged;
       _results = null;
+      _allMatches = [];
+      _displayedCount = 0;
       _loadingData = false;
     });
   }
 
   Future<void> _checkAndLoad({bool forceDownload = false}) async {
-    setState(() => _loadingData = true);
+    setState(() {
+      _loadingData = true;
+      _downloadProgress = null;
+      _downloadError = false;
+    });
     final types = [
       ScryfallBulkType.oracleCards,
       ScryfallBulkType.defaultCards,
@@ -421,10 +456,22 @@ class _SearchPageState extends State<SearchPage> {
         final uri = await _scry.fetchBulkIndexAndChooseUri(bulkType: type);
         if (uri != null) {
           try {
-            await _scry.downloadBulk(uri, bulkType: type, onProgress: (_) {});
+            if (mounted) setState(() => _downloadProgress = 0);
+            await _scry.downloadBulk(
+              uri,
+              bulkType: type,
+              onProgress: (p) {
+                if (mounted) setState(() => _downloadProgress = p);
+              },
+            );
+            if (mounted) setState(() => _downloadProgress = null);
           } catch (_) {
             if (!mounted) return;
-            setState(() => _loadingData = false);
+            setState(() {
+              _loadingData = false;
+              _downloadProgress = null;
+              _downloadError = true;
+            });
             return;
           }
         }
@@ -434,43 +481,62 @@ class _SearchPageState extends State<SearchPage> {
     final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
     final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
     final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    final merged = _mergeBulk([oracle, defaults, all]);
+    final merged = await Future(() => _mergeBulk([oracle, defaults, all]));
     if (!mounted) return;
     setState(() {
       _data = merged;
       _results = null;
+      _allMatches = [];
+      _displayedCount = 0;
       _loadingData = false;
+      _downloadProgress = null;
     });
   }
 
-  List<Map<String, dynamic>> _mergeBulk(List<List<dynamic>> sources) {
-    final merged = <Map<String, dynamic>>[];
-    final seen = <String>{};
-    for (final src in sources) {
-      for (final item in src.cast<Map<String, dynamic>>()) {
-        final id = item['id']?.toString() ??
-            item['oracle_id']?.toString() ??
-            item['name']?.toString();
-        if (id == null) continue;
-        if (seen.add(id)) merged.add(item);
-      }
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
     }
-    return merged;
   }
 
-  void _executeSearch() {
+  void _loadMore() {
+    if (_displayedCount >= _allMatches.length) return;
+    setState(() {
+      _displayedCount = (_displayedCount + _pageSize).clamp(0, _allMatches.length);
+      _results = _allMatches.sublist(0, _displayedCount);
+    });
+  }
+
+  Future<void> _executeSearch() async {
     final q = _controller.text.trim();
     if (_data == null || q.isEmpty) {
       setState(() {
+        _allMatches = [];
+        _displayedCount = 0;
         _results = null;
-        _totalResultCount = 0;
+        _searching = false;
       });
       return;
     }
-    final matches = _searchEngine.filterCards(_data!, q);
+
+    final generation = ++_searchGeneration;
     setState(() {
-      _totalResultCount = matches.length;
-      _results = matches.length > _maxDisplayed ? matches.sublist(0, _maxDisplayed) : matches;
+      _searching = true;
+      _results = null;
+    });
+
+    final matches = await Future(
+      () => _searchEngine.filterCards(_data!, q),
+    );
+
+    if (!mounted || generation != _searchGeneration) return;
+
+    setState(() {
+      _allMatches = matches;
+      _displayedCount = matches.length.clamp(0, _pageSize);
+      _results = _allMatches.sublist(0, _displayedCount);
+      _searching = false;
     });
   }
 
@@ -483,107 +549,126 @@ class _SearchPageState extends State<SearchPage> {
 
     if (built != null && built.isNotEmpty) {
       _controller.text = built;
+      _debounce?.cancel();
       _executeSearch();
     }
   }
 
+  void _showStatusInfo() {
+    final loc = appLocalizations;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                loc.translate('search.metaTitle'),
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(loc.translate('search.syntaxHint'), style: theme.textTheme.bodySmall),
+              const SizedBox(height: 4),
+              Text(loc.translate('search.defaultCardsSource'), style: theme.textTheme.bodySmall),
+              if (_data != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  loc.translate('search.metaCardsLoaded').replaceAll('{count}', _data!.length.toString()),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   // ---------------------------------------------------------------------------
-  // Result card tile
+  // Card image helpers
   // ---------------------------------------------------------------------------
 
-  Color _rarityColor(String rarity) {
-    switch (rarity) {
-      case 'mythic':
-        return const Color(0xFFE8762D);
-      case 'rare':
-        return const Color(0xFFC69C6D);
-      case 'uncommon':
-        return const Color(0xFF8EA3B5);
-      default:
-        return const Color(0xFF9E9E9E);
+  String? _getCardImageUrl(Map<String, dynamic> card) {
+    final imageUris = card['image_uris'];
+    if (imageUris is Map) {
+      return (imageUris['normal'] ?? imageUris['small'] ?? imageUris['large'])
+          ?.toString();
     }
+    // Double-faced / adventure cards store images per face
+    final faces = card['card_faces'];
+    if (faces is List && faces.isNotEmpty) {
+      final face0 = faces[0] as Map<String, dynamic>?;
+      final faceUris = face0?['image_uris'];
+      if (faceUris is Map) {
+        return (faceUris['normal'] ?? faceUris['small'] ?? faceUris['large'])
+            ?.toString();
+      }
+    }
+    return null;
   }
 
-  String _formatManaCost(String cost) {
-    return cost.replaceAll('{', '').replaceAll('}', '');
-  }
-
-  Widget _buildCardTile(BuildContext context, Map<String, dynamic> item) {
+  Widget _buildCardImageItem(BuildContext context, Map<String, dynamic> card) {
+    final imageUrl = _getCardImageUrl(card);
+    final name = card['name']?.toString() ?? '';
     final theme = Theme.of(context);
-    final name = item['name']?.toString() ?? '';
-    final typeLine = item['type_line']?.toString() ?? '';
-    final setCode = (item['set']?.toString() ?? '').toUpperCase();
-    final rarity = item['rarity']?.toString() ?? '';
-    final manaCost = item['mana_cost']?.toString() ?? '';
-    final rarityColor = _rarityColor(rarity);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            // Rarity colour bar
-            Container(
-              width: 4,
-              height: 44,
-              decoration: BoxDecoration(
-                color: rarityColor,
-                borderRadius: BorderRadius.circular(2),
+    Widget imageWidget;
+    if (imageUrl != null) {
+      imageWidget = Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (ctx, child, progress) {
+          if (progress == null) return child;
+          return Container(
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: Center(
+              child: CircularProgressIndicator(
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
+                    : null,
+                strokeWidth: 2,
               ),
             ),
-            const SizedBox(width: 12),
-            // Name + type
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    typeLine,
-                    style: theme.textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Mana cost + set code
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (manaCost.isNotEmpty)
-                  Text(
-                    _formatManaCost(manaCost),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                Text(
-                  setCode,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
+        errorBuilder: (ctx, _, __) => _cardPlaceholder(theme, name),
+      );
+    } else {
+      imageWidget = _cardPlaceholder(theme, name);
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: imageWidget,
+    );
+  }
+
+  Widget _cardPlaceholder(ThemeData theme, String name) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(8),
+      child: Text(
+        name,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall,
       ),
     );
   }
@@ -601,196 +686,231 @@ class _SearchPageState extends State<SearchPage> {
         title: Text(loc.translate('nav.search')),
         actions: [
           IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: loc.translate('search.metaTitle'),
+            onPressed: _data == null ? null : _showStatusInfo,
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: loc.translate('search.downloadAction'),
             onPressed: _loadingData ? null : () => _checkAndLoad(forceDownload: true),
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            // Data status card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      loc.translate('search.metaTitle'),
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      loc.translate('search.syntaxHint'),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      loc.translate('search.defaultCardsSource'),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    if (_data != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        loc
-                            .translate('search.metaCardsLoaded')
-                            .replaceAll('{count}', _data!.length.toString()),
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Search bar
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    enabled: _data != null,
-                    decoration: InputDecoration(
-                      hintText: loc.translate('search.placeholder'),
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      suffixIcon: _controller.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18),
-                              onPressed: () {
-                                _controller.clear();
-                                setState(() {
-                                  _results = null;
-                                  _totalResultCount = 0;
-                                });
-                              },
-                            )
-                          : null,
-                    ),
-                    onSubmitted: (_) => _executeSearch(),
-                    onChanged: (_) => setState(() {}),
-                    textInputAction: TextInputAction.search,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(72, 50),
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
-                    ),
-                    onPressed: _data == null ? null : _executeSearch,
-                    child: const Text('Search'),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.tune),
-                  tooltip: loc.translate('search.advancedFilter'),
-                  onPressed: _data == null ? null : _openFilterMenu,
-                ),
-              ],
-            ),
-
-            // Result count header
-            if (_results != null) ...[
-              const SizedBox(height: 8),
-              Align(
+      body: Column(
+        children: [
+          // Download progress bar
+          if (_downloadProgress != null) ...[
+            LinearProgressIndicator(value: _downloadProgress),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _totalResultCount == 0
-                      ? loc.translate('search.noResults')
-                      : _totalResultCount <= _maxDisplayed
-                          ? loc
-                              .translate('search.resultsAll')
-                              .replaceAll('{total}', _totalResultCount.toString())
-                          : loc
-                              .translate('search.resultsShowing')
-                              .replaceAll('{shown}', _results!.length.toString())
-                              .replaceAll('{total}', _totalResultCount.toString()),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
-                  ),
+                  loc
+                      .translate('search.statusDownloading')
+                      .replaceAll('{progress}', '${(_downloadProgress! * 100).toInt()}'),
+                  style: theme.textTheme.bodySmall,
                 ),
               ),
-            ],
+            ),
+          ],
+          // Error banner
+          if (_downloadError)
+            Container(
+              width: double.infinity,
+              color: theme.colorScheme.errorContainer,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, size: 16, color: theme.colorScheme.onErrorContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      loc.translate('search.statusError'),
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: theme.colorScheme.onErrorContainer),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close, color: theme.colorScheme.onErrorContainer),
+                    iconSize: 16,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => setState(() => _downloadError = false),
+                  ),
+                ],
+              ),
+            ),
+          // Main content
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  // Search bar
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _controller,
+                          enabled: _data != null,
+                          decoration: InputDecoration(
+                            hintText: loc.translate('search.placeholder'),
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: _controller.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () {
+                                      _controller.clear();
+                                      _debounce?.cancel();
+                                      setState(() {
+                                        _allMatches = [];
+                                        _displayedCount = 0;
+                                        _results = null;
+                                      });
+                                    },
+                                  )
+                                : null,
+                          ),
+                          onSubmitted: (_) {
+                            _debounce?.cancel();
+                            _executeSearch();
+                          },
+                          onChanged: (_) {
+                            setState(() {}); // refresh clear button visibility
+                            _debounce?.cancel();
+                            _debounce = Timer(
+                              const Duration(milliseconds: 400),
+                              _executeSearch,
+                            );
+                          },
+                          textInputAction: TextInputAction.search,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton(
+                        icon: const Icon(Icons.tune),
+                        tooltip: loc.translate('search.advancedFilter'),
+                        onPressed: _data == null ? null : _openFilterMenu,
+                      ),
+                    ],
+                  ),
 
-            const SizedBox(height: 8),
+                  // Result count header
+                  if (_results != null && !_searching) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _allMatches.isEmpty
+                            ? loc.translate('search.noResults')
+                            : _displayedCount >= _allMatches.length
+                                ? loc
+                                    .translate('search.resultsAll')
+                                    .replaceAll('{total}', _allMatches.length.toString())
+                                : loc
+                                    .translate('search.resultsShowing')
+                                    .replaceAll('{shown}', _displayedCount.toString())
+                                    .replaceAll('{total}', _allMatches.length.toString()),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                        ),
+                      ),
+                    ),
+                  ],
 
-            // Results / placeholder
-            Expanded(
-              child: _results == null
-                  ? Center(
-                      child: _loadingData
-                          ? Column(
+                  const SizedBox(height: 8),
+
+                  // Results / placeholder
+                  Expanded(
+                    child: _loadingData
+                        ? Center(
+                            child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const CircularProgressIndicator(),
                                 const SizedBox(height: 12),
                                 Text(loc.translate('search.statusPreparing')),
                               ],
-                            )
-                          : Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.manage_search,
-                                  size: 48,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  loc.translate('search.hint'),
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  loc.translate('search.syntaxExamples'),
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                                  ),
-                                ),
-                              ],
                             ),
-                    )
-                  : _results!.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                size: 48,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                loc.translate('search.noResults'),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _results!.length,
-                          itemBuilder: (context, index) {
-                            final item = _results![index] as Map<String, dynamic>;
-                            return _buildCardTile(context, item);
-                          },
-                        ),
+                          )
+                        : _searching
+                            ? const Center(child: CircularProgressIndicator())
+                            : _results == null
+                                ? Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.manage_search,
+                                          size: 48,
+                                          color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          loc.translate('search.hint'),
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.bodyMedium?.copyWith(
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          loc.translate('search.syntaxExamples'),
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : _results!.isEmpty
+                                    ? Center(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.search_off,
+                                              size: 48,
+                                              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              loc.translate('search.noResults'),
+                                              style: theme.textTheme.bodyMedium?.copyWith(
+                                                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      )
+                                    : GridView.builder(
+                                        controller: _scrollController,
+                                        padding: EdgeInsets.zero,
+                                        gridDelegate:
+                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          // MTG card ratio ≈ 63 × 88 mm
+                                          childAspectRatio: 63 / 88,
+                                          crossAxisSpacing: 8,
+                                          mainAxisSpacing: 8,
+                                        ),
+                                        itemCount: _results!.length,
+                                        itemBuilder: (context, index) {
+                                          final item = _results![index]
+                                              as Map<String, dynamic>;
+                                          return _buildCardImageItem(
+                                              context, item);
+                                        },
+                                      ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
