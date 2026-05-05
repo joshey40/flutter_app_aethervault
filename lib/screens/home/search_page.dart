@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../services/scryfall_search_engine.dart';
 import '../../services/scryfall_service.dart';
 import '../../services/localization_service.dart';
+import 'search_syntax_page.dart';
 
 // ---------------------------------------------------------------------------
 // Advanced filter modal – separate StatefulWidget so controllers are
@@ -793,6 +794,15 @@ class _SearchPageState extends State<SearchPage> {
                         icon: const Icon(Icons.tune),
                         tooltip: loc.translate('search.advancedFilter'),
                         onPressed: _data == null ? null : _openFilterMenu,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.help_outline),
+                        tooltip: 'Search Syntax',
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SearchSyntaxPage(),
+                          ),
+                        ),
                       ),
                     ],
                   ),
