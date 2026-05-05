@@ -196,10 +196,39 @@ class ScryfallSearchEngine {
     return true;
   }
 
+  /// Returns oracle text from top-level field, falling back to concatenated
+  /// card_faces oracle texts for double-faced / adventure cards.
+  String _oracleText(Map<String, dynamic> card) {
+    final direct = card['oracle_text']?.toString() ?? '';
+    if (direct.isNotEmpty) return direct.toLowerCase();
+    final faces = card['card_faces'];
+    if (faces is List && faces.isNotEmpty) {
+      return faces
+          .map((f) => (f as Map<String, dynamic>)['oracle_text']?.toString() ?? '')
+          .join('\n')
+          .toLowerCase();
+    }
+    return '';
+  }
+
+  /// Returns type line from top-level field, falling back to card_faces.
+  String _typeLine(Map<String, dynamic> card) {
+    final direct = card['type_line']?.toString() ?? '';
+    if (direct.isNotEmpty) return direct.toLowerCase();
+    final faces = card['card_faces'];
+    if (faces is List && faces.isNotEmpty) {
+      return faces
+          .map((f) => (f as Map<String, dynamic>)['type_line']?.toString() ?? '')
+          .join('\n')
+          .toLowerCase();
+    }
+    return '';
+  }
+
   bool _matchesTerm(Map<String, dynamic> card, _SearchTerm term) {
     final name = _lowerString(card['name']);
-    final oracleText = _lowerString(card['oracle_text']);
-    final typeLine = _lowerString(card['type_line']);
+    final oracleText = _oracleText(card);
+    final typeLine = _typeLine(card);
     final setName = _lowerString(card['set_name']);
     final setCode = _lowerString(card['set']);
     final language = _lowerString(card['lang']);
@@ -457,8 +486,7 @@ class ScryfallSearchEngine {
             typeLine.contains('saga');
       case 'vanilla':
         // Creature with no oracle text (no abilities)
-        final oracleText = card['oracle_text']?.toString() ?? '';
-        return typeLine.contains('creature') && oracleText.trim().isEmpty;
+        return typeLine.contains('creature') && _oracleText(card).trim().isEmpty;
       // --- Card flags ---
       case 'reprint':
         return card['reprint'] == true;

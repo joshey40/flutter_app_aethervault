@@ -368,16 +368,10 @@ class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
 }
 
 // ---------------------------------------------------------------------------
-// Search Page – top-level isolate helpers
+// Search Page – helpers
 // ---------------------------------------------------------------------------
 
-typedef _FilterArgs = ({List<dynamic> cards, String query});
-
-List<Map<String, dynamic>> _filterCardsIsolate(_FilterArgs args) {
-  return ScryfallSearchEngine().filterCards(args.cards, args.query);
-}
-
-List<Map<String, dynamic>> _mergeBulkIsolate(List<List<dynamic>> sources) {
+List<Map<String, dynamic>> _mergeBulk(List<List<dynamic>> sources) {
   final merged = <Map<String, dynamic>>[];
   final seen = <String>{};
   for (final src in sources) {
@@ -432,7 +426,7 @@ class _SearchPageState extends State<SearchPage> {
     final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
     final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
     final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    final merged = await compute(_mergeBulkIsolate, [oracle, defaults, all]);
+    final merged = await Future(() => _mergeBulk([oracle, defaults, all]));
     if (!mounted) return;
     setState(() {
       _data = merged;
@@ -486,7 +480,7 @@ class _SearchPageState extends State<SearchPage> {
     final oracle = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ?? [];
     final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
     final all = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    final merged = await compute(_mergeBulkIsolate, [oracle, defaults, all]);
+    final merged = await Future(() => _mergeBulk([oracle, defaults, all]));
     if (!mounted) return;
     setState(() {
       _data = merged;
@@ -531,9 +525,8 @@ class _SearchPageState extends State<SearchPage> {
       _results = null;
     });
 
-    final matches = await compute(
-      _filterCardsIsolate,
-      (cards: _data!, query: q),
+    final matches = await Future(
+      () => ScryfallSearchEngine().filterCards(_data!, q),
     );
 
     if (!mounted || generation != _searchGeneration) return;
@@ -604,96 +597,77 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Result card tile
+  // Card image helpers
   // ---------------------------------------------------------------------------
 
-  Color _rarityColor(String rarity) {
-    switch (rarity) {
-      case 'mythic':
-        return const Color(0xFFE8762D);
-      case 'rare':
-        return const Color(0xFFC69C6D);
-      case 'uncommon':
-        return const Color(0xFF8EA3B5);
-      default:
-        return const Color(0xFF9E9E9E);
+  String? _getCardImageUrl(Map<String, dynamic> card) {
+    final imageUris = card['image_uris'];
+    if (imageUris is Map) {
+      return (imageUris['normal'] ?? imageUris['small'] ?? imageUris['large'])
+          ?.toString();
     }
+    // Double-faced / adventure cards store images per face
+    final faces = card['card_faces'];
+    if (faces is List && faces.isNotEmpty) {
+      final face0 = faces[0] as Map<String, dynamic>?;
+      final faceUris = face0?['image_uris'];
+      if (faceUris is Map) {
+        return (faceUris['normal'] ?? faceUris['small'] ?? faceUris['large'])
+            ?.toString();
+      }
+    }
+    return null;
   }
 
-  String _formatManaCost(String cost) {
-    return cost.replaceAll('{', '').replaceAll('}', '');
-  }
-
-  Widget _buildCardTile(BuildContext context, Map<String, dynamic> item) {
+  Widget _buildCardImageItem(BuildContext context, Map<String, dynamic> card) {
+    final imageUrl = _getCardImageUrl(card);
+    final name = card['name']?.toString() ?? '';
     final theme = Theme.of(context);
-    final name = item['name']?.toString() ?? '';
-    final typeLine = item['type_line']?.toString() ?? '';
-    final setCode = (item['set']?.toString() ?? '').toUpperCase();
-    final rarity = item['rarity']?.toString() ?? '';
-    final manaCost = item['mana_cost']?.toString() ?? '';
-    final rarityColor = _rarityColor(rarity);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            // Rarity colour bar
-            Container(
-              width: 4,
-              height: 44,
-              decoration: BoxDecoration(
-                color: rarityColor,
-                borderRadius: BorderRadius.circular(2),
+    Widget imageWidget;
+    if (imageUrl != null) {
+      imageWidget = Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (ctx, child, progress) {
+          if (progress == null) return child;
+          return Container(
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: Center(
+              child: CircularProgressIndicator(
+                value: progress.expectedTotalBytes != null
+                    ? progress.cumulativeBytesLoaded /
+                        progress.expectedTotalBytes!
+                    : null,
+                strokeWidth: 2,
               ),
             ),
-            const SizedBox(width: 12),
-            // Name + type
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    typeLine,
-                    style: theme.textTheme.bodySmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Mana cost + set code
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (manaCost.isNotEmpty)
-                  Text(
-                    _formatManaCost(manaCost),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                Text(
-                  setCode,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          );
+        },
+        errorBuilder: (ctx, _, __) => _cardPlaceholder(theme, name),
+      );
+    } else {
+      imageWidget = _cardPlaceholder(theme, name);
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: imageWidget,
+    );
+  }
+
+  Widget _cardPlaceholder(ThemeData theme, String name) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(8),
+      child: Text(
+        name,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall,
       ),
     );
   }
@@ -813,23 +787,6 @@ class _SearchPageState extends State<SearchPage> {
                           textInputAction: TextInputAction.search,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            minimumSize: const Size(72, 50),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                          ),
-                          onPressed: (_data == null || _loadingData)
-                              ? null
-                              : () {
-                                  _debounce?.cancel();
-                                  _executeSearch();
-                                },
-                          child: Text(loc.translate('search.action')),
-                        ),
-                      ),
                       const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(Icons.tune),
@@ -928,12 +885,23 @@ class _SearchPageState extends State<SearchPage> {
                                           ],
                                         ),
                                       )
-                                    : ListView.builder(
+                                    : GridView.builder(
                                         controller: _scrollController,
+                                        padding: EdgeInsets.zero,
+                                        gridDelegate:
+                                            const SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: 2,
+                                          // MTG card ratio ≈ 63 × 88 mm
+                                          childAspectRatio: 63 / 88,
+                                          crossAxisSpacing: 8,
+                                          mainAxisSpacing: 8,
+                                        ),
                                         itemCount: _results!.length,
                                         itemBuilder: (context, index) {
-                                          final item = _results![index] as Map<String, dynamic>;
-                                          return _buildCardTile(context, item);
+                                          final item = _results![index]
+                                              as Map<String, dynamic>;
+                                          return _buildCardImageItem(
+                                              context, item);
                                         },
                                       ),
                   ),
