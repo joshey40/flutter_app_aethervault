@@ -13,9 +13,15 @@ class ScryfallSearchEngine {
       return cards.cast<Map<String, dynamic>>();
     }
 
-    return cards.cast<Map<String, dynamic>>().where((card) {
+    final result = cards.cast<Map<String, dynamic>>().where((card) {
       return groups.any((group) => _matchesGroup(card, group));
     }).toList();
+    result.sort((a, b) {
+      final nameA = a['name']?.toString() ?? '';
+      final nameB = b['name']?.toString() ?? '';
+      return nameA.compareTo(nameB);
+    });
+    return result;
   }
 
   List<List<_SearchTerm>> _parseQueryGroups(String query) {
@@ -246,7 +252,9 @@ class ScryfallSearchEngine {
       case _SearchTermKind.type:
         return typeLine.contains(term.value.toLowerCase());
       case _SearchTermKind.oracleText:
-        return oracleText.contains(term.value.toLowerCase());
+        // Replace ~ with the card's name (Scryfall placeholder convention)
+        final queryText = term.value.toLowerCase().replaceAll('~', name);
+        return oracleText.contains(queryText);
       case _SearchTermKind.color:
         return _matchesColorQuery(cardColors, term.value, term.operator);
       case _SearchTermKind.colorIdentity:
