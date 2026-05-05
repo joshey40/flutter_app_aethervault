@@ -399,6 +399,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final ScryfallService _scry = ScryfallService();
+  final ScryfallSearchEngine _searchEngine = ScryfallSearchEngine();
   List<dynamic>? _data;
   List<Map<String, dynamic>> _allMatches = [];
   List<dynamic>? _results;
@@ -526,7 +527,7 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     final matches = await Future(
-      () => ScryfallSearchEngine().filterCards(_data!, q),
+      () => _searchEngine.filterCards(_data!, q),
     );
 
     if (!mounted || generation != _searchGeneration) return;

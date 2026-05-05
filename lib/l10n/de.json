@@ -77,8 +77,7 @@
     "filterLang": "Sprache (lang:)",
     "filterFormat": "Format (f:)",
     "filterIs": "is:",
-    "filterRarityAny": "Beliebige Seltenheit",
-    "action": "Suchen"
+    "filterRarityAny": "Beliebige Seltenheit"
   },
   "collection": {
     "title": "Kollektion",

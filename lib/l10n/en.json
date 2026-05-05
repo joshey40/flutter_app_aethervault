@@ -77,8 +77,7 @@
     "filterLang": "Language (lang:)",
     "filterFormat": "Format (f:)",
     "filterIs": "is:",
-    "filterRarityAny": "Any rarity",
-    "action": "Search"
+    "filterRarityAny": "Any rarity"
   },
   "collection": {
     "title": "Collection",
