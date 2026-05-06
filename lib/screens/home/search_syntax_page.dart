@@ -1,315 +1,692 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-// A long, scrollable page that reproduces the Scryfall search syntax
-// documentation text as plain Flutter widgets. The text is taken from the
-// user's attached HTML and reproduced verbatim in sections.
+import '../../services/localization_service.dart';
 
-class SearchSyntaxPage extends StatelessWidget {
-    const SearchSyntaxPage({super.key});
+// ---------------------------------------------------------------------------
+// Search Syntax Reference Page
+//
+// Displays the full Scryfall search syntax reference.
+// Features:
+//   • Filter field to search sections by title or keyword.
+//   • Table-of-contents modal bottom sheet (AppBar list icon).
+//   • Copy-to-clipboard button on every example block.
+//   • "Try this search" button that pops the page with the example query so
+//     the caller can pre-populate the search field.
+//   • SelectionArea wraps the content for cross-paragraph text selection.
+// ---------------------------------------------------------------------------
 
-    Widget _sectionTitle(BuildContext context, String text) => Padding(
-                padding: const EdgeInsets.only(top: 18.0, bottom: 6.0),
-                child: Text(text, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-            );
+class SearchSyntaxPage extends StatefulWidget {
+  const SearchSyntaxPage({super.key});
 
-    Widget _para(BuildContext context, String text) => Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: SelectableText(text, style: Theme.of(context).textTheme.bodyMedium),
-            );
+  @override
+  State<SearchSyntaxPage> createState() => _SearchSyntaxPageState();
+}
 
-    Widget _example(BuildContext context, String text) => Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(vertical: 8.0),
-                padding: const EdgeInsets.all(12.0),
-                decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(8),
-                ),
-                child: SelectableText(text, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'monospace')),
-            );
+class _SearchSyntaxPageState extends State<SearchSyntaxPage> {
+  final _scrollController = ScrollController();
+  final _filterController = TextEditingController();
+  String _filter = '';
 
-    @override
-    Widget build(BuildContext context) {
+  // Section titles — must remain in the same order as the _buildSections list.
+  static const List<String> _sectionTitles = [
+    'Colors and Color Identity',
+    'Card Types',
+    'Card Text',
+    'Mana Costs',
+    'Power, Toughness, and Loyalty',
+    'Multi-faced Cards',
+    'Spells, Permanents, and Effects',
+    'Extra Cards and Funny Cards',
+    'Rarity',
+    'Sets and Blocks',
+    'Cubes',
+    'Format Legality',
+    'USD/EUR/TIX Prices',
+    'Artist, Flavor Text and Watermark',
+    'Border, Frame, Foil & Resolution',
+    'Games, Promos, & Spotlights',
+    'Year',
+    'Tagger Tags',
+    'Reprints',
+    'Languages',
+    'Shortcuts and Nicknames',
+    'Negating Conditions',
+    'Regular Expressions',
+    'Exact Names',
+    'Using "OR"',
+    'Nesting Conditions',
+    'Display Keywords',
+  ];
+
+  late final List<GlobalKey> _sectionKeys;
+
+  @override
+  void initState() {
+    super.initState();
+    _sectionKeys = List.generate(_sectionTitles.length, (_) => GlobalKey());
+    _filterController.addListener(() {
+      setState(() => _filter = _filterController.text.toLowerCase().trim());
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _filterController.dispose();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Table of contents
+  // ---------------------------------------------------------------------------
+
+  void _showToC() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (sheetCtx) {
         final theme = Theme.of(context);
-        return Scaffold(
-            appBar: AppBar(title: const Text('Scryfall Search Reference')),
-            body: SafeArea(
-                child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                    child: SingleChildScrollView(
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text(
-                                'Scryfall includes a large set of keywords and expressions\nyou can use to find Magic: The Gathering cards',
-                                style: theme.textTheme.bodySmall,
-                            ),
-
-                            _sectionTitle(context, 'Colors and Color Identity'),
-                            _para(context, 'You can find cards that are a certain color using the c: or color: keyword,\nand cards that are a certain color identity using the id: or identity: keywords.'),
-
-                            _para(context, 'Both sets of keywords accepts full color names like blue\nor the abbreviated color letters w, u, r, b and g.'),
-
-                            _para(context, 'You can use many nicknames for color sets:\nall guild names (e.g. azorius), all shard names (e.g. bant),\nall college names (e.g., quandrix),\nall wedge names (e.g. abzan),\nand the four-color nicknames chaos, aggression, altruism, growth, artifice are supported.'),
-
-                            _para(context, 'Use c or colorless to match colorless cards, and m or multicolor to match multicolor cards.'),
-
-                            _para(context, 'You can use comparison expressions (>, <, >=, <=, and !=)\nto check against ranges of colors. You can also use numbers instead to find cards that have that many colors.'),
-
-                            _para(context, 'Find cards that have a color indicator with has:indicator.'),
-
-                            _example(context, 'c:rg'),
-                            _example(context, 'color>=uw -c:red'),
-                            _example(context, 'id<=esper t:instant'),
-                            _example(context, 'id:c t:land'),
-                            _example(context, 'c=2 is:bear'),
-
-                            _sectionTitle(context, 'Card Types'),
-                            _para(context, 'Find cards of a certain card type with the t: or type: keywords.\nYou can search for any supertype, card type, or subtype.'),
-                            _para(context, 'Using only partial words is allowed.'),
-                            _example(context, 't:merfolk t:legend'),
-                            _example(context, 't:goblin -t:creature'),
-
-                            _sectionTitle(context, 'Card Text'),
-                            _para(context, 'Use the o: or oracle: keywords to find cards that have specific\nphrases in their text box.'),
-                            _para(context, 'You can put quotes " " around text with punctuation or spaces.'),
-                            _para(context, 'You can use ~ in your text as a placeholder for the card’s name.'),
-                            _para(context, 'This keyword usually checks the current Oracle text for cards,\nso it uses the most up-to-date phrasing available.\nFor example, “dies” instead of “is put into a graveyard”.'),
-                            _para(context, 'Use the fo: or fulloracle: operator to search the full Oracle text,\nwhich includes reminder text.'),
-                            _para(context, 'You can also use keyword: or kw: to search for cards with a\nspecific keyword ability.'),
-                            _example(context, 'o:draw t:creature'),
-                            _example(context, 'o:"~ enters tapped"'),
-                            _example(context, 'kw:flying -t:creature'),
-
-                            _sectionTitle(context, 'Mana Costs'),
-                            _para(context, 'Use the m: or mana: keyword to search for cards that have\ncertain symbols in their mana costs.'),
-                            _para(context, 'This keyword uses the official text version of mana costs set\nforth in the Comprehensive Rules. For example, {G} represents a green mana.'),
-                            _para(context, 'Shorthand is allowed for symbols that aren’t split: G is the same as {G}'),
-                            _para(context, 'However, you must always wrap complex/split symbols like {2/G} in braces.'),
-                            _para(context, 'You can search for mana costs using comparison operators; a mana cost is greater than another if it includes\nall the same symbols and more, and it’s less if it includes only a subset of symbols.'),
-                            _para(context, 'You can find cards of a specific mana value with manavalue or mv,\ncomparing with a numeric expression (>, <, =, >=, <=, and !=). You can also find even or odd mana costs with manavalue:even or manavalue:odd'),
-                            _para(context, 'You can filter cards that contain hybrid mana symbols with is:hybrid\nor Phyrexian mana symbols with is:phyrexian.'),
-                            _para(context, 'You can find permanents that provide specific levels of devotion, using either single-color\nmana symbols for devotion to one color, or hybrid symbols for devotion to two, with devotion:\nor a comparison operator.'),
-                            _para(context, 'You can also find cards that produce specific types of mana, with produces:'),
-                            _example(context, 'mana:{G}{U}'),
-                            _example(context, 'm:2WW'),
-                            _example(context, 'm>3WU'),
-                            _example(context, 'm:{R/P}'),
-                            _example(context, 'c:u mv=5'),
-                            _example(context, 'devotion:{u/b}{u/b}{u/b}'),
-
-                            _sectionTitle(context, 'Power, Toughness, and Loyalty'),
-                            _para(context, 'You can use numeric expressions (>, <, =, >=, <=, and !=)\nto find cards with certain\npower, power/pow, toughness, toughness/tou,\ntotal power and toughness, pt/powtou,\nor starting loyalty, loyalty/loy.'),
-                            _para(context, 'You can compare the values with each other or with a provided number.'),
-                            _example(context, 'pow>=8'),
-                            _example(context, 'pow>tou c:w t:creature'),
-                            _example(context, 't:planeswalker loy=3'),
-
-                            _sectionTitle(context, 'Multi-faced Cards'),
-                            _para(context, 'You can find cards that have more than one face with\n is:split (split cards), is:flip (flip cards),\nis:transform (cards that transform, alias tdfc),\nis:meld (cards that meld), is:leveler (cards with Level Up),\nis:dfc (double-faced cards), and is:mdfc (modal double-faced cards).'),
-                            _para(context, 'You can find meld parts specifically with is:meldpart and their results with is:meldresult.'),
-                            _example(context, 'is:meld'),
-                            _example(context, 'is:split'),
-
-                            _sectionTitle(context, 'Spells, Permanents, and Effects'),
-                            _para(context, 'Find cards that are cast as spells with is:spell.'),
-                            _para(context, 'Find permanent cards with is:permanent, historic cards with is:historic,\ncreatures that can be in your party with is:party, creatures that are outlaws with is:outlaw,\nmodal effects with is:modal, vanilla creatures with is:vanilla,\nFrench vanilla cards with is:frenchvanilla,\n2/2/2 “bear” creatures with is:bear,\nor lands that can turn into creatures with is:manland.'),
-                            _example(context, 'c>=br is:spell f:duel'),
-                            _example(context, 'is:permanent t:rebel'),
-                            _example(context, 'is:vanilla'),
-
-                            _sectionTitle(context, 'Extra Cards and Funny Cards'),
-                            _para(context, 'Vanguard, plane, scheme, and phenomenon cards are hidden by default, as are\ncards from “memorabilia” sets. You must either search for their type\n(using the type: keyword) or a set that contains them (the set: keyword).'),
-                            _para(context, 'Un-cards, holiday cards, and other funny cards are findable with is:funny\nor mentioning their set.'),
-                            _para(context, 'You may also use include:extras to\nreveal absolutely every card when you search.'),
-                            _example(context, 'is:funny'),
-                            _example(context, 't:scheme'),
-                            _example(context, 'power include:extras'),
-
-                            _sectionTitle(context, 'Rarity'),
-                            _para(context, 'Use r: or rarity: to find cards by their print rarity.\nYou can search for common, uncommon, rare, special, mythic, and bonus.'),
-                            _para(context, 'You can also use comparison operators like < and >=.'),
-                            _para(context, 'Use new:rarity to find reprint cards printed at a new\nrarity for the first time. You can find cards that have\never been printed in a given rarity using in: (for example, in:rare to find cards that have ever been printed at rare.)'),
-                            _para(context, 'Cards new to pauper in particular can be found using is:newinpauper.'),
-                            _example(context, 'r:common t:artifact'),
-                            _example(context, 'r>=r'),
-                            _example(context, 'rarity:common e:ima new:rarity'),
-                            _example(context, 'in:rare -rarity:rare'),
-
-                            _sectionTitle(context, 'Sets and Blocks'),
-                            _para(context, 'Use s:, e:, set:, or edition: to find cards using their Magic set code.'),
-                            _para(context, 'Use cn: or number: to find cards by collector number within a set. Combine this with s: to find specific card editions. Searching by ranges with a syntax like cn>50 is also possible.'),
-                            _para(context, 'Use b: or block: to find cards in a Magic block by providing the three-letter code for any set in that block.'),
-                            _para(context, 'The in: keyword finds cards that once “passed through”\nthe given set code. For example in:lea would only match cards\nthat once appeared in Alpha.'),
-                            _para(context, 'You can search for cards based on the type of product they appear in. This includes the primary product types (st:core, st:expansion, or st:draftinnovation), as well as series of products (st:masters, st:funny, st:commander, st:duel_deck, st:from_the_vault, st:spellbook, or st:premium_deck) and more specialized types (st:alchemy, st:archenemy, st:masterpiece, st:memorabilia, st:planechase, st:promo, st:starter, st:token, st:treasure_chest, or st:vanguard.)'),
-                            _para(context, 'The in: keyword also supports these set types, so you can search for cards with no printings in a set type with a query like -in:core.'),
-                            _para(context, 'You can also search for individual cards that were sold in certain places with is:booster or is:planeswalker_deck, or specific types of promo cards with is: queries like is:league, is:buyabox, is:giftbox, is:intro_pack, is:gameday, is:prerelease, is:release, is:fnm, is:judge_gift, is:arena_league, is:player_rewards, is:media_insert, is:instore, is:convention, or is:set_promo, among others.'),
-                            _example(context, 'e:war'),
-                            _example(context, 'e:war is:booster'),
-                            _example(context, 'b:wwk'),
-                            _example(context, 'in:lea in:m15'),
-                            _example(context, 't:legendary -in:booster'),
-                            _example(context, 'is:datestamped is:prerelease'),
-
-                            _sectionTitle(context, 'Cubes'),
-                            _para(context, 'Find cards that are part of cube lists using the cube: keyword. The currently supported cubes are arena, grixis, legacy, chuck, twisted, april, protour, uncommon, modern, amaz, tinkerer, livethedream, chromatic, vintage, and apcube.'),
-                            _example(context, 'cube:vintage'),
-                            _example(context, 'cube:modern t:planeswalker'),
-
-                            _sectionTitle(context, 'Format Legality'),
-                            _para(context, 'Use the f: or format: keywords to find cards that are legal in a given format.'),
-                            _para(context, 'You can also find cards that are explicitly banned in a format with the banned: keyword and restricted with the restricted: keyword.'),
-                            _para(context, 'The current supported formats are: standard, future (Future Standard), historic, timeless, gladiator, pioneer, modern, legacy, pauper, vintage, penny (Penny Dreadful), commander, oathbreaker, standardbrawl, brawl, alchemy, paupercommander, duel (Duel Commander), oldschool (Old School 93/94), premodern, predh, and tlr (Tiny Leaders: Reborn).'),
-                            _para(context, 'You can use is:commander to find cards that can be your commander, is:brawler to find cards that can be your Brawl Commander, is:companion to find Companion cards, is:duelcommander to find cards that can be your Duel Commander, and is:oathbreaker to find cards that can be your Oathbreaker.'),
-                            _para(context, 'You can find Commander Partner cards with is:partner.'),
-                            _para(context, 'Cards that are Commander Gamechangers can be found using is:gamechanger.'),
-                            _para(context, 'You can find cards on the Reserved List with is:reserved.'),
-                            _example(context, 'c:g t:creature f:pauper'),
-                            _example(context, 'banned:legacy'),
-                            _example(context, 'is:commander'),
-                            _example(context, 'is:reserved'),
-
-                            _sectionTitle(context, 'USD/EUR/TIX prices'),
-                            _para(context, 'You can find prints within certain usd, eur, tix price ranges by comparing them with a numeric expression (>, <, =, >=, <=, and !=).'),
-                            _para(context, 'You can find the cheapest print of each card with cheapest:usd, cheapest:eur, and cheapest:tix.'),
-                            _example(context, 'tix>15.00'),
-                            _example(context, 'usd>=0.50 e:ema'),
-
-                            _sectionTitle(context, 'Artist, Flavor Text and Watermark'),
-                            _para(context, 'Search for cards illustrated by a certain artist with the a:, or artist: keywords. And you can search for cards with more than one artist using artists>1.'),
-                            _para(context, 'Search for words in a card’s flavor text using the ft: or flavor: keywords.'),
-                            _para(context, 'Search for a card’s affiliation watermark using the wm: or watermark: keywords, or match all cards with watermarks using has:watermark.'),
-                            _para(context, 'For any of these, you can wrap statements with spaces or punctuation in quotes " ".'),
-                            _para(context, 'You can find cards being printed with new illustrations using new:art, being illustrated by a particular artist for the first time with new:artist, and with brand-new flavor text using new:flavor.'),
-                            _para(context, 'You can compare how many different illustrations a give card has with things like illustrations>1.'),
-                            _example(context, 'a:"proce"'),
-                            _example(context, 'ft:mishra'),
-                            _example(context, 'ft:designed e:m15'),
-                            _example(context, 'wm:orzhov'),
-                            _example(context, 'e:m10 new:art is:reprint'),
-                            _example(context, 'new:art -new:artist st:masters game:paper'),
-                            _example(context, 'new:flavor e:m15 is:reprint'),
-
-                            _sectionTitle(context, 'Border, Frame, Foil & Resolution'),
-                            _para(context, 'Use the border: keyword to find cards with a black, white, silver, or borderless border.'),
-                            _para(context, 'You can find cards with a specific frame edition using frame:1993, frame:1997, frame:2003, frame:2015, and frame:future. You can also search for particular frame-effects, such as frame:legendary, frame:colorshifted, frame:tombstone, frame:enchantment.'),
-                            _para(context, 'You can find cards with full art using is:full.'),
-                            _para(context, 'new:frame will find cards printed in a specific frame for the first time.'),
-                            _para(context, 'Each card is available in non-foil, in foil, or in both. You can find prints available in each with is:nonfoil and is:foil, or is:foil is:nonfoil to find prints (like most booster cards) available in both. You can also find cards available in etched foil and glossy finishes with is:etched and is:glossy.'),
-                            _para(context, 'You can find cards in our database with high-resolution images using is:hires.'),
-                            _para(context, 'Search for a card’s security stamp with stamp:oval, stamp:acorn, stamp:triangle, or stamp:arena'),
-                            _para(context, 'You can search for or exclude Universes Beyond cards with is:universesbeyond or not:universesbeyond. You can search for cards with the default Magic frame with is:default, or for atypical frame treatments with is:atypical.'),
-                            _example(context, 'border:white t:creature'),
-                            _example(context, 'is:new r:mythic'),
-                            _example(context, 'is:old t:artifact'),
-                            _example(context, 'is:hires'),
-                            _example(context, 'is:foil e:c16'),
-                            _example(context, 'frame:2003 new:frame in:fut is:reprint'),
-
-                            _sectionTitle(context, 'Games, Promos, & Spotlights'),
-                            _para(context, 'You can find specific prints available in different Magic game environments with the game: keyword. The games paper, mtgo, and arena are supported.'),
-                            _para(context, 'You can filter by a card’s availability in a game with the in: keyword. The games paper, mtgo, and arena are supported.'),
-                            _para(context, 'Find prints that are only available digitally (MTGO and Arena) with is:digital.'),
-                            _para(context, 'You can find Arena Alchemy cards with is:alchemy, and Arena Rebalanced cards with is:rebalanced.'),
-                            _para(context, 'Find promotional cards (in any environment) with is:promo.'),
-                            _para(context, 'Find cards that are Story Spotlights with is:spotlight.'),
-                            _para(context, 'Find cards that Scryfall has had the honor of previewing with is:scryfallpreview.'),
-                            _example(context, 'game:arena'),
-                            _example(context, '-in:mtgo f:legacy'),
-                            _example(context, 'is:promo'),
-                            _example(context, 'is:spotlight'),
-                            _example(context, 'is:scryfallpreview'),
-
-                            _sectionTitle(context, 'Year'),
-                            _para(context, 'You can use numeric expressions (>, <, =, >=, <=, and !=)\nto find cards that were released relative to a certain year or a yyyy-mm-dd date.\nYou can also use any set code to stand in for the set’s release date, or use now/today to stand in for today’s date.'),
-                            _example(context, 'year<=1994'),
-                            _example(context, 'year=2026'),
-                            _example(context, 'date>=2015-08-18'),
-                            _example(context, 'date>ori'),
-                            _example(context, 'date>now'),
-
-                            _sectionTitle(context, 'Tagger Tags'),
-                            _para(context, 'You can use art:, atag:, or arttag: to find things in a card’s illustration.'),
-                            _para(context, 'You can use function:, otag:, or oracletag: to find “Oracle” tags which\ndescribe the function of the card.'),
-                            _para(context, 'Data for these two features comes from the Tagger project.'),
-                            _example(context, 'art:squirrel'),
-                            _example(context, 'function:removal'),
-
-                            _sectionTitle(context, 'Reprints'),
-                            _para(context, 'You can find reprints with is:reprint, cards that were new in their set with not:reprint, and cards that have only been in a single set with is:unique.'),
-                            _para(context, 'You can also compare the number of times a card has been printed with syntax like prints=1, or the number of sets a card has been in with sets=1.'),
-                            _example(context, 'e:c16 not:reprint'),
-                            _example(context, 'e:ktk is:unique'),
-                            _example(context, 'sets>=20'),
-                            _example(context, 'e:arn papersets=1'),
-
-                            _sectionTitle(context, 'Languages'),
-                            _para(context, 'You can request cards in certain languages with the lang:/language: keywords.'),
-                            _para(context, 'You can widen your search to any language with the special lang:any keyword.'),
-                            _para(context, 'You can also find the first printing of a card in each language using new:language and all printings of a card that’s been printed in a language at least once with in: (e.g. in:ru will find cards that have ever been printed in Russian.)'),
-                            _example(context, 'lang:japanese'),
-                            _example(context, 'lang:any t:planeswalker unique:prints'),
-                            _example(context, 'lang:ko new:language t:goblin'),
-                            _example(context, 'in:ru in:zhs'),
-
-                            _sectionTitle(context, 'Shortcuts and Nicknames'),
-                            _para(context, 'The search system includes a few convenience shortcuts for common card sets:'),
-                            _para(context, 'You can find all Masterpiece Series cards with is:masterpiece'),
-                            _example(context, 'is:dual'),
-                            _example(context, 'is:fetchland'),
-                            _example(context, 'is:colorshifted'),
-
-                            _sectionTitle(context, 'Negating Conditions'),
-                            _para(context, 'All keywords except for include can be negated by prefixing them with a hyphen (-). This inverts the meaning of the keyword to reject cards that matched what you’ve searched for.'),
-                            _para(context, 'The is: keyword has a convenient inverted mode not: which is the same as -is:. Conversely, -not: is the same as is:.'),
-                            _example(context, '-fire c:r t:instant'),
-                            _example(context, 'o:changeling -t:creature'),
-                            _example(context, 'not:reprint e:c16'),
-
-                            _sectionTitle(context, 'Regular Expressions'),
-                            _para(context, 'You can use forward slashes `//` instead of quotes with the `type:`, `t:`, `oracle:`, `o:`, `flavor:`, `ft:`, and `name:` keywords to match those parts of a card with a regular expression.'),
-                            _para(context, r'Scryfall supports many regex features such as `.*?`, option groups `(a|b)`, brackets `[ab]`, character classes \d, \w, and anchors (?!), \b, ^, and $.'),
-                            _para(context, r'Forward slashes inside your regex must be escaped with `\/`.'),
-                            _para(context, r'Full documentation for this keyword is available on our Regular Expressions help page.'),
-                            _example(context, 't:creature o:/^{T}:/'),
-                            _example(context, 't:instant o:/\\spp/'),
-                            _example(context, 'name:/\\bizzet\\b/'),
-
-                            _sectionTitle(context, 'Exact Names'),
-                            _para(context, 'If you prefix words or quoted phrases with `!` you will find cards with that exact name only.'),
-                            _para(context, 'This is still case-insensitive.'),
-                            _example(context, '!fire'),
-                            _example(context, '!"sift through sands"'),
-
-                            _sectionTitle(context, 'Using "OR"'),
-                            _para(context, 'By default every search term you enter is combined. All of them must match to\nfind a card.'),
-                            _para(context, 'If you want to search over a set of options or choices, you can put the special word `or`/`OR` between terms.'),
-                            _example(context, 't:fish or t:bird'),
-                            _example(context, 't:land (a:titus or a:avon)'),
-
-                            _sectionTitle(context, 'Nesting Conditions'),
-                            _para(context, 'You may nest conditions inside parentheses `( )` to group them together. This is most useful when combined with the `OR` keyword.'),
-                            _para(context, 'Remember that terms that are not separated by `OR` are still combined.'),
-                            _example(context, 't:legendary (t:goblin or t:elf)'),
-                            _example(context, 'through (depths or sands or mists)'),
-
-                            _sectionTitle(context, 'Display Keywords'),
-                            _para(context, 'You can enter your display options for searches as keywords rather than using the controls on the page.'),
-                            _para(context, 'Select how duplicate results are eliminated with `unique:cards`, `unique:prints` (previously `++`), or `unique:art` (also `@@`).'),
-                            _para(context, 'Change how results are shown with `display:grid`, `display:checklist`, `display:full`, or `display:text`.'),
-                            _para(context, 'Change how results are sorted with `order:artist`, `order:cmc`, `order:power`, `order:toughness`, `order:set`, `order:name`, `order:usd`, `order:tix`, `order:eur`, `order:rarity`, `order:color`, `order:released`, `order:spoiled`, `order:edhrec`, `order:penny`, or `order:review`.'),
-                            _para(context, 'Select what printings of cards to preferentially show with `prefer:oldest`, `prefer:newest`, `prefer:usd-low` or `prefer:usd-high` (and the equivalents for `tix` and `eur`), `prefer:promo` (promos), `prefer:default` (default Magic frame), `prefer:atypical` (atypical Magic frames), `prefer:universesbeyond` / `prefer:ub` (Universes Beyond prints), or `prefer:notuniversesbeyond` / `prefer:notub` (non-Universes Beyond prints).'),
-                            _para(context, 'Change the order of the sorted data with `direction:asc` or `direction:desc`.'),
-                            _example(context, '!"Lightning Bolt" unique:prints'),
-                            _example(context, 't:forest a:avon unique:art'),
-                            _example(context, 'f:modern order:rarity direction:asc'),
-                            _example(context, 't:human display:text'),
-                            _example(context, 'in:leb game:paper prefer:newest'),
-                            _example(context, 'year=2025 prefer:atypical'),
-
-                            const SizedBox(height: 24),
-                        ]),
-                    ),
+        final visible = <int>[
+          for (var i = 0; i < _sectionTitles.length; i++)
+            if (_filter.isEmpty ||
+                _sectionTitles[i].toLowerCase().contains(_filter))
+              i,
+        ];
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          maxChildSize: 0.9,
+          minChildSize: 0.3,
+          expand: false,
+          builder: (_, sheetScroll) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Text(
+                  appLocalizations.translate('search.tocTitle'),
+                  style: theme.textTheme.titleMedium,
                 ),
-            ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: ListView.builder(
+                  controller: sheetScroll,
+                  itemCount: visible.length,
+                  itemBuilder: (_, i) {
+                    final idx = visible[i];
+                    return ListTile(
+                      dense: true,
+                      title: Text(_sectionTitles[idx]),
+                      onTap: () {
+                        Navigator.of(sheetCtx).pop();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final ctx = _sectionKeys[idx].currentContext;
+                          if (ctx != null) {
+                            Scrollable.ensureVisible(
+                              ctx,
+                              duration: const Duration(milliseconds: 400),
+                              curve: Curves.easeInOut,
+                            );
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Widget helpers
+  // ---------------------------------------------------------------------------
+
+  /// Wraps a group of content widgets into a named section.
+  /// The section is hidden when [_filter] is non-empty and does not match
+  /// [title] (case-insensitive).
+  Widget _section(int index, String title, List<Widget> children) {
+    if (_filter.isNotEmpty && !title.toLowerCase().contains(_filter)) {
+      return const SizedBox.shrink();
     }
+    return KeyedSubtree(
+      key: _sectionKeys[index],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(height: 28),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _para(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+      );
+
+  Widget _example(String text) {
+    final theme = Theme.of(context);
+    final loc = appLocalizations;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                text,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.copy_outlined, size: 17),
+            tooltip: loc.translate('search.copiedToClipboard'),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: text));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(loc.translate('search.copiedToClipboard')),
+                  duration: const Duration(seconds: 1),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search, size: 17),
+            tooltip: loc.translate('search.tryThisSearch'),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+            onPressed: () => Navigator.of(context).pop(text),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final loc = appLocalizations;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Scryfall Search Reference'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt_outlined),
+            tooltip: loc.translate('search.tocTitle'),
+            onPressed: _showToC,
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: SelectionArea(
+          child: Column(
+            children: [
+              // ---- Filter field ----
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: TextField(
+                  controller: _filterController,
+                  decoration: InputDecoration(
+                    hintText: loc.translate('search.syntaxFilterHint'),
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _filter.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: _filterController.clear,
+                          )
+                        : null,
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ),
+
+              // ---- Content ----
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Introductory hero card (only shown without a filter)
+                        if (_filter.isEmpty)
+                          Card(
+                            margin:
+                                const EdgeInsets.only(top: 4, bottom: 4),
+                            child: ListTile(
+                              leading: Icon(Icons.info_outline,
+                                  color: theme.colorScheme.primary),
+                              title: const Text('Scryfall Search Reference'),
+                              subtitle: const Text(
+                                'These keywords are supported by the local offline '
+                                'search engine. Tap the search icon on any example '
+                                'to try it immediately.',
+                              ),
+                              isThreeLine: true,
+                            ),
+                          ),
+
+                        // ---- 0: Colors and Color Identity ----
+                        _section(0, _sectionTitles[0], [
+                          _para(
+                              'Find cards of a certain color with c: or color:, '
+                              'and a certain color identity with id: or identity:.'),
+                          _para(
+                              'Accepts full color names (blue) or letters (w u b r g). '
+                              'Nicknames for guilds (azorius), shards (bant), wedges (abzan), '
+                              'colleges (quandrix), and four-color groups (chaos) are all supported.'),
+                          _para(
+                              'Use colorless / c for colorless cards, and multicolor / m for multi-color cards. '
+                              'Comparison operators (>, <, >=, <=, !=) and numeric counts (c=2) are supported.'),
+                          _example('c:rg'),
+                          _example('color>=uw -c:red'),
+                          _example('id<=esper t:instant'),
+                          _example('c=2 is:bear'),
+                          _example('id:c t:land'),
+                        ]),
+
+                        // ---- 1: Card Types ----
+                        _section(1, _sectionTitles[1], [
+                          _para(
+                              'Find cards of a certain type with t: or type:. '
+                              'Searches supertypes, card types, and subtypes. Partial words are allowed.'),
+                          _example('t:merfolk t:legend'),
+                          _example('t:goblin -t:creature'),
+                        ]),
+
+                        // ---- 2: Card Text ----
+                        _section(2, _sectionTitles[2], [
+                          _para(
+                              'Use o: or oracle: to find cards with specific phrases in their text box. '
+                              'Wrap multi-word phrases in quotes.'),
+                          _para(
+                              'Use ~ as a placeholder for the card\'s own name. '
+                              'fo: / fulloracle: also searches reminder text inside parentheses.'),
+                          _para('Use kw: or keyword: to search for keyword abilities.'),
+                          _example('o:draw t:creature'),
+                          _example('o:"~ enters tapped"'),
+                          _example('fo:reminder kw:flying'),
+                          _example('kw:flying -t:creature'),
+                        ]),
+
+                        // ---- 3: Mana Costs ----
+                        _section(3, _sectionTitles[3], [
+                          _para(
+                              'Use m: or mana: to search for cards with certain symbols in their mana cost. '
+                              'Shorthand like G is allowed; complex symbols like {2/G} must be in braces.'),
+                          _para(
+                              'Comparison operators apply set-subset logic: m>=WU finds cards whose cost '
+                              'is a superset of {W}{U}.'),
+                          _para(
+                              'Use mv: or manavalue: (or cmc:) to find cards by mana value. '
+                              'manavalue:even and manavalue:odd are also supported.'),
+                          _para(
+                              'is:hybrid and is:phyrexian filter by mana symbol type.'),
+                          _example('mana:{G}{U}'),
+                          _example('m:2WW'),
+                          _example('m>{R}'),
+                          _example('c:u mv=5'),
+                          _example('mv<=2 is:instant'),
+                          _example('manavalue:even c:r'),
+                        ]),
+
+                        // ---- 4: Power, Toughness, and Loyalty ----
+                        _section(4, _sectionTitles[4], [
+                          _para(
+                              'Use pow: / power:, tou: / toughness:, loy: / loyalty:, or pt: / powtou: '
+                              'with numeric expressions (>, <, =, >=, <=, !=) or the wildcard * for variable stats.'),
+                          _para(
+                              'Cross-field comparisons are supported: pow>tou finds creatures '
+                              'whose power exceeds their toughness.'),
+                          _example('pow>=8'),
+                          _example('pow>tou c:w t:creature'),
+                          _example('pow=* t:creature'),
+                          _example('t:planeswalker loy=3'),
+                          _example('pt>=10'),
+                        ]),
+
+                        // ---- 5: Multi-faced Cards ----
+                        _section(5, _sectionTitles[5], [
+                          _para(
+                              'is:split · is:flip · is:transform (alias tdfc) · is:meld · '
+                              'is:leveler · is:dfc (all double-faced) · is:mdfc (modal double-faced).'),
+                          _para(
+                              'is:meldpart and is:meldresult distinguish the parts from the result.'),
+                          _example('is:meld'),
+                          _example('is:mdfc c:u'),
+                          _example('is:transform t:land'),
+                        ]),
+
+                        // ---- 6: Spells, Permanents, and Effects ----
+                        _section(6, _sectionTitles[6], [
+                          _para(
+                              'is:spell · is:permanent · is:historic · is:party · is:outlaw · '
+                              'is:modal · is:vanilla · is:frenchvanilla · is:bear · is:manland.'),
+                          _example('c>=br is:spell f:duel'),
+                          _example('is:permanent t:rebel'),
+                          _example('is:vanilla'),
+                          _example('is:bear c:g'),
+                        ]),
+
+                        // ---- 7: Extra Cards and Funny Cards ----
+                        _section(7, _sectionTitles[7], [
+                          _para(
+                              'Vanguard, plane, scheme, and phenomenon cards are hidden by default. '
+                              'Search by type or set to find them.'),
+                          _para(
+                              'Un-cards and holiday cards: is:funny. '
+                              'include:extras reveals all cards.'),
+                          _example('is:funny'),
+                          _example('t:scheme'),
+                          _example('power include:extras'),
+                        ]),
+
+                        // ---- 8: Rarity ----
+                        _section(8, _sectionTitles[8], [
+                          _para(
+                              'Use r: or rarity: to search for common, uncommon, rare, mythic. '
+                              'Comparison operators (r>=uncommon) are supported.'),
+                          _para(
+                              'new:rarity finds reprints at a new rarity. '
+                              'in:rare finds cards ever printed at rare.'),
+                          _example('r:common t:artifact'),
+                          _example('r>=rare c:u'),
+                          _example('rarity:common e:ima new:rarity'),
+                          _example('in:rare -rarity:rare'),
+                        ]),
+
+                        // ---- 9: Sets and Blocks ----
+                        _section(9, _sectionTitles[9], [
+                          _para(
+                              'Use s:, e:, set:, or edition: with a Magic set code.'),
+                          _para(
+                              'cn: or number: for collector number within a set; ranges supported (cn>50).'),
+                          _para(
+                              'b: or block: for all sets within a block (uses the three-letter set code). '
+                              'Note: block search is not supported in offline mode.'),
+                          _para(
+                              'st: or settype: for product type: core, expansion, masters, commander, etc.'),
+                          _para(
+                              'in: checks whether a card has ever appeared in a given set code or set type.'),
+                          _example('e:war'),
+                          _example('s:m21 is:booster'),
+                          _example('st:masters r:mythic'),
+                          _example('in:lea in:m15'),
+                          _example('t:legendary -in:booster'),
+                          _example('cn<=50 e:war'),
+                        ]),
+
+                        // ---- 10: Cubes ----
+                        _section(10, _sectionTitles[10], [
+                          _para(
+                              'cube: finds cards in named cube lists (vintage, legacy, modern, etc.). '
+                              'Note: cube data requires the Scryfall API; not available offline.'),
+                          _example('cube:vintage'),
+                          _example('cube:modern t:planeswalker'),
+                        ]),
+
+                        // ---- 11: Format Legality ----
+                        _section(11, _sectionTitles[11], [
+                          _para(
+                              'f: or format: finds cards legal in a format. '
+                              'banned: and restricted: find banned/restricted cards.'),
+                          _para(
+                              'Supported formats: standard, future, historic, timeless, gladiator, pioneer, '
+                              'modern, legacy, pauper, vintage, penny, commander, oathbreaker, '
+                              'standardbrawl, brawl, alchemy, paupercommander, duel, oldschool, premodern.'),
+                          _para(
+                              'is:commander · is:brawler · is:companion · is:partner · is:reserved · is:gamechanger'),
+                          _example('c:g t:creature f:pauper'),
+                          _example('banned:legacy'),
+                          _example('restricted:vintage'),
+                          _example('is:commander c:w'),
+                          _example('is:reserved'),
+                        ]),
+
+                        // ---- 12: USD/EUR/TIX Prices ----
+                        _section(12, _sectionTitles[12], [
+                          _para(
+                              'Compare card prices with usd:, eur:, tix: and a numeric expression.'),
+                          _para(
+                              'cheapest:usd/eur/tix finds the cheapest print per card '
+                              '(requires Scryfall API; not available offline).'),
+                          _example('usd<0.10 r:rare'),
+                          _example('tix>15.00'),
+                          _example('usd>=0.50 e:ema'),
+                        ]),
+
+                        // ---- 13: Artist, Flavor Text and Watermark ----
+                        _section(13, _sectionTitles[13], [
+                          _para(
+                              'a:, art:, or artist: searches the illustrator\'s name. '
+                              'ft: or flavor: searches flavor text. '
+                              'wm: or watermark: searches card watermarks.'),
+                          _para(
+                              'has:watermark, has:flavortext, has:artist match cards with those fields present.'),
+                          _para(
+                              'new:art, new:artist, new:flavor find new illustrations, new artists, or new flavor text.'),
+                          _example('a:"proce"'),
+                          _example('ft:mishra'),
+                          _example('wm:orzhov'),
+                          _example('e:m10 new:art is:reprint'),
+                        ]),
+
+                        // ---- 14: Border, Frame, Foil & Resolution ----
+                        _section(14, _sectionTitles[14], [
+                          _para(
+                              'border: accepts black, white, silver, or borderless.'),
+                          _para(
+                              'frame: accepts 1993, 1997, 2003, 2015, future, or frame effects '
+                              'like legendary, colorshifted, tombstone, enchantment.'),
+                          _para(
+                              'is:full / is:fullart — full-art cards. '
+                              'is:nonfoil / is:foil / is:etched / is:glossy — finish types. '
+                              'is:hires — high-resolution image available. '
+                              'stamp: accepts oval, acorn, triangle, arena.'),
+                          _para(
+                              'is:universesbeyond / not:universesbeyond · is:old · is:new · is:colorshifted'),
+                          _example('border:white t:creature'),
+                          _example('is:old r:mythic'),
+                          _example('is:foil e:c16'),
+                          _example('frame:colorshifted'),
+                          _example('is:hires is:universesbeyond'),
+                        ]),
+
+                        // ---- 15: Games, Promos, & Spotlights ----
+                        _section(15, _sectionTitles[15], [
+                          _para(
+                              'game: / in: accept paper, mtgo, or arena.'),
+                          _para(
+                              'is:digital — digital-only. '
+                              'is:alchemy / is:rebalanced — Arena Alchemy cards. '
+                              'is:promo — promotional prints. '
+                              'is:spotlight — Story Spotlight cards. '
+                              'is:scryfallpreview — Scryfall-previewed cards.'),
+                          _example('game:arena'),
+                          _example('-in:mtgo f:legacy'),
+                          _example('is:promo e:war'),
+                          _example('is:spotlight'),
+                        ]),
+
+                        // ---- 16: Year ----
+                        _section(16, _sectionTitles[16], [
+                          _para(
+                              'year: compares by release year. '
+                              'date: compares by full ISO date (yyyy-mm-dd), '
+                              'accepts a set code as a date shorthand, and now/today for today.'),
+                          _example('year<=1994'),
+                          _example('year=2026'),
+                          _example('date>=2015-08-18'),
+                          _example('date>ori'),
+                          _example('date<=now'),
+                        ]),
+
+                        // ---- 17: Tagger Tags ----
+                        _section(17, _sectionTitles[17], [
+                          _para(
+                              'art: / atag: / arttag: search illustration tags. '
+                              'function: / otag: / oracletag: search Oracle function tags. '
+                              'These require the Scryfall API and are not available offline.'),
+                          _example('art:squirrel'),
+                          _example('function:removal'),
+                        ]),
+
+                        // ---- 18: Reprints ----
+                        _section(18, _sectionTitles[18], [
+                          _para(
+                              'is:reprint — card has been printed before. '
+                              'not:reprint — new in this set. '
+                              'is:unique — only one printing ever.'),
+                          _para(
+                              'prints= and sets= compare print/set counts. '
+                              'These require Scryfall API data not available offline.'),
+                          _example('e:c16 not:reprint'),
+                          _example('e:ktk is:unique'),
+                        ]),
+
+                        // ---- 19: Languages ----
+                        _section(19, _sectionTitles[19], [
+                          _para(
+                              'lang: / language: finds cards in a specific language (en, de, fr, it, '
+                              'es, pt, ja, ko, ru, zhs, zht, he, la, grc, ar, sa, ph). '
+                              'lang:any matches any language.'),
+                          _para(
+                              'new:language finds the first printing in each language. '
+                              'in: finds cards ever printed in a language.'),
+                          _example('lang:japanese'),
+                          _example('lang:any t:planeswalker unique:prints'),
+                          _example('lang:ko new:language t:goblin'),
+                          _example('in:ru in:zhs'),
+                        ]),
+
+                        // ---- 20: Shortcuts and Nicknames ----
+                        _section(20, _sectionTitles[20], [
+                          _para(
+                              'Convenience shortcuts for well-known card groups:'),
+                          _example('is:dual'),
+                          _example('is:fetchland'),
+                          _example('is:masterpiece'),
+                          _example('is:colorshifted'),
+                        ]),
+
+                        // ---- 21: Negating Conditions ----
+                        _section(21, _sectionTitles[21], [
+                          _para(
+                              'Prefix any keyword with - to negate it. '
+                              'not: is an alias for -is: (and vice versa).'),
+                          _example('-fire c:r t:instant'),
+                          _example('o:changeling -t:creature'),
+                          _example('not:reprint e:c16'),
+                        ]),
+
+                        // ---- 22: Regular Expressions ----
+                        _section(22, _sectionTitles[22], [
+                          _para(
+                              'Wrap a value in /…/ to use it as a regular expression with '
+                              't:, o:, fo:, ft:, and name:. '
+                              r'Supports .*?, (a|b), [ab], \d, \w, ^, $, \b, and (?!).'),
+                          _para(r'Escape forward slashes inside the pattern with \/.'),
+                          _example('t:creature o:/^{T}:/'),
+                          _example(r't:instant o:/\spp/'),
+                          _example(r'name:/\bizzet\b/'),
+                        ]),
+
+                        // ---- 23: Exact Names ----
+                        _section(23, _sectionTitles[23], [
+                          _para(
+                              'Prefix a word or quoted phrase with ! to match the exact card name. '
+                              'Case-insensitive.'),
+                          _example('!fire'),
+                          _example('!"sift through sands"'),
+                        ]),
+
+                        // ---- 24: Using "OR" ----
+                        _section(24, _sectionTitles[24], [
+                          _para(
+                              'By default all terms are ANDed. '
+                              'Put OR between terms to search over a set of alternatives.'),
+                          _example('t:fish or t:bird'),
+                          _example('t:land (a:titus or a:avon)'),
+                        ]),
+
+                        // ---- 25: Nesting Conditions ----
+                        _section(25, _sectionTitles[25], [
+                          _para(
+                              'Use ( ) to group terms. Most useful with OR.'),
+                          _example('t:legendary (t:goblin or t:elf)'),
+                          _example('through (depths or sands or mists)'),
+                        ]),
+
+                        // ---- 26: Display Keywords ----
+                        _section(26, _sectionTitles[26], [
+                          _para(
+                              'These keywords control how results are displayed and sorted; '
+                              'they do not filter cards.'),
+                          _para(
+                              'unique:cards (default) · unique:prints · unique:art — '
+                              'deduplication mode.'),
+                          _para(
+                              'order:name · order:cmc · order:color · order:rarity · '
+                              'order:power · order:toughness · order:set · order:artist · '
+                              'order:usd · order:eur · order:tix · order:released — sort field.'),
+                          _para(
+                              'direction:asc (default) · direction:desc — sort direction.'),
+                          _example('!"Lightning Bolt" unique:prints'),
+                          _example('t:forest a:avon unique:art'),
+                          _example('f:modern order:rarity direction:asc'),
+                        ]),
+
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
