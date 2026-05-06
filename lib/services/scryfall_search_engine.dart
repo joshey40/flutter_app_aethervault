@@ -60,7 +60,8 @@ class ScryfallSearchEngine {
           case _SearchTermKind.directionDisplay:
             directionMode = term.value.toLowerCase();
           case _SearchTermKind.metaIgnored:
-            break; // prefer:, include:, new:, cube:, block: – silently ignored
+          case _SearchTermKind.unsupportedOffline:
+            break; // silently ignored
           default:
             filterTerms.add(term);
         }
@@ -296,10 +297,6 @@ class ScryfallSearchEngine {
       case 'cn':
       case 'number':
         return _SearchTermKind.collectorNumber;
-      // --- Block (limited support) ---
-      case 'b':
-      case 'block':
-        return _SearchTermKind.metaIgnored; // block_code absent from card bulk data
       // --- In (set/game/set-type appearance) ---
       case 'in':
         return _SearchTermKind.inKeyword;
@@ -367,9 +364,15 @@ class ScryfallSearchEngine {
         return _SearchTermKind.orderDisplay;
       case 'direction':
         return _SearchTermKind.directionDisplay;
-      // --- Meta keywords parsed but not applied locally ---
+      // --- Display-only meta keywords (no filtering intent) ---
       case 'prefer':
       case 'include':
+        return _SearchTermKind.metaIgnored;
+      // --- Keywords that would filter cards but require data not present
+      //     in the local bulk export.  They silently pass all cards locally
+      //     but are surfaced as warnings via analyzeQuery(). ---
+      case 'b':
+      case 'block':
       case 'new':
       case 'cube':
       case 'devotion':
@@ -383,7 +386,7 @@ class ScryfallSearchEngine {
       case 'illustrations':
       case 'prints':
       case 'sets':
-        return _SearchTermKind.metaIgnored;
+        return _SearchTermKind.unsupportedOffline;
       default:
         return _SearchTermKind.looseText;
     }
@@ -581,23 +584,30 @@ class ScryfallSearchEngine {
       // Name
       // -----------------------------------------------------------------------
       case _SearchTermKind.exactName:
-        return name == term.value.toLowerCase();
+        return _normalizeForCompare(name) ==
+            _normalizeForCompare(term.value.toLowerCase());
       case _SearchTermKind.name:
+        if (_isRegexValue(term.value)) return _matchesRegex(name, term.value);
         return name.contains(term.value.toLowerCase());
 
       // -----------------------------------------------------------------------
       // Type
       // -----------------------------------------------------------------------
       case _SearchTermKind.type:
+        if (_isRegexValue(term.value)) return _matchesRegex(typeLine, term.value);
         return typeLine.contains(term.value.toLowerCase());
 
       // -----------------------------------------------------------------------
       // Oracle text
       // -----------------------------------------------------------------------
       case _SearchTermKind.oracleText:
+        if (_isRegexValue(term.value)) return _matchesRegex(oracleText, term.value);
         return oracleText
             .contains(term.value.toLowerCase().replaceAll('~', name));
       case _SearchTermKind.fullOracleText:
+        if (_isRegexValue(term.value)) {
+          return _matchesRegex(_fullOracleText(card), term.value);
+        }
         return _fullOracleText(card)
             .contains(term.value.toLowerCase().replaceAll('~', name));
 
@@ -635,9 +645,27 @@ class ScryfallSearchEngine {
       // Power / toughness / loyalty / combined pt
       // -----------------------------------------------------------------------
       case _SearchTermKind.power:
+        {
+          final qv = term.value.toLowerCase();
+          if (qv == 'tou' || qv == 'toughness') {
+            final p = double.tryParse(card['power']?.toString().trim() ?? '');
+            final t = double.tryParse(card['toughness']?.toString().trim() ?? '');
+            if (p == null || t == null) return false;
+            return _compareDoubles(p, t, term.operator);
+          }
+        }
         return _matchesPowerToughness(
             card['power'], term.value, term.operator);
       case _SearchTermKind.toughness:
+        {
+          final qv = term.value.toLowerCase();
+          if (qv == 'pow' || qv == 'power') {
+            final p = double.tryParse(card['power']?.toString().trim() ?? '');
+            final t = double.tryParse(card['toughness']?.toString().trim() ?? '');
+            if (p == null || t == null) return false;
+            return _compareDoubles(t, p, term.operator);
+          }
+        }
         return _matchesPowerToughness(
             card['toughness'], term.value, term.operator);
       case _SearchTermKind.loyalty:
@@ -707,6 +735,9 @@ class ScryfallSearchEngine {
         return _lowerString(card['artist'])
             .contains(term.value.toLowerCase());
       case _SearchTermKind.flavorText:
+        if (_isRegexValue(term.value)) {
+          return _matchesRegex(_lowerString(card['flavor_text']), term.value);
+        }
         return _lowerString(card['flavor_text'])
             .contains(term.value.toLowerCase());
       case _SearchTermKind.keyword:
@@ -761,6 +792,7 @@ class ScryfallSearchEngine {
             keywords.any((kw) => kw.contains(loose));
 
       case _SearchTermKind.metaIgnored:
+      case _SearchTermKind.unsupportedOffline:
       case _SearchTermKind.uniqueDisplay:
       case _SearchTermKind.orderDisplay:
       case _SearchTermKind.directionDisplay:
@@ -1579,6 +1611,105 @@ class ScryfallSearchEngine {
     }
     return sanitized;
   }
+
+  // =========================================================================
+  // Regex value helpers
+  // =========================================================================
+
+  /// Returns true when [value] is delimited by forward slashes: /pattern/
+  bool _isRegexValue(String value) {
+    return value.length >= 2 &&
+        value.startsWith('/') &&
+        value.endsWith('/');
+  }
+
+  /// Applies the regex contained inside [regexValue] (e.g. "/^foo/") to
+  /// [text].  Returns false on invalid patterns.
+  bool _matchesRegex(String text, String regexValue) {
+    try {
+      // Strip enclosing slashes and unescape \/ → /
+      final pattern = regexValue
+          .substring(1, regexValue.length - 1)
+          .replaceAll(r'\/', '/');
+      return RegExp(pattern, caseSensitive: false).hasMatch(text);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // =========================================================================
+  // Numeric comparison helper (used for cross-field comparisons)
+  // =========================================================================
+
+  bool _compareDoubles(double a, double b, String operator) {
+    switch (operator) {
+      case ':':
+      case '=':
+        return a == b;
+      case '>':
+        return a > b;
+      case '>=':
+        return a >= b;
+      case '<':
+        return a < b;
+      case '<=':
+        return a <= b;
+      case '!=':
+        return a != b;
+      default:
+        return a == b;
+    }
+  }
+
+  // =========================================================================
+  // Accent / case normalisation (used for exact-name matching)
+  // =========================================================================
+
+  /// Strips common combining diacritics and lowercases [value] so that
+  /// accent-insensitive exact-name searches work across localised card names.
+  String _normalizeForCompare(String value) {
+    // Unicode NFC normalisation is not available in Dart's core library
+    // without a package, so we apply a best-effort ASCII fold for the most
+    // common Latin diacritics encountered in MTG card names.
+    const from =
+        'àáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ'
+        'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞŸ';
+    const to =
+        'aaaaaaaceeeeiiiidnoooooouuuuyby'
+        'aaaaaaaceeeeiiiidnoooooouuuuyby';
+    final buffer = StringBuffer();
+    for (final char in value.runes) {
+      final idx = from.runes.toList().indexOf(char);
+      buffer.write(idx >= 0 ? to[idx] : String.fromCharCode(char));
+    }
+    return buffer.toString();
+  }
+
+  // =========================================================================
+  // Public API: analyzeQuery
+  // =========================================================================
+
+  /// Returns a deduplicated list of keyword names that appear in [query] but
+  /// are not supported by the local search engine (i.e. they silently match
+  /// all cards rather than filtering).  Use this to show in-UI warnings.
+  List<String> analyzeQuery(String query) {
+    final warnings = <String>[];
+    try {
+      final groups = _parseQueryGroups(query.trim());
+      for (final group in groups) {
+        for (final term in group) {
+          if (term.kind == _SearchTermKind.unsupportedOffline &&
+              term.field != null &&
+              !warnings.contains(term.field!)) {
+            warnings.add(term.field!);
+          }
+        }
+      }
+    } catch (_) {
+      // Silently ignore parse errors in the analysis path.
+    }
+    return warnings;
+  }
 }
 
 // =============================================================================
@@ -1651,4 +1782,7 @@ enum _SearchTermKind {
   orderDisplay,
   directionDisplay,
   metaIgnored,
+  // --- Keywords with no local-data support (silently pass all cards but
+  //     are reported as warnings by analyzeQuery()). ---
+  unsupportedOffline,
 }
