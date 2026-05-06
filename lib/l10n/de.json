@@ -108,7 +108,21 @@
     "syntaxFilterHint": "Abschnitte filtern…",
     "cardDetailTitle": "Kartendetails",
     "cardDetailLegalities": "Legalität",
-    "cardDetailPrices": "Preise"
+    "cardDetailPrices": "Preise",
+    "filterManaCost": "Manakosten (m:)",
+    "filterKeyword": "Schlüsselwort (kw:)",
+    "filterArtist": "Künstler (a:)",
+    "filterFlavorText": "Geschmackstext (ft:)",
+    "filterPriceUsd": "USD-Preis (usd:)",
+    "filterPriceEur": "EUR-Preis (eur:)",
+    "filterPriceTix": "TIX-Preis (tix:)",
+    "filterYear": "Jahr (year:)",
+    "filterSortOrder": "Sortieren nach",
+    "filterSortDir": "Richtung",
+    "filterSortAsc": "Aufsteigend",
+    "filterSortDesc": "Absteigend",
+    "filterClearAll": "Alles löschen",
+    "filterUnique": "Eindeutiger Modus"
   },
   "collection": {
     "title": "Kollektion",
