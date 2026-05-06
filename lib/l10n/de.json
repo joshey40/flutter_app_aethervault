@@ -112,7 +112,7 @@
     "filterManaCost": "Manakosten (m:)",
     "filterKeyword": "Schlüsselwort (kw:)",
     "filterArtist": "Künstler (a:)",
-    "filterFlavorText": "Geschmackstext (ft:)",
+    "filterFlavorText": "Hintergrundtext (ft:)",
     "filterPriceUsd": "USD-Preis (usd:)",
     "filterPriceEur": "EUR-Preis (eur:)",
     "filterPriceTix": "TIX-Preis (tix:)",
@@ -122,7 +122,13 @@
     "filterSortAsc": "Aufsteigend",
     "filterSortDesc": "Absteigend",
     "filterClearAll": "Alles löschen",
-    "filterUnique": "Eindeutiger Modus"
+    "filterUnique": "Eindeutiger Modus",
+    "filterColorMatch": "Farbübereinstimmung:",
+    "filterIdentityMatch": "Identitätsübereinstimmung:",
+    "filterSortDefault": "Standard",
+    "filterUniqueDefault": "Standard (Karten)",
+    "filterUniquePrints": "Alle Drucke",
+    "filterUniqueArt": "Nach Illustration"
   },
   "collection": {
     "title": "Kollektion",

@@ -122,7 +122,13 @@
     "filterSortAsc": "Ascending",
     "filterSortDesc": "Descending",
     "filterClearAll": "Clear all",
-    "filterUnique": "Unique mode"
+    "filterUnique": "Unique mode",
+    "filterColorMatch": "Color match:",
+    "filterIdentityMatch": "Identity match:",
+    "filterSortDefault": "Default",
+    "filterUniqueDefault": "Default (cards)",
+    "filterUniquePrints": "All prints",
+    "filterUniqueArt": "By art"
   },
   "collection": {
     "title": "Collection",

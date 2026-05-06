@@ -429,7 +429,7 @@ class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
                     if (_colorMap.values.any((v) => v)) ...[
                       const SizedBox(height: 4),
                       _colorMatchRow(
-                        'Color match: ',
+                        loc.translate('search.filterColorMatch'),
                         _colorOp,
                         (s) => setState(() { _colorOp = s.first; _refreshPreview(); }),
                       ),
@@ -456,7 +456,7 @@ class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
                     if (_idColorMap.values.any((v) => v)) ...[
                       const SizedBox(height: 4),
                       _colorMatchRow(
-                        'Identity match: ',
+                        loc.translate('search.filterIdentityMatch'),
                         _idColorOp,
                         (s) => setState(() { _idColorOp = s.first; _refreshPreview(); }),
                       ),
@@ -718,7 +718,7 @@ class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
                           decoration: const InputDecoration(isDense: true),
                           isExpanded: true,
                           items: [
-                            const DropdownMenuItem(value: null, child: Text('Default')),
+                            DropdownMenuItem(value: null, child: Text(loc.translate('search.filterSortDefault'))),
                             ...const [
                               'name', 'cmc', 'color', 'rarity', 'power',
                               'toughness', 'set', 'artist', 'usd', 'eur',
@@ -751,10 +751,10 @@ class _AdvancedFilterModalState extends State<_AdvancedFilterModal> {
                     DropdownButtonFormField<String>(
                       value: _unique,
                       decoration: const InputDecoration(isDense: true),
-                      items: const [
-                        DropdownMenuItem(value: null, child: Text('Default (cards)')),
-                        DropdownMenuItem(value: 'prints', child: Text('All prints')),
-                        DropdownMenuItem(value: 'art',    child: Text('By art')),
+                      items: [
+                        DropdownMenuItem(value: null, child: Text(loc.translate('search.filterUniqueDefault'))),
+                        DropdownMenuItem(value: 'prints', child: Text(loc.translate('search.filterUniquePrints'))),
+                        DropdownMenuItem(value: 'art',    child: Text(loc.translate('search.filterUniqueArt'))),
                       ],
                       onChanged: (v) => setState(() { _unique = v; _refreshPreview(); }),
                     ),
