@@ -18,6 +18,7 @@
 // Display / meta keywords (applied globally, do not filter individual cards):
 //   unique:cards|prints|art, order:<field>, direction:asc|desc
 //   prefer: and include: are parsed but currently ignored.
+//   prints:/sets:/illustrations: use repository-provided aggregate metadata.
 //   new:, cube:, b:/block: are parsed but return no results (insufficient data).
 // ---------------------------------------------------------------------------
 
@@ -371,6 +372,12 @@ class ScryfallSearchEngine {
       // --- Keywords that would filter cards but require data not present
       //     in the local bulk export.  They silently pass all cards locally
       //     but are surfaced as warnings via analyzeQuery(). ---
+      case 'illustrations':
+        return _SearchTermKind.illustrationCount;
+      case 'prints':
+        return _SearchTermKind.printCount;
+      case 'sets':
+        return _SearchTermKind.setCount;
       case 'b':
       case 'block':
       case 'new':
@@ -383,9 +390,6 @@ class ScryfallSearchEngine {
       case 'otag':
       case 'oracletag':
       case 'function':
-      case 'illustrations':
-      case 'prints':
-      case 'sets':
         return _SearchTermKind.unsupportedOffline;
       default:
         return _SearchTermKind.looseText;
@@ -698,6 +702,18 @@ class ScryfallSearchEngine {
             cnNum, _opValueQuery(term.operator, term.value));
       case _SearchTermKind.inKeyword:
         return _matchesInKeyword(card, term.value, typeLine);
+      case _SearchTermKind.printCount:
+        return _matchesNumericQuery(
+            _doubleValue(card['_av_variant_count']),
+            _opValueQuery(term.operator, term.value));
+      case _SearchTermKind.setCount:
+        return _matchesNumericQuery(
+            _doubleValue(card['_av_set_count']),
+            _opValueQuery(term.operator, term.value));
+      case _SearchTermKind.illustrationCount:
+        return _matchesNumericQuery(
+            _doubleValue(card['_av_illustration_count']),
+            _opValueQuery(term.operator, term.value));
 
       // -----------------------------------------------------------------------
       // Language
@@ -1763,6 +1779,9 @@ enum _SearchTermKind {
   powTou,
   // --- Set / printing ---
   set,
+  printCount,
+  setCount,
+  illustrationCount,
   collectorNumber,
   inKeyword,
   language,
