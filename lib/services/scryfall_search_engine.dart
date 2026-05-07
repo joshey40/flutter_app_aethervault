@@ -1357,24 +1357,34 @@ class ScryfallSearchEngine {
         // Can be your Commander: legendary creature or legendary planeswalker,
         // plus any card with "can be your commander" oracle text.
         if (typeLine.contains('legendary') &&
-            typeLine.contains('creature')) return true;
+            typeLine.contains('creature')) {
+          return true;
+        }
         if (typeLine.contains('legendary') &&
-            typeLine.contains('planeswalker')) return true;
+            typeLine.contains('planeswalker')) {
+          return true;
+        }
         return _oracleText(card).contains('can be your commander');
       case 'brawler':
         // Eligible Brawl commander: legendary creature or planeswalker in brawl.
         if (!typeLine.contains('legendary')) return false;
         if (!typeLine.contains('creature') &&
-            !typeLine.contains('planeswalker')) return false;
+            !typeLine.contains('planeswalker')) {
+          return false;
+        }
         final legalities = card['legalities'];
         if (legalities is! Map) return false;
         return legalities['standardbrawl'] == 'legal' ||
             legalities['brawl'] == 'legal';
       case 'duelcommander':
         if (typeLine.contains('legendary') &&
-            typeLine.contains('creature')) return true;
+            typeLine.contains('creature')) {
+          return true;
+        }
         if (typeLine.contains('legendary') &&
-            typeLine.contains('planeswalker')) return true;
+            typeLine.contains('planeswalker')) {
+          return true;
+        }
         return _oracleText(card).contains('can be your commander');
       case 'oathbreaker':
         return typeLine.contains('planeswalker');

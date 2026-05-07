@@ -6,7 +6,7 @@ import '../settings/settings_page.dart';
 import 'collection_page.dart';
 import 'decks_page.dart';
 import 'overview_page.dart';
-import 'search_page.dart';
+import 'search/search_page.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({
