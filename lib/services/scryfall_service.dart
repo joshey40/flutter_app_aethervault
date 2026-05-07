@@ -14,6 +14,20 @@ enum ScryfallBulkType {
   allCards,
 }
 
+class ScryfallBulkMetadata {
+  const ScryfallBulkMetadata({
+    required this.bulkType,
+    required this.lastDownload,
+    required this.fileName,
+    required this.fileSizeBytes,
+  });
+
+  final ScryfallBulkType bulkType;
+  final DateTime? lastDownload;
+  final String fileName;
+  final int? fileSizeBytes;
+}
+
 extension ScryfallBulkTypeX on ScryfallBulkType {
   String get apiValue {
     switch (this) {
@@ -87,6 +101,18 @@ class ScryfallService {
       return null;
     }
     return file.length();
+  }
+
+  Future<ScryfallBulkMetadata> metadata({
+    ScryfallBulkType bulkType = ScryfallBulkType.defaultCards,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    return ScryfallBulkMetadata(
+      bulkType: bulkType,
+      lastDownload: await lastDownload(bulkType: bulkType),
+      fileName: prefs.getString(_prefsFileNameKey(bulkType)) ?? bulkType.fileName,
+      fileSizeBytes: await localFileSizeBytes(bulkType: bulkType),
+    );
   }
 
   /// Check bulk index and return the chosen download uri (oracle_cards preferred)

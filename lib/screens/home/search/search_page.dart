@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../services/scryfall_search_engine.dart';
+import '../../../services/scryfall_card_repository.dart';
 import '../../../services/scryfall_service.dart';
 import '../../../services/localization_service.dart';
 import 'search_syntax_page.dart';
@@ -15,19 +16,14 @@ import 'widgets/card_detail_sheet.dart';
 // Search Page – helpers
 // ---------------------------------------------------------------------------
 
-List<Map<String, dynamic>> _mergeBulk(List<List<dynamic>> sources) {
-  final merged = <Map<String, dynamic>>[];
-  final seen = <String>{};
-  for (final src in sources) {
-    for (final item in src.cast<Map<String, dynamic>>()) {
-      final id = item['id']?.toString() ??
-          item['oracle_id']?.toString() ??
-          item['name']?.toString();
-      if (id == null) continue;
-      if (seen.add(id)) merged.add(item);
-    }
-  }
-  return merged;
+class _SearchUiResult {
+  const _SearchUiResult({
+    required this.card,
+    required this.group,
+  });
+
+  final Map<String, dynamic> card;
+  final ScryfallCardGroup? group;
 }
 
 // ---------------------------------------------------------------------------
@@ -44,9 +40,14 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   final ScryfallService _scry = ScryfallService();
   final ScryfallSearchEngine _searchEngine = ScryfallSearchEngine();
-  List<dynamic>? _data;
-  List<Map<String, dynamic>> _allMatches = [];
-  List<dynamic>? _results;
+  late final ScryfallCardRepository _repo = ScryfallCardRepository(
+    service: _scry,
+  );
+  bool _allPrintingsMode = false;
+  bool _baseDataReady = false;
+  bool _allCardsReady = false;
+  List<_SearchUiResult> _allMatches = [];
+  List<_SearchUiResult>? _results;
   int _displayedCount = 0;
   static const int _pageSize = 50;
   int _searchGeneration = 0;
@@ -78,13 +79,11 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _loadLocalData() async {
     setState(() => _loadingData = true);
-    final oracle   = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards)  ?? [];
-    final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
-    final all      = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards)     ?? [];
-    final merged   = await Future(() => _mergeBulk([oracle, defaults, all]));
+    await _repo.loadBaseData();
     if (!mounted) return;
     setState(() {
-      _data = merged;
+      _baseDataReady = true;
+      _allCardsReady = _repo.allCardsLoaded;
       _results = null;
       _allMatches = [];
       _displayedCount = 0;
@@ -102,8 +101,10 @@ class _SearchPageState extends State<SearchPage> {
     final types = [
       ScryfallBulkType.oracleCards,
       ScryfallBulkType.defaultCards,
-      ScryfallBulkType.allCards,
     ];
+    if (_repo.allCardsLoaded) {
+      types.add(ScryfallBulkType.allCards);
+    }
     _downloadTotal = types.length;
     var step = 0;
     for (final type in types) {
@@ -136,13 +137,14 @@ class _SearchPageState extends State<SearchPage> {
       }
     }
 
-    final oracle   = await _scry.loadLocalData(bulkType: ScryfallBulkType.oracleCards)  ?? [];
-    final defaults = await _scry.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ?? [];
-    final all      = await _scry.loadLocalData(bulkType: ScryfallBulkType.allCards)     ?? [];
-    final merged   = await Future(() => _mergeBulk([oracle, defaults, all]));
+    await _repo.loadBaseData();
+    if (_repo.allCardsLoaded) {
+      await _repo.ensureAllCardsLoaded();
+    }
     if (!mounted) return;
     setState(() {
-      _data = merged;
+      _baseDataReady = true;
+      _allCardsReady = _repo.allCardsLoaded;
       _results = null;
       _allMatches = [];
       _displayedCount = 0;
@@ -166,9 +168,32 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  Future<void> _ensureAllCardsReady() async {
+    final hasLocalCache =
+        await _scry.hasLocalCache(bulkType: ScryfallBulkType.allCards);
+    final stale = await _scry.isCacheStale(bulkType: ScryfallBulkType.allCards);
+    if (!hasLocalCache || stale) {
+      final uri =
+          await _scry.fetchBulkIndexAndChooseUri(bulkType: ScryfallBulkType.allCards);
+      if (uri != null) {
+        await _scry.downloadBulk(
+          uri,
+          bulkType: ScryfallBulkType.allCards,
+          onProgress: (p) {
+            if (mounted) setState(() => _downloadProgress = p);
+          },
+        );
+      }
+    }
+    await _repo.ensureAllCardsLoaded();
+    if (mounted) {
+      setState(() => _downloadProgress = null);
+    }
+  }
+
   Future<void> _executeSearch() async {
     final q = _controller.text.trim();
-    if (_data == null || q.isEmpty) {
+    if (!_baseDataReady || q.isEmpty) {
       setState(() {
         _allMatches = [];
         _displayedCount = 0;
@@ -185,15 +210,34 @@ class _SearchPageState extends State<SearchPage> {
       _results = null;
     });
 
-    final matches = await Future(
-      () => _searchEngine.filterCards(_data!, q),
+    final plan = planScryfallQuery(
+      query: q,
+      forceAllPrintingsMode: _allPrintingsMode,
     );
+
+    if (plan.requiresAllCards && !_repo.allCardsLoaded) {
+      await _ensureAllCardsReady();
+    }
+
+    final dataset = plan.requiresAllCards
+        ? _repo.allSearchCards()
+        : _repo.defaultSearchCards();
+    final matches = await Future(() => _searchEngine.filterCards(dataset, q));
+    final uiMatches = matches
+        .map(
+          (card) => _SearchUiResult(
+            card: card,
+            group: _repo.groupForCard(card),
+          ),
+        )
+        .toList();
 
     if (!mounted || generation != _searchGeneration) return;
 
     setState(() {
-      _allMatches = matches;
-      _displayedCount = matches.length.clamp(0, _pageSize);
+      _allCardsReady = _repo.allCardsLoaded;
+      _allMatches = uiMatches;
+      _displayedCount = uiMatches.length.clamp(0, _pageSize);
       _results = _allMatches.sublist(0, _displayedCount);
       _searching = false;
       _unsupportedWarnings = _searchEngine.analyzeQuery(q);
@@ -253,10 +297,21 @@ class _SearchPageState extends State<SearchPage> {
               Text(loc.translate('search.syntaxHint'), style: theme.textTheme.bodySmall),
               const SizedBox(height: 4),
               Text(loc.translate('search.defaultCardsSource'), style: theme.textTheme.bodySmall),
-              if (_data != null) ...[
+              if (_baseDataReady) ...[
                 const SizedBox(height: 4),
                 Text(
-                  loc.translate('search.metaCardsLoaded').replaceAll('{count}', _data!.length.toString()),
+                  loc
+                      .translate('search.metaCardsLoaded')
+                      .replaceAll('{count}', _repo.defaultCardsCount.toString()),
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _allPrintingsMode
+                      ? _allCardsReady
+                          ? loc.translate('search.modeAllCardsReady')
+                          : loc.translate('search.modeAllCardsOnDemand')
+                      : loc.translate('search.modeDefaultCards'),
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -269,8 +324,13 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   // Card detail bottom sheet
-  void _showCardDetail(BuildContext context, Map<String, dynamic> card) {
-    showCardDetailSheet(context, card);
+  void _showCardDetail(BuildContext context, _SearchUiResult result) {
+    final variants = result.group?.variants ?? [result.card];
+    showCardDetailSheet(
+      context,
+      result.card,
+      variants: variants,
+    );
   }
 
   @override
@@ -304,7 +364,8 @@ class _SearchPageState extends State<SearchPage> {
     return null;
   }
 
-  Widget _buildCardImageItem(BuildContext context, Map<String, dynamic> card) {
+  Widget _buildCardImageItem(BuildContext context, _SearchUiResult result) {
+    final card = result.card;
     final imageUrl = _getCardImageUrl(card);
     final name = card['name']?.toString() ?? '';
     final theme = Theme.of(context);
@@ -336,7 +397,7 @@ class _SearchPageState extends State<SearchPage> {
     }
 
     return GestureDetector(
-      onTap: () => _showCardDetail(context, card),
+      onTap: () => _showCardDetail(context, result),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: imageWidget,
@@ -344,10 +405,18 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildCardListItem(BuildContext context, Map<String, dynamic> card) {
+  Widget _buildCardListItem(BuildContext context, _SearchUiResult result) {
+    final card = result.card;
+    final loc = appLocalizations;
     final name    = card['name']?.toString()    ?? '';
     final typeLine = card['type_line']?.toString() ?? '';
     final setCode = card['set']?.toString().toUpperCase() ?? '';
+    final variants = (card['_av_variant_count'] as int?) ?? 1;
+    final languages = (card['_av_languages'] as List?)?.length ?? 0;
+    final variantSummary = loc
+        .translate('search.variantSummary')
+        .replaceAll('{variants}', variants.toString())
+        .replaceAll('{languages}', languages.toString());
     final cmcRaw  = card['cmc'];
     final cmcStr  = cmcRaw != null
         ? cmcRaw.toString().replaceAll(RegExp(r'\.0$'), '')
@@ -387,9 +456,23 @@ class _SearchPageState extends State<SearchPage> {
             style: theme.textTheme.labelSmall
                 ?.copyWith(color: theme.colorScheme.secondary),
           ),
+          if (variants > 1) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                variantSummary,
+                style: theme.textTheme.labelSmall,
+              ),
+            ),
+          ],
         ],
       ),
-      onTap: () => _showCardDetail(context, card),
+      onTap: () => _showCardDetail(context, result),
     );
   }
 
@@ -430,7 +513,7 @@ class _SearchPageState extends State<SearchPage> {
           IconButton(
             icon: const Icon(Icons.info_outline),
             tooltip: loc.translate('search.metaTitle'),
-            onPressed: _data == null ? null : _showStatusInfo,
+            onPressed: _baseDataReady ? _showStatusInfo : null,
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -517,7 +600,7 @@ class _SearchPageState extends State<SearchPage> {
                   // Search bar
                   AppSearchBar(
                     controller: _controller,
-                    enabled: _data != null,
+                    enabled: _baseDataReady,
                     onClear: () {
                       _controller.clear();
                       _debounce?.cancel();
@@ -537,7 +620,7 @@ class _SearchPageState extends State<SearchPage> {
                       _debounce?.cancel();
                       _debounce = Timer(const Duration(milliseconds: 400), _executeSearch);
                     },
-                    onOpenFilter: _data == null ? null : _openFilterMenu,
+                    onOpenFilter: _baseDataReady ? _openFilterMenu : null,
                     onOpenSyntax: () async {
                       final example = await Navigator.of(context).push<String>(
                         MaterialPageRoute(builder: (_) => SearchSyntaxPage()),
@@ -549,6 +632,30 @@ class _SearchPageState extends State<SearchPage> {
                         _executeSearch();
                       }
                     },
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      ChoiceChip(
+                        label: Text(loc.translate('search.oracleOnlyMode')),
+                        selected: !_allPrintingsMode,
+                        onSelected: (selected) {
+                          if (!selected) return;
+                          setState(() => _allPrintingsMode = false);
+                          _executeSearch();
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: Text(loc.translate('search.allPrintingsMode')),
+                        selected: _allPrintingsMode,
+                        onSelected: (selected) {
+                          if (!selected) return;
+                          setState(() => _allPrintingsMode = true);
+                          _executeSearch();
+                        },
+                      ),
+                    ],
                   ),
 
                   // Result count header + unsupported keyword warnings
@@ -610,11 +717,11 @@ class _SearchPageState extends State<SearchPage> {
                       isGridView: _isGridView,
                       scrollController: _scrollController,
                       gridItemBuilder: (ctx, index) {
-                        final item = _results![index] as Map<String, dynamic>;
+                        final item = _results![index];
                         return _buildCardImageItem(ctx, item);
                       },
                       listItemBuilder: (ctx, index) {
-                        final item = _results![index] as Map<String, dynamic>;
+                        final item = _results![index];
                         return _buildCardListItem(ctx, item);
                       },
                       tryExamplesBuilder: (ctx) => Column(
@@ -634,7 +741,7 @@ class _SearchPageState extends State<SearchPage> {
                               for (final key in const ['example1', 'example2', 'example3', 'example4'])
                                 ActionChip(
                                   label: Text(loc.translate('search.$key'), style: theme.textTheme.labelSmall),
-                                  onPressed: _data == null
+                                  onPressed: !_baseDataReady
                                       ? null
                                       : () {
                                           _controller.text = loc.translate('search.$key');

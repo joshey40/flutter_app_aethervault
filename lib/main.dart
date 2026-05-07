@@ -98,7 +98,6 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     final types = [
       ScryfallBulkType.oracleCards,
       ScryfallBulkType.defaultCards,
-      ScryfallBulkType.allCards,
     ];
     bool needsDownload = false;
     try {
