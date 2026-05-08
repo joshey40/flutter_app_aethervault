@@ -4,22 +4,6 @@
 // Supports the Scryfall search syntax documented at:
 //   https://scryfall.com/docs/syntax
 //
-// Operators implemented:
-//   name: (n:), oracle: (o:), fulloracle: (fo:), type: (t:), color: (c:),
-//   identity: (id:), rarity: (r:), manavalue: (mv:/cmc:), mana: (m:),
-//   pow:/power:, tou:/toughness:, loyalty: (loy:), pt:/powtou:,
-//   set: (s:/e:), block: (b:) [basic], in: [basic], cn:/number:,
-//   lang:/language:, format: (f:), banned:, restricted:,
-//   artist: (a:), flavor: (ft:), keyword: (kw:), watermark: (wm:),
-//   game:, border:, frame:, year:, date:, usd:, eur:, tix:,
-//   st:/settype:, stamp:,
-//   is:, has:, not:, !exactname
-//
-// Display / meta keywords (applied globally, do not filter individual cards):
-//   unique:cards|prints|art, order:<field>, direction:asc|desc
-//   prefer: and include: are parsed but currently ignored.
-//   prints:/sets:/illustrations: use repository-provided aggregate metadata.
-//   new:, cube:, b:/block: are parsed but return no results (insufficient data).
 // ---------------------------------------------------------------------------
 
 class ScryfallSearchEngine {
@@ -27,21 +11,25 @@ class ScryfallSearchEngine {
   // Public API
   // =========================================================================
 
-  /// Filters [cards] using a Scryfall-compatible [query] string.
+  /// Filters cards using a Scryfall-compatible [query] string.
   /// Display keywords (unique:, order:, direction:) are extracted and applied
   /// as post-processing steps.
   List<Map<String, dynamic>> filterCards(
-    List<dynamic> cards,
+    List<dynamic> oracle_cards,
+    List<dynamic> default_cards,
+    List<dynamic> all_cards,
     String query,
   ) {
     final sanitizedQuery = query.trim();
     if (sanitizedQuery.isEmpty) {
-      return cards.cast<Map<String, dynamic>>();
+      // Empty query → return all default cards.
+      return default_cards.cast<Map<String, dynamic>>();
     }
 
     final groups = _parseQueryGroups(sanitizedQuery);
     if (groups.isEmpty) {
-      return cards.cast<Map<String, dynamic>>();
+      // Parsing failed or produced no valid terms → return all default cards.
+      return default_cards.cast<Map<String, dynamic>>();
     }
 
     // Extract display/meta options from all groups; build filter-only groups.
@@ -60,8 +48,7 @@ class ScryfallSearchEngine {
             orderMode = term.value.toLowerCase();
           case _SearchTermKind.directionDisplay:
             directionMode = term.value.toLowerCase();
-          case _SearchTermKind.metaIgnored:
-          case _SearchTermKind.unsupportedOffline:
+          case _SearchTermKind.unsupported:
             break; // silently ignored
           default:
             filterTerms.add(term);
@@ -72,10 +59,10 @@ class ScryfallSearchEngine {
 
     List<Map<String, dynamic>> result;
     if (filterGroups.isEmpty) {
-      // Query consisted only of meta terms; return all cards.
-      result = cards.cast<Map<String, dynamic>>().toList();
+      // Query consisted only of meta terms; return all default cards for post-processing.
+      result = default_cards.cast<Map<String, dynamic>>().toList();
     } else {
-      result = cards.cast<Map<String, dynamic>>().where((card) {
+      result = all_cards.cast<Map<String, dynamic>>().where((card) {
         return filterGroups.any((group) => _matchesGroup(card, group));
       }).toList();
     }
@@ -365,13 +352,8 @@ class ScryfallSearchEngine {
         return _SearchTermKind.orderDisplay;
       case 'direction':
         return _SearchTermKind.directionDisplay;
-      // --- Display-only meta keywords (no filtering intent) ---
       case 'prefer':
-      case 'include':
-        return _SearchTermKind.metaIgnored;
-      // --- Keywords that would filter cards but require data not present
-      //     in the local bulk export.  They silently pass all cards locally
-      //     but are surfaced as warnings via analyzeQuery(). ---
+        return _SearchTermKind.unsupported;
       case 'illustrations':
         return _SearchTermKind.illustrationCount;
       case 'prints':
@@ -380,17 +362,25 @@ class ScryfallSearchEngine {
         return _SearchTermKind.setCount;
       case 'b':
       case 'block':
-      case 'new':
-      case 'cube':
+        return _SearchTermKind.block;
       case 'devotion':
+        return _SearchTermKind.devotion;
       case 'produces':
+        return _SearchTermKind.unsupported;
       case 'cheapest':
+        return _SearchTermKind.unsupported;
       case 'atag':
       case 'arttag':
+        return _SearchTermKind.unsupported;
       case 'otag':
       case 'oracletag':
       case 'function':
-        return _SearchTermKind.unsupportedOffline;
+        return _SearchTermKind.unsupported;
+      case 'include':
+        return _SearchTermKind.unsupported;
+      case 'new':
+      case 'cube':
+        return _SearchTermKind.unsupported;
       default:
         return _SearchTermKind.looseText;
     }
@@ -406,6 +396,7 @@ class ScryfallSearchEngine {
   ) {
     final seen = <String>{};
     return cards.where((card) {
+      // Determine key based on mode; if key is empty, include the card (can't determine uniqueness)
       final String key;
       switch (mode) {
         case 'prints':
@@ -630,7 +621,7 @@ class ScryfallSearchEngine {
         return _matchesRarity(rarity, term.value.toLowerCase(), term.operator);
 
       // -----------------------------------------------------------------------
-      // Mana value (mv / cmc)
+      // Mana value (mv / cmc) and cost
       // -----------------------------------------------------------------------
       case _SearchTermKind.manaValue:
         final qv = term.value.toLowerCase();
@@ -638,12 +629,10 @@ class ScryfallSearchEngine {
         if (qv == 'odd') return manaValue % 2 != 0;
         return _matchesNumericQuery(
             manaValue, _opValueQuery(term.operator, term.value));
-
-      // -----------------------------------------------------------------------
-      // Mana cost
-      // -----------------------------------------------------------------------
       case _SearchTermKind.manaCost:
         return _matchesManaCost(card, term.value, term.operator);
+      case _SearchTermKind.devotion:
+        return _matchesDevotion(card, term.value, term.operator);
 
       // -----------------------------------------------------------------------
       // Power / toughness / loyalty / combined pt
@@ -689,8 +678,9 @@ class ScryfallSearchEngine {
       // Set / collector number / in: / block
       // -----------------------------------------------------------------------
       case _SearchTermKind.set:
-        return setCode == term.value.toLowerCase() ||
-            setName.contains(term.value.toLowerCase());
+        return setCode == term.value.toLowerCase();
+      case _SearchTermKind.block:
+        return setCode.contains(term.value.toLowerCase());
       case _SearchTermKind.collectorNumber:
         final cn = card['collector_number']?.toString() ?? '';
         if (term.operator == ':' || term.operator == '=') {
@@ -807,8 +797,7 @@ class ScryfallSearchEngine {
             typeLine.contains(loose) ||
             keywords.any((kw) => kw.contains(loose));
 
-      case _SearchTermKind.metaIgnored:
-      case _SearchTermKind.unsupportedOffline:
+      case _SearchTermKind.unsupported:
       case _SearchTermKind.uniqueDisplay:
       case _SearchTermKind.orderDisplay:
       case _SearchTermKind.directionDisplay:
@@ -1098,6 +1087,37 @@ class ScryfallSearchEngine {
     return symbols;
   }
 
+  // =========================================================================
+  // Devotion matching
+  // Devotion is the count of colored mana symbols in the cost.
+  // Example:
+  //    "devotion:www" a card with 3 or more white mana symbols in its cost.
+  //    "devotion:{w/u}{w/u}" a card with 2 or more white or blue symbols in its cost."
+  // =========================================================================
+
+  bool _matchesDevotion(
+      Map<String, dynamic> card, String value, String operator) {
+    final raw = card['mana_cost']?.toString() ?? '';
+    if (raw.isEmpty) return false;
+
+    final normalizedCost =
+        raw.toLowerCase().replaceAll('{', '').replaceAll('}', '');
+    final normalizedQuery =
+        value.toLowerCase().replaceAll('{', '').replaceAll('}', '');
+
+    // Count the number of colored mana symbols in the card's cost.
+    final devotionCount = _parseManaSymbols(normalizedCost).entries
+        .where((e) => 'wubrg'.contains(e.key))
+        .fold(0, (sum, e) => sum + e.value);
+
+    // Count the number of colored mana symbols in the query.
+    final queryCount = _parseManaSymbols(normalizedQuery).entries
+        .where((e) => 'wubrg'.contains(e.key))
+        .fold(0, (sum, e) => sum + e.value);
+
+    return devotionCount >= queryCount;
+  }
+    
   // =========================================================================
   // Release date matching  (year: and date:)
   // =========================================================================
@@ -1724,7 +1744,7 @@ class ScryfallSearchEngine {
       final groups = _parseQueryGroups(query.trim());
       for (final group in groups) {
         for (final term in group) {
-          if (term.kind == _SearchTermKind.unsupportedOffline &&
+          if (term.kind == _SearchTermKind.unsupported &&
               term.field != null &&
               !warnings.contains(term.field!)) {
             warnings.add(term.field!);
@@ -1773,12 +1793,14 @@ enum _SearchTermKind {
   rarity,
   manaValue,
   manaCost,
+  devotion,
   power,
   toughness,
   loyalty,
   powTou,
   // --- Set / printing ---
   set,
+  block,
   printCount,
   setCount,
   illustrationCount,
@@ -1810,8 +1832,6 @@ enum _SearchTermKind {
   uniqueDisplay,
   orderDisplay,
   directionDisplay,
-  metaIgnored,
-  // --- Keywords with no local-data support (silently pass all cards but
-  //     are reported as warnings by analyzeQuery()). ---
-  unsupportedOffline,
+  // --- Unsupported (tagger-only, cross-print, or external-data-based) ---
+  unsupported,
 }

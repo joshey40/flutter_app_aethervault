@@ -65,14 +65,14 @@ class ScryfallService {
   String _prefsFileNameKey(ScryfallBulkType bulkType) => 'scryfall.${bulkType.storageSuffix}.fileName';
 
   /// Returns whether a local cached file exists and its last download time (nullable)
-  Future<DateTime?> lastDownload({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<DateTime?> lastDownload({ScryfallBulkType bulkType = ScryfallBulkType.allCards}) async {
     final prefs = await SharedPreferences.getInstance();
     final millis = prefs.getInt(_prefsLastDownloadKey(bulkType));
     if (millis == null) return null;
     return DateTime.fromMillisecondsSinceEpoch(millis);
   }
 
-  Future<String?> _localFilePath({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<String?> _localFilePath({ScryfallBulkType bulkType = ScryfallBulkType.allCards}) async {
     if (kIsWeb) {
       return null;
     }
@@ -82,7 +82,7 @@ class ScryfallService {
     return '${dir.path}/$fileName';
   }
 
-  Future<bool> hasLocalCache({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<bool> hasLocalCache({ScryfallBulkType bulkType = ScryfallBulkType.allCards}) async {
     if (kIsWeb) {
       return _webCacheData[bulkType] != null;
     }
@@ -91,7 +91,7 @@ class ScryfallService {
     return exists;
   }
 
-  Future<int?> localFileSizeBytes({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<int?> localFileSizeBytes({ScryfallBulkType bulkType = ScryfallBulkType.allCards}) async {
     if (kIsWeb) {
       return _webCacheSizeBytes[bulkType];
     }
@@ -104,7 +104,7 @@ class ScryfallService {
   }
 
   Future<ScryfallBulkMetadata> metadata({
-    ScryfallBulkType bulkType = ScryfallBulkType.defaultCards,
+    ScryfallBulkType bulkType = ScryfallBulkType.allCards,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     return ScryfallBulkMetadata(
@@ -116,9 +116,9 @@ class ScryfallService {
   }
 
   /// Check bulk index and return the chosen download uri (oracle_cards preferred)
-  Future<String?> fetchBulkIndexAndChooseUri({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<String?> fetchBulkIndexAndChooseUri({ScryfallBulkType bulkType = ScryfallBulkType.allCards}) async {
     try {
-      final res = await _retry(() => _client.get(Uri.parse(_bulkIndexUrl), headers: _defaultHeaders));
+      final res = await _client.get(Uri.parse(_bulkIndexUrl), headers: _defaultHeaders);
       if (res.statusCode != 200) {
         if (kDebugMode) debugPrint('ScryfallService: failed to fetch bulk index HTTP ${res.statusCode}');
         return null;
@@ -161,31 +161,16 @@ class ScryfallService {
     
   }
 
-  Future<T> _retry<T>(Future<T> Function() fn, {int attempts = 3, Duration initialDelay = const Duration(milliseconds: 500)}) async {
-    int attempt = 0;
-    while (true) {
-      try {
-        attempt++;
-        return await fn();
-      } catch (e) {
-        if (attempt >= attempts) rethrow;
-        if (kDebugMode) debugPrint('ScryfallService: attempt $attempt failed: $e');
-        final delayMs = initialDelay.inMilliseconds * pow(2, attempt - 1).toInt();
-        await Future.delayed(Duration(milliseconds: delayMs));
-      }
-    }
-  }
-
   /// Downloads the bulk file and saves locally while reporting progress via [onProgress] (0..1)
   Future<void> downloadBulk(
     String downloadUri, {
     required void Function(double) onProgress,
-    ScryfallBulkType bulkType = ScryfallBulkType.defaultCards,
+    ScryfallBulkType bulkType = ScryfallBulkType.allCards,
   }) async {
     if (kDebugMode) debugPrint('ScryfallService: starting download for ${bulkType.apiValue} -> $downloadUri');
     if (kIsWeb) {
       onProgress(0);
-      final response = await _retry(() => _client.get(Uri.parse(downloadUri), headers: _defaultHeaders));
+      final response = await _client.get(Uri.parse(downloadUri), headers: _defaultHeaders);
       if (response.statusCode != 200) {
         if (kDebugMode) debugPrint('ScryfallService: failed to download bulk (web) HTTP ${response.statusCode}');
         throw Exception('Failed to download Scryfall bulk data');
@@ -203,7 +188,7 @@ class ScryfallService {
 
     final req = http.Request('GET', Uri.parse(downloadUri));
     req.headers.addAll(_defaultHeaders);
-    final streamed = await _retry(() => _client.send(req));
+    final streamed = await _client.send(req);
     if (streamed.statusCode != 200) {
       if (kDebugMode) debugPrint('ScryfallService: failed to download bulk HTTP ${streamed.statusCode}');
       throw Exception('Failed to download Scryfall bulk data: HTTP ${streamed.statusCode}');
@@ -242,13 +227,13 @@ class ScryfallService {
   }
 
   /// Whether cache is older than [maxAgeDays]
-  Future<bool> isCacheStale({int maxAgeDays = 7, ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<bool> isCacheStale({int maxAgeDays = 7, ScryfallBulkType bulkType = ScryfallBulkType.allCards}) async {
     final last = await lastDownload(bulkType: bulkType);
     if (last == null) return true;
     return DateTime.now().difference(last) > Duration(days: maxAgeDays);
   }
 
-  Future<List<dynamic>?> loadLocalData({ScryfallBulkType bulkType = ScryfallBulkType.defaultCards}) async {
+  Future<List<dynamic>?> loadLocalBulkType({ScryfallBulkType bulkType = ScryfallBulkType.oracleCards}) async {
     try {
       if (kIsWeb) {
         return _webCacheData[bulkType];
@@ -261,6 +246,37 @@ class ScryfallService {
       return raw as List<dynamic>?;
     } catch (_) {
       return null;
+    }
+  }
+
+  Future<void> prepareData({required void Function(double) onProgress}) async {
+    final steps = 3;
+    int step = 0;
+    Future<void> onProgressWrapper(double progress) async {
+      final overallProgress = (step + progress) / steps;
+      onProgress(overallProgress);
+    }
+    // download card data
+    final oracleUri = await fetchBulkIndexAndChooseUri(bulkType: ScryfallBulkType.oracleCards);
+    if (oracleUri != null) {
+      await downloadBulk(oracleUri, onProgress: onProgressWrapper, bulkType: ScryfallBulkType.oracleCards);
+      step++;
+    } else {
+      if (kDebugMode) debugPrint('ScryfallService: no download URI found for oracle_cards');
+    }
+    final defaultUri = await fetchBulkIndexAndChooseUri(bulkType: ScryfallBulkType.defaultCards);
+    if (defaultUri != null) {
+      await downloadBulk(defaultUri, onProgress: onProgressWrapper, bulkType: ScryfallBulkType.defaultCards);
+      step++;
+    } else {
+      if (kDebugMode) debugPrint('ScryfallService: no download URI found for default_cards');
+    }
+    final allUri = await fetchBulkIndexAndChooseUri(bulkType: ScryfallBulkType.allCards);
+    if (allUri != null) {
+      await downloadBulk(allUri, onProgress: onProgressWrapper, bulkType: ScryfallBulkType.allCards);
+      step++;
+    } else {
+      if (kDebugMode) debugPrint('ScryfallService: no download URI found for all_cards');
     }
   }
 

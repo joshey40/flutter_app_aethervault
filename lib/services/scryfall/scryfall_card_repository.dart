@@ -4,53 +4,6 @@ import 'scryfall_service.dart';
 /// - default mode + non-variant query => default_cards
 /// - default mode + variant-sensitive query => all_cards
 /// - all-printings mode => all_cards
-class ScryfallQueryPlan {
-  const ScryfallQueryPlan({
-    required this.requiresAllCards,
-    required this.variantSensitive,
-    required this.reason,
-  });
-
-  final bool requiresAllCards;
-  final bool variantSensitive;
-  final String reason;
-}
-
-ScryfallQueryPlan planScryfallQuery({
-  required String query,
-  required bool forceAllPrintingsMode,
-}) {
-  if (forceAllPrintingsMode) {
-    return const ScryfallQueryPlan(
-      requiresAllCards: true,
-      variantSensitive: true,
-      reason: 'all_printings_mode',
-    );
-  }
-
-  final q = query.toLowerCase();
-  // Fields that operate on printings/translations rather than one default card.
-  const variantFieldPattern =
-      r'(^|\s)(lang|language|prints|sets|illustrations)\s*(>=|<=|!=|:|=|>|<)';
-  // unique:prints / unique:art imply printing-level results.
-  const variantUniquePattern = r'(^|\s)unique\s*:\s*(prints|art)\b';
-  final hasVariantField = RegExp(variantFieldPattern).hasMatch(q);
-  final hasVariantUnique = RegExp(variantUniquePattern).hasMatch(q);
-
-  if (hasVariantField || hasVariantUnique) {
-    return const ScryfallQueryPlan(
-      requiresAllCards: true,
-      variantSensitive: true,
-      reason: 'variant_sensitive_syntax',
-    );
-  }
-
-  return const ScryfallQueryPlan(
-    requiresAllCards: false,
-    variantSensitive: false,
-    reason: 'default_cards',
-  );
-}
 
 class ScryfallCardGroup {
   ScryfallCardGroup(this.oracleId);
@@ -108,33 +61,26 @@ class ScryfallCardRepository {
   List<Map<String, dynamic>> _oracleCards = const [];
   List<Map<String, dynamic>> _defaultCards = const [];
   List<Map<String, dynamic>> _allCards = const [];
+
   List<Map<String, dynamic>>? _defaultSearchCache;
   List<Map<String, dynamic>>? _allSearchCache;
-  bool _allCardsLoaded = false;
 
-  bool get allCardsLoaded => _allCardsLoaded;
   int get defaultCardsCount => _defaultCards.length;
   int get allCardsCount => _allCards.length;
 
   Future<void> loadBaseData() async {
     final oracleRaw =
-        await _service.loadLocalData(bulkType: ScryfallBulkType.oracleCards) ??
+        await _service.loadLocalBulkType(bulkType: ScryfallBulkType.oracleCards) ??
             [];
     final defaultRaw =
-        await _service.loadLocalData(bulkType: ScryfallBulkType.defaultCards) ??
+        await _service.loadLocalBulkType(bulkType: ScryfallBulkType.defaultCards) ??
+            [];
+    final allRaw =
+        await _service.loadLocalBulkType(bulkType: ScryfallBulkType.allCards) ??
             [];
     _oracleCards = _castCards(oracleRaw);
     _defaultCards = _castCards(defaultRaw);
-    _rebuildIndex();
-  }
-
-  Future<void> ensureAllCardsLoaded() async {
-    if (_allCardsLoaded) return;
-    final allRaw =
-        await _service.loadLocalData(bulkType: ScryfallBulkType.allCards) ?? [];
-    if (allRaw.isEmpty) return;
     _allCards = _castCards(allRaw);
-    _allCardsLoaded = true;
     _rebuildIndex();
   }
 
@@ -143,7 +89,6 @@ class ScryfallCardRepository {
   }
 
   List<Map<String, dynamic>> allSearchCards() {
-    if (!_allCardsLoaded) return defaultSearchCards();
     return _allSearchCache ??= _allCards.map(_enrichCard).toList();
   }
 
@@ -186,16 +131,14 @@ class ScryfallCardRepository {
       group.primaryCard ??= card;
     }
 
-    if (_allCardsLoaded) {
-      for (final card in _allCards) {
-        final oracleId = _oracleIdFor(card);
-        if (oracleId == null) continue;
-        final group = _groupsByOracle.putIfAbsent(
-          oracleId,
-          () => ScryfallCardGroup(oracleId),
-        );
-        group.addVariant(card);
-      }
+    for (final card in _allCards) {
+      final oracleId = _oracleIdFor(card);
+      if (oracleId == null) continue;
+      final group = _groupsByOracle.putIfAbsent(
+        oracleId,
+        () => ScryfallCardGroup(oracleId),
+      );
+      group.addVariant(card);
     }
 
     for (final group in _groupsByOracle.values) {
