@@ -149,7 +149,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     children: [
                       // Left column: Settings
                       SizedBox(
-                        width: 56,
+                        width: 48,
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.start,
                           children: [
@@ -312,7 +312,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
                       // Right: Commander Tax with invisible top/bottom labels to reserve space
                       SizedBox(
-                        width: 56,
+                        width: 48,
                         child: Column(
                           mainAxisSize: MainAxisSize.max,
                           children: [

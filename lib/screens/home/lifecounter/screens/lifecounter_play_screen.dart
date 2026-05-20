@@ -20,6 +20,8 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   late LifecounterGame _game;
   final _storage = LifecounterStorage();
   int? _commanderDamageTargetIndex;
+  bool _showManaBar = false;
+  final List<int> _manaCounts = List<int>.filled(6, 0);
   // commanderDamage persisted on `_game.commanderDamage` as [source][target] -> [slot0, slot1?]
 
   @override
@@ -174,19 +176,137 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
         actions: [
           IconButton(
               icon: const Icon(Icons.refresh),
-              tooltip: loc.translate('lifecounter.resetGame') != 'lifecounter.resetGame' ? loc.translate('lifecounter.resetGame') : 'Reset Game',
+              tooltip: loc.translate('lifecounter.resetGame'),
               onPressed: () => _confirmReset(),
             ),
+          // Mana toggle button
+          IconButton(
+            icon: const Icon(Icons.auto_awesome),
+            tooltip: 'Mana',
+            onPressed: () {
+              setState(() {
+                _showManaBar = !_showManaBar;
+              });
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.casino),
-            tooltip: 'Coin / Dice',
+            tooltip: 'Random',
             onPressed: () => showRandomPicker(context, maxPlayers: _game.playerCount),
           ),
         ],
       ),
-      body: Builder(builder: (ctx) {
+      body: Column(
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          // Animated mana bar that slides down under the AppBar
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            height: _showManaBar ? 40.0 : 0.0,
+            curve: Curves.easeInOut,
+            child: ClipRect(
+              child: Align(
+                alignment: Alignment.topCenter,
+                heightFactor: 1.0,
+                child: Container(
+                  color: Theme.of(context).colorScheme.surface,
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: List<Widget>.generate(6, (i) {
+                        final colors = [
+                          Colors.grey.shade200,
+                          Colors.blue,
+                          Colors.black,
+                          Colors.red,
+                          Colors.green,
+                          Colors.grey,
+                        ];
+
+                        
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                            child: SizedBox(
+                              child: Material(
+                                color: colors[i],
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
+                                  child: Builder(builder: (ctx) {
+                                    final textColor = (i == 0 || i == 5) ? Colors.black87 : Colors.white;
+                                    return SizedBox(
+                                      width: 55,
+                                      height: 32,
+                                      child: Stack(
+                                        children: [
+                                          Positioned.fill(
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        _manaCounts[i] = (_manaCounts[i] - 1).clamp(0, 9999);
+                                                      });
+                                                    },
+                                                    onLongPress: () {
+                                                      setState(() {
+                                                        _manaCounts[i] = 0;
+                                                      });
+                                                    },
+                                                    child: Align(
+                                                      alignment: Alignment.centerLeft,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 0.0),
+                                                        child: Icon(Icons.remove_circle_outline, size: 16, color: textColor),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        _manaCounts[i] = (_manaCounts[i] + 1).clamp(0, 9999);
+                                                      });
+                                                    },
+                                                    child: Align(
+                                                      alignment: Alignment.centerRight,
+                                                      child: Padding(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 0.0),
+                                                        child: Icon(Icons.add_circle_outline, size: 16, color: textColor),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Center(
+                                            child: IgnorePointer(
+                                              child: Text('${_manaCounts[i]}', style: TextStyle(fontSize: 13, color: textColor)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(child: Builder(builder: (ctx) {
         final count = _game.playerCount;
-        const double gap = 3.0;
+        const double gap = 2.0;
         if (count == 1) {
           return Padding(
             padding: const EdgeInsets.all(gap),
@@ -259,7 +379,9 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
             ],
           ),
         );
-      }),
+          })),
+        ],
+      ),
     );
   }
 

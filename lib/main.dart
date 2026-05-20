@@ -13,8 +13,6 @@ import 'screens/home/home_shell.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
-import 'services/scryfall/scryfall_service.dart';
-import 'services/scryfall/scryfall_card_repository.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -26,8 +24,6 @@ Future<void> main() async {
 
   final preferencesStorage = AppPreferencesStorage();
   final authService = FirebaseAuthService();
-  final scry = ScryfallService();
-  final scryCardRepo = ScryfallCardRepository(service: scry);
 
   final initialThemeMode = await preferencesStorage.loadThemeMode();
   final initialLocale = await preferencesStorage.loadLocale();
@@ -41,8 +37,6 @@ Future<void> main() async {
       initialThemeMode: initialThemeMode,
       initialLocale: initialLocale,
       currentUser: currentUser,
-      scryfallService: scry,
-      scryfallCardRepository: scryCardRepo,
     ),
   );
 }
@@ -55,8 +49,6 @@ class AetherVaultApp extends StatefulWidget {
     required this.initialThemeMode,
     required this.initialLocale,
     required this.currentUser,
-    required this.scryfallService,
-    required this.scryfallCardRepository,
   });
 
   final AppPreferencesStorage preferencesStorage;
@@ -64,8 +56,6 @@ class AetherVaultApp extends StatefulWidget {
   final ThemeMode initialThemeMode;
   final Locale initialLocale;
   final VaultUser? currentUser;
-  final ScryfallService scryfallService;
-  final ScryfallCardRepository scryfallCardRepository;
 
   @override
   State<AetherVaultApp> createState() => _AetherVaultAppState();
