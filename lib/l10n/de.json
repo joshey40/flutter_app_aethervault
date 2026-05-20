@@ -6,7 +6,6 @@
   "auth": {
     "createAccountTitle": "Erstelle deine Vault",
     "createAccountSubtitle": "Erstelle dein Firebase-Konto für Aethervault.",
-    "displayName": "Anzeigename",
     "email": "E-Mail",
     "password": "Passwort",
     "confirmPassword": "Passwort bestätigen",
@@ -20,7 +19,30 @@
     "decks": "Decks",
     "search": "Suche",
     "collection": "Kollektion",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "play": "Spielen"
+  },
+  "lifecounter": {
+    "title": "Lebenszähler",
+    "format": "Format",
+    "presetStandard": "Standard",
+    "presetCommander": "Commander",
+    "startLife": "Startleben",
+    "players": "Spieler",
+    "startNewGame": "Neues Spiel starten",
+    "startGame": "Spiel starten",
+    "resumeGame": "Spiel fortsetzen"
+    ,
+    "playerSettingsTitle": "Einstellungen: Spieler {index}",
+    "partner": "Partner",
+    "playerLabel": "Spieler {index}",
+    "random": "Münze / Würfeln",
+    "random.coin": "Münze",
+    "random.player": "Spieler",
+    "random.rollAgain": "Nochmal würfeln",
+    "resetGame": "Spiel zurücksetzen",
+    "resetConfirm": "Bist du sicher, dass du alle Spieler auf das Startleben zurücksetzen möchtest?",
+    "gameReset": "Spiel zurückgesetzt"
   },
   "overview": {
     "greeting": "Willkommen zurück, {name}",
@@ -164,6 +186,11 @@
     "englishShort": "EN",
     "germanShort": "DE"
   },
+  "ok": "OK",
+  "cancel": "Abbrechen",
+  "close": "Schließen",
+  "confirm": "Bestätigen",
+  "back": "Zurück",
   "errors": {
     "emptyFields": "Bitte fülle alle Pflichtfelder aus.",
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
@@ -172,5 +199,10 @@
     "invalidCredentials": "E-Mail oder Passwort ist falsch.",
     "weakPassword": "Das Passwort ist zu schwach.",
     "reauthRequired": "Bitte melde dich erneut an, um fortzufahren."
+  }
+  ,
+  "coin": {
+    "heads": "Kopf",
+    "tails": "Zahl"
   }
 }

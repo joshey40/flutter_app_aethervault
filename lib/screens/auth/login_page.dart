@@ -151,6 +151,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 8),
                           ElevatedButton(
+                            style: ElevatedButton.styleFrom(minimumSize: const Size(120, 44)),
                             onPressed: _isSubmitting ? null : _submit,
                             child: _isSubmitting
                                 ? const SizedBox(
@@ -162,6 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 12),
                           TextButton(
+                            style: TextButton.styleFrom(minimumSize: const Size(80, 40)),
                             onPressed: _isSubmitting ? null : widget.onSignUpTap,
                             child: Text(appLocalizations.translate('auth.switchToSignUp')),
                           ),

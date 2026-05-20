@@ -20,7 +20,30 @@
     "decks": "Decks",
     "search": "Search",
     "collection": "Collection",
-    "settings": "Settings"
+    "settings": "Settings",
+    "play": "Play"
+  },
+  "lifecounter": {
+    "title": "Lifecounter",
+    "format": "Format",
+    "presetStandard": "Standard",
+    "presetCommander": "Commander",
+    "startLife": "Startleben",
+    "players": "Spieler",
+    "startNewGame": "Start New Game",
+    "startGame": "Start Game",
+    "resumeGame": "Resume Game"
+    ,
+    "playerSettingsTitle": "Settings: Player {index}",
+    "partner": "Partner",
+    "playerLabel": "Player {index}",
+    "random": "Flip / Roll",
+    "random.coin": "Coin",
+    "random.player": "Player",
+    "random.rollAgain": "Roll again",
+    "resetGame": "Reset Game",
+    "resetConfirm": "Are you sure you want to reset all players to start life?",
+    "gameReset": "Game reset"
   },
   "overview": {
     "greeting": "Welcome back, {name}",
@@ -164,6 +187,11 @@
     "englishShort": "EN",
     "germanShort": "DE"
   },
+  "ok": "OK",
+  "cancel": "Cancel",
+  "close": "Close",
+  "confirm": "Confirm",
+  "back": "Back",
   "errors": {
     "emptyFields": "Please fill in all required fields.",
     "passwordMismatch": "Passwords do not match.",
@@ -172,5 +200,10 @@
     "invalidCredentials": "The email or password is incorrect.",
     "weakPassword": "The password is too weak.",
     "reauthRequired": "Please sign in again to continue."
+  }
+  ,
+  "coin": {
+    "heads": "Heads",
+    "tails": "Tails"
   }
 }

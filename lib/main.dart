@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
 
 import 'models/vault_user.dart';
 import 'credentials/firebase_options.dart';
@@ -19,6 +20,9 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Lock orientation to portrait only. (Keeping screen awake removed temporarily.)
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final preferencesStorage = AppPreferencesStorage();
   final authService = FirebaseAuthService();
@@ -97,7 +101,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   }
 
   Future<void> _runStartupInitialization() async {
-    final scry = widget.scryfallService;
+    /**final scry = widget.scryfallService;
 
     // Download and prepare Scryfall data, with progress updates
     await scry.prepareData(onProgress: (progress) {
@@ -108,7 +112,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       });
     });
     // Setup Scryfall repository with the loaded data
-    await widget.scryfallCardRepository.loadBaseData();
+    await widget.scryfallCardRepository.loadBaseData(); */
 
     if (!mounted) return;
     setState(() {

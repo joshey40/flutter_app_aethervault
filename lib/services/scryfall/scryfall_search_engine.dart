@@ -15,21 +15,21 @@ class ScryfallSearchEngine {
   /// Display keywords (unique:, order:, direction:) are extracted and applied
   /// as post-processing steps.
   List<Map<String, dynamic>> filterCards(
-    List<dynamic> oracle_cards,
-    List<dynamic> default_cards,
-    List<dynamic> all_cards,
+    List<dynamic> oracleCards,
+    List<dynamic> defaultCards,
+    List<dynamic> allCards,
     String query,
   ) {
     final sanitizedQuery = query.trim();
     if (sanitizedQuery.isEmpty) {
       // Empty query → return all default cards.
-      return default_cards.cast<Map<String, dynamic>>();
+      return defaultCards.cast<Map<String, dynamic>>();
     }
 
     final groups = _parseQueryGroups(sanitizedQuery);
     if (groups.isEmpty) {
       // Parsing failed or produced no valid terms → return all default cards.
-      return default_cards.cast<Map<String, dynamic>>();
+      return defaultCards.cast<Map<String, dynamic>>();
     }
 
     // Extract display/meta options from all groups; build filter-only groups.
@@ -60,9 +60,9 @@ class ScryfallSearchEngine {
     List<Map<String, dynamic>> result;
     if (filterGroups.isEmpty) {
       // Query consisted only of meta terms; return all default cards for post-processing.
-      result = default_cards.cast<Map<String, dynamic>>().toList();
+      result = defaultCards.cast<Map<String, dynamic>>().toList();
     } else {
-      result = all_cards.cast<Map<String, dynamic>>().where((card) {
+      result = allCards.cast<Map<String, dynamic>>().where((card) {
         return filterGroups.any((group) => _matchesGroup(card, group));
       }).toList();
     }
@@ -565,7 +565,6 @@ class ScryfallSearchEngine {
     final name = _lowerString(card['name']);
     final oracleText = _oracleText(card);
     final typeLine = _typeLine(card);
-    final setName = _lowerString(card['set_name']);
     final setCode = _lowerString(card['set']);
     final language = _lowerString(card['lang']);
     final rarity = _lowerString(card['rarity']);

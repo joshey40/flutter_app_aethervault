@@ -7,6 +7,7 @@ import 'collection_page.dart';
 import 'decks_page.dart';
 import 'overview_page.dart';
 import 'search/search_page.dart';
+import 'lifecounter/screens/lifecounter_entry_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({
@@ -39,6 +40,7 @@ class _HomeShellState extends State<HomeShell> {
       OverviewPage(user: widget.user),
       const DecksPage(),
       const SearchPage(),
+      const LifecounterEntryScreen(),
       const CollectionPage(),
       SettingsPage(
         user: widget.user,
@@ -74,6 +76,11 @@ class _HomeShellState extends State<HomeShell> {
             icon: const Icon(Icons.search_outlined),
             activeIcon: const Icon(Icons.search),
             label: appLocalizations.translate('nav.search'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.favorite_border),
+            activeIcon: const Icon(Icons.favorite),
+            label: appLocalizations.translate('nav.play'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.style_outlined),

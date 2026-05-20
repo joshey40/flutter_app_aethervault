@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppPreferencesStorage {
   static const String _themeModeKey = 'settings.themeMode';
   static const String _localeKey = 'settings.locale';
+  static const String _lifecounterKey = 'lifecounter.current_game';
 
   Future<ThemeMode> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -40,5 +41,21 @@ class AppPreferencesStorage {
   Future<void> saveLocale(Locale locale) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_localeKey, locale.languageCode);
+  }
+
+  // Lifecounter persistence (JSON encoded game)
+  Future<void> saveLifecounterGame(String json) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lifecounterKey, json);
+  }
+
+  Future<String?> loadLifecounterGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lifecounterKey);
+  }
+
+  Future<void> clearLifecounterGame() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_lifecounterKey);
   }
 }
