@@ -13,6 +13,8 @@ import 'screens/home/home_shell.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
+import 'services/scryfall/download_service.dart';
+import 'services/services_provider.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -29,6 +31,8 @@ Future<void> main() async {
   final initialLocale = await preferencesStorage.loadLocale();
   await initializeLocalizations(initialLocale.languageCode);
   final currentUser = await authService.loadCurrentUser();
+
+  // Scryfall data initialization handled inside the app (service removed).
 
   runApp(
     AetherVaultApp(
@@ -56,6 +60,7 @@ class AetherVaultApp extends StatefulWidget {
   final ThemeMode initialThemeMode;
   final Locale initialLocale;
   final VaultUser? currentUser;
+  // CardsDataService removed
 
   @override
   State<AetherVaultApp> createState() => _AetherVaultAppState();
@@ -70,6 +75,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   bool _initializing = true;
   double _initProgress = 0.0;
   String _initStatus = '';
+  // parsed cards data service removed
 
   @override
   void initState() {
@@ -86,30 +92,57 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       });
     });
 
-    // start Scryfall initialization (show loading screen while running)
+    // Start initialization as before (CardsDataService removed).
+    _initializing = true;
     _runStartupInitialization();
   }
 
   Future<void> _runStartupInitialization() async {
-    /**final scry = widget.scryfallService;
-
-    // Download and prepare Scryfall data, with progress updates
-    await scry.prepareData(onProgress: (progress) {
-      if (!mounted) return;
-      setState(() {
-        _initProgress = progress;
-        _initStatus = 'Preparing data... (${(progress * 100).toStringAsFixed(0)}%)';
-      });
-    });
-    // Setup Scryfall repository with the loaded data
-    await widget.scryfallCardRepository.loadBaseData(); */
-
+    // Download Scryfall data and prepare it for use.
     if (!mounted) return;
     setState(() {
-      _initializing = false;
+      _initStatus = 'Fetching Scryfall metadata...';
       _initProgress = 0.0;
-      _initStatus = '';
     });
+
+    try {
+      final svc = DownloadService.instance;
+      setState(() {
+        _initStatus = 'Downloading All Cards (this may take a while)...';
+        _initProgress = 0.0;
+      });
+
+      final file = await svc.downloadAllCards(force: false, onProgress: (received, total) {
+        if (!mounted) return;
+        setState(() {
+          if (total != null && total > 0) {
+            _initProgress = received / total;
+            _initStatus = 'Downloading All Cards: ${(_initProgress * 100).toStringAsFixed(0)}%';
+          } else {
+            // Unknown total size: show received bytes in status
+            _initStatus = 'Downloading All Cards: $received bytes';
+          }
+        });
+      });
+
+      if (mounted) {
+        setState(() {
+          _initStatus = 'Scryfall data ready: ${file.path}';
+          _initProgress = 1.0;
+        });
+        // Download complete; parsing/service removed per project cleanup.
+      }
+    } catch (e) {
+      setState(() {
+        _initStatus = 'Scryfall initialization failed: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _initializing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -206,7 +239,8 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       darkTheme: AppTheme.darkTheme,
       themeMode: _themeMode,
       locale: _locale,
-      home: StreamBuilder<VaultUser?>(
+      home: ServicesProvider(
+        child: StreamBuilder<VaultUser?>(
         stream: widget.authService.authStateChanges(),
         initialData: widget.currentUser,
         builder: (context, snapshot) {
@@ -233,8 +267,8 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
             onLocaleChanged: _setLocale,
             onSignOut: _handleSignOut,
           );
-        },
-      ),
+        }),
+      )
     );
   }
 }
