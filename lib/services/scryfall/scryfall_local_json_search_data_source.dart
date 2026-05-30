@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -15,23 +16,9 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
 
   final DownloadService _downloadService;
   final int maxResults;
-  List<ScryfallCardPrint>? _cache;
 
   @override
   Future<List<ScryfallCardPrint>> searchDefaultCards(String rawQuery) async {
-    final cards = await _loadCards();
-    final query = _LocalScryfallQuery.parse(rawQuery);
-
-    return cards
-        .where(query.matches)
-        .take(maxResults)
-        .toList(growable: false);
-  }
-
-  Future<List<ScryfallCardPrint>> _loadCards() async {
-    final cached = _cache;
-    if (cached != null) return cached;
-
     final file = await _downloadService.getLocalFile(
       type: ScryfallBulkDataType.defaultCards,
     );
@@ -39,33 +26,97 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
       throw StateError('Scryfall default_cards file is not available.');
     }
 
-    final cards = await Isolate.run(() => _readCardsFromFile(file.path));
-    _cache = cards;
-    return cards;
+    return Isolate.run(
+      () => _searchCardsInFile(
+        path: file.path,
+        rawQuery: rawQuery,
+        maxResults: maxResults,
+      ),
+    );
   }
 
-  static List<ScryfallCardPrint> _readCardsFromFile(String path) {
-    final bytes = File(path).readAsBytesSync();
-    final content = _decodeJsonBytes(bytes);
-    final decoded = jsonDecode(content);
-    if (decoded is! List) {
-      throw const FormatException('Scryfall default_cards JSON is expected to be a list.');
+  static Future<List<ScryfallCardPrint>> _searchCardsInFile({
+    required String path,
+    required String rawQuery,
+    required int maxResults,
+  }) async {
+    final query = _LocalScryfallQuery.parse(rawQuery);
+    final results = <ScryfallCardPrint>[];
+
+    await for (final cardJson in _readTopLevelJsonObjects(path)) {
+      final decoded = jsonDecode(cardJson);
+      if (decoded is! Map<String, dynamic>) continue;
+
+      final card = ScryfallCardPrint.fromJson(decoded);
+      if (query.matches(card)) {
+        results.add(card);
+        if (results.length >= maxResults) break;
+      }
     }
 
-    return decoded
-        .whereType<Map<String, dynamic>>()
-        .map(ScryfallCardPrint.fromJson)
-        .toList(growable: false);
+    return results;
   }
 
-  static String _decodeJsonBytes(List<int> bytes) {
-    try {
-      return utf8.decode(bytes);
-    } on FormatException {
-      if (_looksLikeGzip(bytes)) {
-        return utf8.decode(gzip.decode(bytes));
+  static Stream<String> _readTopLevelJsonObjects(String path) async* {
+    final file = File(path);
+    final header = await file.openRead(0, 2).fold<List<int>>(
+      <int>[],
+      (previous, chunk) => previous..addAll(chunk),
+    );
+
+    Stream<List<int>> bytes = file.openRead();
+    if (_looksLikeGzip(header)) {
+      bytes = bytes.transform(gzip.decoder);
+    }
+
+    final chars = bytes.transform(utf8.decoder);
+    final buffer = StringBuffer();
+    var depth = 0;
+    var inString = false;
+    var escaping = false;
+    var capturing = false;
+
+    await for (final chunk in chars) {
+      for (var i = 0; i < chunk.length; i++) {
+        final char = chunk[i];
+
+        if (capturing) buffer.write(char);
+
+        if (inString) {
+          if (escaping) {
+            escaping = false;
+          } else if (char == r'\') {
+            escaping = true;
+          } else if (char == '"') {
+            inString = false;
+          }
+          continue;
+        }
+
+        if (char == '"') {
+          inString = true;
+          continue;
+        }
+
+        if (char == '{') {
+          if (!capturing) {
+            capturing = true;
+            buffer.clear();
+            buffer.write(char);
+          }
+          depth++;
+          continue;
+        }
+
+        if (char == '}') {
+          depth--;
+          if (capturing && depth == 0) {
+            yield buffer.toString();
+            buffer.clear();
+            capturing = false;
+          }
+        }
       }
-      rethrow;
     }
   }
 
