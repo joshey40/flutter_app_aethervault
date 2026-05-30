@@ -35,11 +35,11 @@ class ScryfallSearchPlan {
 
   final ScryfallSearchQuery query;
 
-  /// Source for fast local search. This should normally be default_cards.
+  /// Source for local search. Normal searches use oracle_cards to avoid
+  /// duplicates; print-sensitive searches use default_cards or all_cards.
   final ScryfallBulkDataType searchBulkType;
 
   /// Source for exact print ownership and language/variant tracking.
-  /// This should normally be all_cards.
   final ScryfallBulkDataType collectionBulkType;
 }
 
@@ -56,54 +56,41 @@ class ScryfallSearchPlanner {
       'cube',
       'lore',
     },
-    this.locallySupportedKeywords = const <String>{
-      'a',
+    this.printSensitiveKeywords = const <String>{
       'artist',
-      'c',
-      'color',
-      'colors',
-      'ci',
-      'commander',
-      'edh',
-      'id',
-      'identity',
-      'f',
-      'format',
-      'game',
-      'in',
-      'is',
-      'lang',
-      'language',
-      'm',
-      'mana',
-      'mv',
-      'cmc',
-      'name',
-      'o',
-      'oracle',
-      'pow',
-      'power',
-      'rarity',
-      'r',
-      's',
-      'set',
+      'a',
+      'collector',
+      'cn',
       'e',
       'edition',
-      't',
-      'type',
-      'usd',
       'eur',
+      'f',
+      'finish',
+      'lang',
+      'language',
+      'number',
+      'r',
+      'rarity',
+      's',
+      'set',
+      'usd',
       'year',
+    },
+    this.allCardsKeywords = const <String>{
+      'lang',
+      'language',
     },
   });
 
   final Set<String> remoteOnlyKeywords;
-  final Set<String> locallySupportedKeywords;
+  final Set<String> printSensitiveKeywords;
+  final Set<String> allCardsKeywords;
 
   ScryfallSearchPlan plan(String rawQuery) {
     final terms = _extractKeywordTerms(rawQuery);
     final remoteOnly = <String>[];
     final local = <String>[];
+    var searchBulkType = ScryfallBulkDataType.oracleCards;
 
     for (final term in terms) {
       final keyword = term.keyword.toLowerCase();
@@ -111,6 +98,13 @@ class ScryfallSearchPlanner {
         remoteOnly.add(term.source);
       } else {
         local.add(term.source);
+      }
+
+      if (allCardsKeywords.contains(keyword)) {
+        searchBulkType = ScryfallBulkDataType.allCards;
+      } else if (printSensitiveKeywords.contains(keyword) &&
+          searchBulkType != ScryfallBulkDataType.allCards) {
+        searchBulkType = ScryfallBulkDataType.defaultCards;
       }
     }
 
@@ -125,7 +119,7 @@ class ScryfallSearchPlanner {
         : 'Query contains terms that are not represented reliably in local bulk data: ${remoteOnly.join(', ')}';
 
     return ScryfallSearchPlan(
-      searchBulkType: ScryfallBulkDataType.defaultCards,
+      searchBulkType: searchBulkType,
       collectionBulkType: ScryfallBulkDataType.allCards,
       query: ScryfallSearchQuery(
         rawQuery: rawQuery,
