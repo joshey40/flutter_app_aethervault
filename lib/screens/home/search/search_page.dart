@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../services/localization_service.dart';
 import '../../../services/scryfall/download_service.dart';
-import '../../../services/services_provider.dart';
-
-// Search functionality removed per request; placeholder UI only.
-
-
-// ---------------------------------------------------------------------------
-// Search Page
-// ---------------------------------------------------------------------------
+import '../../../services/scryfall/scryfall_card_print.dart';
+import '../../../services/scryfall/scryfall_local_json_search_data_source.dart';
+import '../../../services/scryfall/scryfall_remote_search_data_source.dart';
+import '../../../services/scryfall/scryfall_search_query.dart';
+import '../../../services/scryfall/scryfall_search_repository.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -19,39 +16,95 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
+  late final HybridScryfallSearchRepository _searchRepository;
+  late final ScryfallRemoteSearchDataSource _remoteDataSource;
+
+  final TextEditingController _searchController = TextEditingController();
+  bool _defaultCardsAvailable = false;
   bool _allCardsAvailable = false;
   bool _checkingAvailability = true;
-  int? _loadedCardCount;
-  // search UI state (search engine removed)
-  final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String? _searchError;
-  List<Map<String, dynamic>> _results = [];
+  ScryfallSearchResultSource? _lastResultSource;
+  String? _lastFallbackReason;
+  List<ScryfallCardPrint> _results = const <ScryfallCardPrint>[];
 
   @override
   void initState() {
     super.initState();
+    _remoteDataSource = ScryfallRemoteSearchDataSource();
+    _searchRepository = HybridScryfallSearchRepository(
+      localDataSource: ScryfallLocalJsonSearchDataSource(),
+      remoteDataSource: _remoteDataSource,
+      planner: ScryfallSearchPlanner(),
+    );
     _checkScryfallAvailability();
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _remoteDataSource.dispose();
     super.dispose();
   }
 
   Future<void> _checkScryfallAvailability() async {
     setState(() => _checkingAvailability = true);
     try {
-      final available = await DownloadService.instance.isAllCardsAvailable();
+      final service = DownloadService.instance;
+      final defaultAvailable = await service.isDefaultCardsAvailable();
+      final allAvailable = await service.isAllCardsAvailable();
       if (!mounted) return;
-      // CardsDataService removed; only show availability of the raw file
-      setState(() => _loadedCardCount = null);
-      setState(() => _allCardsAvailable = available);
+      setState(() {
+        _defaultCardsAvailable = defaultAvailable;
+        _allCardsAvailable = allAvailable;
+      });
     } catch (_) {
-      setState(() => _allCardsAvailable = false);
+      if (!mounted) return;
+      setState(() {
+        _defaultCardsAvailable = false;
+        _allCardsAvailable = false;
+      });
     } finally {
-      setState(() => _checkingAvailability = false);
+      if (mounted) setState(() => _checkingAvailability = false);
+    }
+  }
+
+  Future<void> _performSearch() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      setState(() {
+        _results = const <ScryfallCardPrint>[];
+        _searchError = null;
+        _lastResultSource = null;
+        _lastFallbackReason = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isSearching = true;
+      _searchError = null;
+      _lastResultSource = null;
+      _lastFallbackReason = null;
+    });
+
+    try {
+      final result = await _searchRepository.search(query);
+      if (!mounted) return;
+      setState(() {
+        _results = result.cards;
+        _lastResultSource = result.source;
+        _lastFallbackReason = result.fallbackReason;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _results = const <ScryfallCardPrint>[];
+        _searchError = 'Suche fehlgeschlagen: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
     }
   }
 
@@ -68,7 +121,6 @@ class _SearchPageState extends State<SearchPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Aktives Suchfeld
             Row(
               children: [
                 Expanded(
@@ -87,49 +139,94 @@ class _SearchPageState extends State<SearchPage> {
                 ),
                 const SizedBox(width: 8),
                 SizedBox(
-                  width: 96,
+                  width: 112,
                   child: ElevatedButton(
-                    onPressed: null,
-                    child: const Text('Suche deaktiviert'),
+                    onPressed: _isSearching ? null : _performSearch,
+                    child: _isSearching
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Suchen'),
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: 16),
+            _buildAvailabilityCard(),
+            if (_lastResultSource != null || _lastFallbackReason != null) ...[
+              const SizedBox(height: 8),
+              _buildResultSourceInfo(),
+            ],
+            if (_searchError != null) ...[
+              const SizedBox(height: 8),
+              _buildErrorCard(_searchError!),
+            ],
+            const SizedBox(height: 12),
+            Expanded(child: _buildResultsArea()),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // Availability row
-            Card(
-              child: ListTile(
-                leading: _checkingAvailability
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        _allCardsAvailable ? Icons.check_circle : Icons.error_outline,
-                        color: _allCardsAvailable ? Colors.green : Colors.red,
-                      ),
-                title: Text(_checkingAvailability
-                    ? 'Prüfe Scryfall-Daten...'
-                    : (_allCardsAvailable ? 'Scryfall-Datei vorhanden' : 'Scryfall-Datei fehlt')),
-                subtitle: _loadedCardCount != null ? Text('Geladene Karten: $_loadedCardCount') : null,
-                trailing: TextButton.icon(
-                  onPressed: _checkScryfallAvailability,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Aktualisieren'),
-                ),
+  Widget _buildAvailabilityCard() {
+    final ready = _defaultCardsAvailable && _allCardsAvailable;
+    return Card(
+      child: ListTile(
+        leading: _checkingAvailability
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                ready ? Icons.check_circle : Icons.error_outline,
+                color: ready ? Colors.green : Colors.orange,
               ),
-            ),
+        title: Text(
+          _checkingAvailability
+              ? 'Prüfe Scryfall-Daten...'
+              : ready
+                  ? 'Scryfall-Daten vorhanden'
+                  : 'Scryfall-Daten unvollständig',
+        ),
+        subtitle: Text(
+          'Suche: ${_defaultCardsAvailable ? 'default_cards bereit' : 'default_cards fehlt'} · '
+          'Collection: ${_allCardsAvailable ? 'all_cards bereit' : 'all_cards fehlt'}',
+        ),
+        trailing: TextButton.icon(
+          onPressed: _checkingAvailability ? null : _checkScryfallAvailability,
+          icon: const Icon(Icons.refresh),
+          label: const Text('Aktualisieren'),
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 12),
+  Widget _buildResultSourceInfo() {
+    final sourceText = switch (_lastResultSource) {
+      ScryfallSearchResultSource.localDefaultCards => 'Lokale Suche über default_cards',
+      ScryfallSearchResultSource.remoteScryfallApi => 'Online-Fallback über Scryfall API',
+      null => null,
+    };
 
-            const SizedBox(height: 12),
-
-            // Results or placeholders
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.info_outline, size: 20),
+            const SizedBox(width: 8),
             Expanded(
-              child: _buildResultsArea(),
+              child: Text(
+                [sourceText, _lastFallbackReason]
+                    .whereType<String>()
+                    .where((text) => text.isNotEmpty)
+                    .join('\n'),
+              ),
             ),
           ],
         ),
@@ -137,13 +234,86 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
+  Widget _buildErrorCard(String message) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildResultsArea() {
-    return Center(child: Text('Suche wurde entfernt.'));
+    if (_isSearching && _results.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_results.isEmpty) {
+      return const Center(
+        child: Text('Gib eine Scryfall-Suche ein, z. B. t:dragon, o:draw oder ci:uw mv<=3.'),
+      );
+    }
+
+    return ListView.separated(
+      itemCount: _results.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) => _CardResultTile(card: _results[index]),
+    );
+  }
+}
+
+class _CardResultTile extends StatelessWidget {
+  const _CardResultTile({required this.card});
+
+  final ScryfallCardPrint card;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: _buildLeadingImage(),
+        title: Text(card.name),
+        subtitle: Text(
+          [
+            if (card.manaCost != null && card.manaCost!.isNotEmpty) card.manaCost!,
+            if (card.typeLine.isNotEmpty) card.typeLine,
+            if (card.setCode.isNotEmpty || card.collectorNumber.isNotEmpty)
+              '${card.setCode.toUpperCase()} #${card.collectorNumber}',
+          ].join('\n'),
+          maxLines: 4,
+          overflow: TextOverflow.ellipsis,
+        ),
+        isThreeLine: true,
+      ),
+    );
   }
 
-  Future<void> _performSearch() async {
-    // Search functionality removed.
-    return;
-  }
+  Widget _buildLeadingImage() {
+    final imageUrl = card.imageSmall ?? card.imageNormal;
+    if (imageUrl == null) {
+      return const SizedBox(
+        width: 48,
+        height: 64,
+        child: Icon(Icons.style_outlined),
+      );
+    }
 
+    return SizedBox(
+      width: 48,
+      height: 64,
+      child: Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.style_outlined),
+      ),
+    );
+  }
 }
