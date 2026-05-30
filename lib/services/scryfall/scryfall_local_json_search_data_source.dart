@@ -45,7 +45,8 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   }
 
   static List<ScryfallCardPrint> _readCardsFromFile(String path) {
-    final content = File(path).readAsStringSync();
+    final bytes = File(path).readAsBytesSync();
+    final content = _decodeJsonBytes(bytes);
     final decoded = jsonDecode(content);
     if (decoded is! List) {
       throw const FormatException('Scryfall default_cards JSON is expected to be a list.');
@@ -56,6 +57,20 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
         .map(ScryfallCardPrint.fromJson)
         .toList(growable: false);
   }
+
+  static String _decodeJsonBytes(List<int> bytes) {
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      if (_looksLikeGzip(bytes)) {
+        return utf8.decode(gzip.decode(bytes));
+      }
+      rethrow;
+    }
+  }
+
+  static bool _looksLikeGzip(List<int> bytes) =>
+      bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
 }
 
 class _LocalScryfallQuery {
