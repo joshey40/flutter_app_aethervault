@@ -18,12 +18,13 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   final int maxResults;
 
   @override
-  Future<List<ScryfallCardPrint>> searchDefaultCards(String rawQuery) async {
-    final file = await _downloadService.getLocalFile(
-      type: ScryfallBulkDataType.defaultCards,
-    );
+  Future<List<ScryfallCardPrint>> searchCards({
+    required String rawQuery,
+    required ScryfallBulkDataType type,
+  }) async {
+    final file = await _downloadService.getLocalFile(type: type);
     if (file == null) {
-      throw StateError('Scryfall default_cards file is not available.');
+      throw StateError('Scryfall ${type.apiType} file is not available.');
     }
 
     return Isolate.run(
