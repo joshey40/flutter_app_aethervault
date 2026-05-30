@@ -53,11 +53,24 @@ class DownloadService {
   }) =>
       _getLocalFile(type);
 
+  Future<bool> isOracleCardsAvailable() =>
+      isFileUpToDate(type: ScryfallBulkDataType.oracleCards);
+
   Future<bool> isAllCardsAvailable() =>
       isFileUpToDate(type: ScryfallBulkDataType.allCards);
 
   Future<bool> isDefaultCardsAvailable() =>
       isFileUpToDate(type: ScryfallBulkDataType.defaultCards);
+
+  Future<File> downloadOracleCards({
+    bool force = false,
+    DownloadProgressCallback? onProgress,
+  }) =>
+      downloadBulkData(
+        type: ScryfallBulkDataType.oracleCards,
+        force: force,
+        onProgress: onProgress,
+      );
 
   Future<File> downloadAllCards({
     bool force = false,
