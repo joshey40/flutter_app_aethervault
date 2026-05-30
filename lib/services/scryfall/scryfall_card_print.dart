@@ -20,6 +20,8 @@ class ScryfallCardPrint {
     this.artist,
     this.imageNormal,
     this.imageSmall,
+    this.faceImageNormals = const <String>[],
+    this.faceImageSmalls = const <String>[],
     this.usd,
     this.eur,
   });
@@ -44,6 +46,8 @@ class ScryfallCardPrint {
   final String? artist;
   final String? imageNormal;
   final String? imageSmall;
+  final List<String> faceImageNormals;
+  final List<String> faceImageSmalls;
   final double? usd;
   final double? eur;
 
@@ -76,9 +80,27 @@ class ScryfallCardPrint {
       artist: json['artist'] as String?,
       imageNormal: imageUris?['normal'] as String?,
       imageSmall: imageUris?['small'] as String?,
+      faceImageNormals: _faceImageUris(json, 'normal'),
+      faceImageSmalls: _faceImageUris(json, 'small'),
       usd: _toDouble(prices?['usd']),
       eur: _toDouble(prices?['eur']),
     );
+  }
+
+  bool get hasMultipleFaceImages => faceImageNormals.length > 1 || faceImageSmalls.length > 1;
+
+  List<String> get displayImageNormals {
+    if (imageNormal != null) return <String>[imageNormal!];
+    if (faceImageNormals.isNotEmpty) return faceImageNormals;
+    if (faceImageSmalls.isNotEmpty) return faceImageSmalls;
+    return const <String>[];
+  }
+
+  List<String> get displayImageSmalls {
+    if (imageSmall != null) return <String>[imageSmall!];
+    if (faceImageSmalls.isNotEmpty) return faceImageSmalls;
+    if (faceImageNormals.isNotEmpty) return faceImageNormals;
+    return const <String>[];
   }
 
   static String _coalesceFaces(Map<String, dynamic> json, String key) {
@@ -98,6 +120,19 @@ class ScryfallCardPrint {
   static String? _coalesceNullableFaces(Map<String, dynamic> json, String key) {
     final value = _coalesceFaces(json, key);
     return value.isEmpty ? null : value;
+  }
+
+  static List<String> _faceImageUris(Map<String, dynamic> json, String size) {
+    final faces = json['card_faces'];
+    if (faces is! List) return const <String>[];
+
+    return faces
+        .whereType<Map<String, dynamic>>()
+        .map((face) => face['image_uris'])
+        .whereType<Map<String, dynamic>>()
+        .map((uris) => uris[size] as String? ?? '')
+        .where((uri) => uri.isNotEmpty)
+        .toList(growable: false);
   }
 
   static List<String> _stringList(Object? value) {
