@@ -1,4 +1,9 @@
 enum ScryfallBulkDataType {
+  oracleCards(
+    apiType: 'oracle_cards',
+    localFileName: 'scryfall_oracle_cards.json',
+    userFacingName: 'Oracle Cards',
+  ),
   defaultCards(
     apiType: 'default_cards',
     localFileName: 'scryfall_default_cards.json',
