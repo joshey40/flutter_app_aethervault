@@ -1,3 +1,4 @@
+import 'bulk_data_type.dart';
 import 'scryfall_card_print.dart';
 import 'scryfall_search_query.dart';
 
@@ -14,12 +15,17 @@ class ScryfallSearchResult {
 }
 
 enum ScryfallSearchResultSource {
+  localOracleCards,
   localDefaultCards,
+  localAllCards,
   remoteScryfallApi,
 }
 
 abstract interface class LocalScryfallSearchDataSource {
-  Future<List<ScryfallCardPrint>> searchDefaultCards(String rawQuery);
+  Future<List<ScryfallCardPrint>> searchCards({
+    required String rawQuery,
+    required ScryfallBulkDataType type,
+  });
 }
 
 abstract interface class RemoteScryfallSearchDataSource {
@@ -42,7 +48,7 @@ class HybridScryfallSearchRepository {
     if (normalizedQuery.isEmpty) {
       return const ScryfallSearchResult(
         cards: <ScryfallCardPrint>[],
-        source: ScryfallSearchResultSource.localDefaultCards,
+        source: ScryfallSearchResultSource.localOracleCards,
       );
     }
 
@@ -51,8 +57,11 @@ class HybridScryfallSearchRepository {
     switch (plan.query.executionMode) {
       case ScryfallSearchExecutionMode.localOnly:
         return ScryfallSearchResult(
-          cards: await localDataSource.searchDefaultCards(normalizedQuery),
-          source: ScryfallSearchResultSource.localDefaultCards,
+          cards: await localDataSource.searchCards(
+            rawQuery: normalizedQuery,
+            type: plan.searchBulkType,
+          ),
+          source: _sourceForBulkType(plan.searchBulkType),
         );
       case ScryfallSearchExecutionMode.remoteOnly:
         return ScryfallSearchResult(
@@ -63,8 +72,11 @@ class HybridScryfallSearchRepository {
       case ScryfallSearchExecutionMode.localThenRemoteFallback:
         try {
           return ScryfallSearchResult(
-            cards: await localDataSource.searchDefaultCards(normalizedQuery),
-            source: ScryfallSearchResultSource.localDefaultCards,
+            cards: await localDataSource.searchCards(
+              rawQuery: normalizedQuery,
+              type: plan.searchBulkType,
+            ),
+            source: _sourceForBulkType(plan.searchBulkType),
             fallbackReason: plan.query.reason,
           );
         } catch (_) {
@@ -74,6 +86,17 @@ class HybridScryfallSearchRepository {
             fallbackReason: plan.query.reason,
           );
         }
+    }
+  }
+
+  static ScryfallSearchResultSource _sourceForBulkType(ScryfallBulkDataType type) {
+    switch (type) {
+      case ScryfallBulkDataType.oracleCards:
+        return ScryfallSearchResultSource.localOracleCards;
+      case ScryfallBulkDataType.defaultCards:
+        return ScryfallSearchResultSource.localDefaultCards;
+      case ScryfallBulkDataType.allCards:
+        return ScryfallSearchResultSource.localAllCards;
     }
   }
 }
