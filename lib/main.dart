@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-
 import 'models/vault_user.dart';
 import 'credentials/firebase_options.dart';
 import 'screens/auth/login_page.dart';
@@ -14,6 +13,7 @@ import 'services/app_preferences_storage.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
 import 'services/scryfall/download_service.dart';
+import 'services/scryfall/bulk_data_type.dart';
 import 'services/services_provider.dart';
 import 'theme/app_theme.dart';
 
@@ -31,8 +31,6 @@ Future<void> main() async {
   final initialLocale = await preferencesStorage.loadLocale();
   await initializeLocalizations(initialLocale.languageCode);
   final currentUser = await authService.loadCurrentUser();
-
-  // Scryfall data initialization handled inside the app (service removed).
 
   runApp(
     AetherVaultApp(
@@ -60,7 +58,6 @@ class AetherVaultApp extends StatefulWidget {
   final ThemeMode initialThemeMode;
   final Locale initialLocale;
   final VaultUser? currentUser;
-  // CardsDataService removed
 
   @override
   State<AetherVaultApp> createState() => _AetherVaultAppState();
@@ -71,11 +68,9 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   late Locale _locale;
   bool _showSignUp = false;
   StreamSubscription<VaultUser?>? _authStateSubscription;
-  // startup download state
   bool _initializing = true;
   double _initProgress = 0.0;
   String _initStatus = '';
-  // parsed cards data service removed
 
   @override
   void initState() {
@@ -92,13 +87,10 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       });
     });
 
-    // Start initialization as before (CardsDataService removed).
-    _initializing = true;
     _runStartupInitialization();
   }
 
   Future<void> _runStartupInitialization() async {
-    // Download Scryfall data and prepare it for use.
     if (!mounted) return;
     setState(() {
       _initStatus = 'Fetching Scryfall metadata...';
@@ -106,35 +98,30 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     });
 
     try {
-      final svc = DownloadService.instance;
-      setState(() {
-        _initStatus = 'Downloading All Cards (this may take a while)...';
-        _initProgress = 0.0;
-      });
-
-      final file = await svc.downloadAllCards(force: false, onProgress: (received, total) {
-        if (!mounted) return;
-        setState(() {
-          if (total != null && total > 0) {
-            _initProgress = received / total;
-            _initStatus = 'Downloading All Cards: ${(_initProgress * 100).toStringAsFixed(0)}%';
-          } else {
-            // Unknown total size: show received bytes in status
-            _initStatus = 'Downloading All Cards: $received bytes';
-          }
-        });
-      });
+      final service = DownloadService.instance;
+      await _ensureBulkDataFile(
+        service: service,
+        type: ScryfallBulkDataType.defaultCards,
+        progressStart: 0.0,
+        progressEnd: 0.35,
+      );
+      await _ensureBulkDataFile(
+        service: service,
+        type: ScryfallBulkDataType.allCards,
+        progressStart: 0.35,
+        progressEnd: 1.0,
+      );
 
       if (mounted) {
         setState(() {
-          _initStatus = 'Scryfall data ready: ${file.path}';
+          _initStatus = 'Scryfall data ready.';
           _initProgress = 1.0;
         });
-        // Download complete; parsing/service removed per project cleanup.
       }
-    } catch (e) {
+    } catch (error) {
+      if (!mounted) return;
       setState(() {
-        _initStatus = 'Scryfall initialization failed: $e';
+        _initStatus = 'Scryfall initialization failed: $error';
       });
     } finally {
       if (mounted) {
@@ -143,6 +130,39 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         });
       }
     }
+  }
+
+  Future<void> _ensureBulkDataFile({
+    required DownloadService service,
+    required ScryfallBulkDataType type,
+    required double progressStart,
+    required double progressEnd,
+  }) async {
+    setState(() {
+      _initStatus = 'Checking ${type.userFacingName}...';
+      _initProgress = progressStart;
+    });
+
+    final available = await service.isFileUpToDate(type: type);
+    if (available) return;
+
+    await service.downloadBulkData(
+      type: type,
+      force: false,
+      onProgress: (received, total) {
+        if (!mounted) return;
+        setState(() {
+          if (total != null && total > 0) {
+            final fileProgress = (received / total).clamp(0.0, 1.0);
+            _initProgress = progressStart + (progressEnd - progressStart) * fileProgress;
+            _initStatus =
+                'Downloading ${type.userFacingName}: ${(fileProgress * 100).toStringAsFixed(0)}%';
+          } else {
+            _initStatus = 'Downloading ${type.userFacingName}: $received bytes';
+          }
+        });
+      },
+    );
   }
 
   @override
@@ -193,7 +213,6 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
 
   @override
   Widget build(BuildContext context) {
-    // While initializing Scryfall data, show a full-screen loading indicator
     if (_initializing) {
       return MaterialApp(
         title: 'Aethervault',
@@ -212,8 +231,6 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
                   const SizedBox(height: 8),
                   Text(_initStatus.isEmpty ? 'Preparing data...' : _initStatus),
                   const SizedBox(height: 12),
-                  // Always show a spinner to indicate activity, and also show
-                  // the linear progress bar when we have progress information.
                   const CircularProgressIndicator(),
                   const SizedBox(height: 12),
                   if (_initProgress > 0 && _initProgress <= 1)
@@ -241,34 +258,35 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       locale: _locale,
       home: ServicesProvider(
         child: StreamBuilder<VaultUser?>(
-        stream: widget.authService.authStateChanges(),
-        initialData: widget.currentUser,
-        builder: (context, snapshot) {
-          final currentUser = snapshot.data;
-          if (currentUser == null) {
-            return _showSignUp
-                ? SignUpPage(
-                    authService: widget.authService,
-                    onLoginTap: _showLogin,
-                    onSignUpSuccess: _handleAuthenticated,
-                  )
-                : LoginPage(
-                    authService: widget.authService,
-                    onSignUpTap: _showSignUpPage,
-                    onSignInSuccess: _handleAuthenticated,
-                  );
-          }
+          stream: widget.authService.authStateChanges(),
+          initialData: widget.currentUser,
+          builder: (context, snapshot) {
+            final currentUser = snapshot.data;
+            if (currentUser == null) {
+              return _showSignUp
+                  ? SignUpPage(
+                      authService: widget.authService,
+                      onLoginTap: _showLogin,
+                      onSignUpSuccess: _handleAuthenticated,
+                    )
+                  : LoginPage(
+                      authService: widget.authService,
+                      onSignUpTap: _showSignUpPage,
+                      onSignInSuccess: _handleAuthenticated,
+                    );
+            }
 
-          return HomeShell(
-            user: currentUser,
-            themeMode: _themeMode,
-            onThemeModeChanged: _setThemeMode,
-            locale: _locale,
-            onLocaleChanged: _setLocale,
-            onSignOut: _handleSignOut,
-          );
-        }),
-      )
+            return HomeShell(
+              user: currentUser,
+              themeMode: _themeMode,
+              onThemeModeChanged: _setThemeMode,
+              locale: _locale,
+              onLocaleChanged: _setLocale,
+              onSignOut: _handleSignOut,
+            );
+          },
+        ),
+      ),
     );
   }
 }
