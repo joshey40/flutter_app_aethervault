@@ -24,7 +24,9 @@ class _SearchPageState extends State<SearchPage> {
   bool _defaultCardsAvailable = false;
   bool _checkingAvailability = true;
   bool _isSearching = false;
+  int _searchGeneration = 0;
   String? _searchError;
+  ScryfallSearchResultSource? _lastResultSource;
   List<ScryfallCardPrint> _results = const <ScryfallCardPrint>[];
 
   @override
@@ -62,10 +64,14 @@ class _SearchPageState extends State<SearchPage> {
 
   Future<void> _performSearch() async {
     final query = _searchController.text.trim();
+    final generation = ++_searchGeneration;
+
     if (query.isEmpty) {
       setState(() {
+        _isSearching = false;
         _results = const <ScryfallCardPrint>[];
         _searchError = null;
+        _lastResultSource = null;
       });
       return;
     }
@@ -73,20 +79,27 @@ class _SearchPageState extends State<SearchPage> {
     setState(() {
       _isSearching = true;
       _searchError = null;
+      _lastResultSource = null;
     });
 
     try {
       final result = await _searchRepository.search(query);
-      if (!mounted) return;
-      setState(() => _results = result.cards);
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _results = result.cards;
+        _lastResultSource = result.source;
+      });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _results = const <ScryfallCardPrint>[];
         _searchError = 'Suche fehlgeschlagen: $error';
+        _lastResultSource = null;
       });
     } finally {
-      if (mounted) setState(() => _isSearching = false);
+      if (mounted && generation == _searchGeneration) {
+        setState(() => _isSearching = false);
+      }
     }
   }
 
@@ -98,6 +111,8 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         title: Text(loc.translate('nav.search')),
         actions: [
+          if (_lastResultSource != null)
+            _SearchSourceIcon(source: _lastResultSource!),
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: _OfflineStatusIcon(
@@ -166,6 +181,27 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _runExampleSearch(String query) async {
     _searchController.text = query;
     await _performSearch();
+  }
+}
+
+class _SearchSourceIcon extends StatelessWidget {
+  const _SearchSourceIcon({required this.source});
+
+  final ScryfallSearchResultSource source;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLocal = source == ScryfallSearchResultSource.localDefaultCards;
+    return Tooltip(
+      message: isLocal ? 'Letzte Suche: lokal' : 'Letzte Suche: online',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Icon(
+          isLocal ? Icons.storage_rounded : Icons.cloud_sync_rounded,
+          color: isLocal ? AppTheme.vaultAmber : Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
   }
 }
 
@@ -431,7 +467,9 @@ class _CardImageTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = card.imageNormal ?? card.imageSmall;
+    final imageUrls = card.displayImageNormals.isNotEmpty
+        ? card.displayImageNormals
+        : card.displayImageSmalls;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final placeholderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
 
@@ -448,14 +486,53 @@ class _CardImageTile extends StatelessWidget {
             ),
           ],
         ),
-        child: imageUrl == null
+        child: imageUrls.isEmpty
             ? _MissingImageCard(card: card)
-            : Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _MissingImageCard(card: card),
-              ),
+            : imageUrls.length == 1
+                ? _NetworkCardImage(url: imageUrls.first, card: card)
+                : _DoubleFacedCardImages(urls: imageUrls.take(2).toList(growable: false), card: card),
       ),
+    );
+  }
+}
+
+class _NetworkCardImage extends StatelessWidget {
+  const _NetworkCardImage({required this.url, required this.card});
+
+  final String url;
+  final ScryfallCardPrint card;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.network(
+      url,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _MissingImageCard(card: card),
+    );
+  }
+}
+
+class _DoubleFacedCardImages extends StatelessWidget {
+  const _DoubleFacedCardImages({required this.urls, required this.card});
+
+  final List<String> urls;
+  final ScryfallCardPrint card;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final url in urls)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _NetworkCardImage(url: url, card: card),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
