@@ -22,12 +22,9 @@ class _SearchPageState extends State<SearchPage> {
 
   final TextEditingController _searchController = TextEditingController();
   bool _defaultCardsAvailable = false;
-  bool _allCardsAvailable = false;
   bool _checkingAvailability = true;
   bool _isSearching = false;
   String? _searchError;
-  ScryfallSearchResultSource? _lastResultSource;
-  String? _lastFallbackReason;
   List<ScryfallCardPrint> _results = const <ScryfallCardPrint>[];
 
   @override
@@ -52,20 +49,12 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _checkScryfallAvailability() async {
     setState(() => _checkingAvailability = true);
     try {
-      final service = DownloadService.instance;
-      final defaultAvailable = await service.isDefaultCardsAvailable();
-      final allAvailable = await service.isAllCardsAvailable();
+      final available = await DownloadService.instance.isDefaultCardsAvailable();
       if (!mounted) return;
-      setState(() {
-        _defaultCardsAvailable = defaultAvailable;
-        _allCardsAvailable = allAvailable;
-      });
+      setState(() => _defaultCardsAvailable = available);
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _defaultCardsAvailable = false;
-        _allCardsAvailable = false;
-      });
+      setState(() => _defaultCardsAvailable = false);
     } finally {
       if (mounted) setState(() => _checkingAvailability = false);
     }
@@ -77,8 +66,6 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _results = const <ScryfallCardPrint>[];
         _searchError = null;
-        _lastResultSource = null;
-        _lastFallbackReason = null;
       });
       return;
     }
@@ -86,18 +73,12 @@ class _SearchPageState extends State<SearchPage> {
     setState(() {
       _isSearching = true;
       _searchError = null;
-      _lastResultSource = null;
-      _lastFallbackReason = null;
     });
 
     try {
       final result = await _searchRepository.search(query);
       if (!mounted) return;
-      setState(() {
-        _results = result.cards;
-        _lastResultSource = result.source;
-        _lastFallbackReason = result.fallbackReason;
-      });
+      setState(() => _results = result.cards);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -117,10 +98,13 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         title: Text(loc.translate('nav.search')),
         actions: [
-          IconButton(
-            tooltip: 'Datenstatus aktualisieren',
-            onPressed: _checkingAvailability ? null : _checkScryfallAvailability,
-            icon: const Icon(Icons.sync_rounded),
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: _OfflineStatusIcon(
+              checking: _checkingAvailability,
+              ready: _defaultCardsAvailable,
+              onRefresh: _checkScryfallAvailability,
+            ),
           ),
         ],
       ),
@@ -129,28 +113,22 @@ class _SearchPageState extends State<SearchPage> {
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _SearchHero(
+                  _CompactSearchBar(
                     controller: _searchController,
                     isSearching: _isSearching,
                     onSearch: _performSearch,
                   ),
-                  const SizedBox(height: 12),
-                  _buildStatusRow(),
-                  if (_lastResultSource != null || _lastFallbackReason != null) ...[
-                    const SizedBox(height: 10),
-                    _buildResultSourceInfo(),
-                  ],
                   if (_searchError != null) ...[
                     const SizedBox(height: 10),
-                    _buildErrorCard(_searchError!),
+                    _ErrorBanner(message: _searchError!),
                   ],
                   if (_results.isNotEmpty) ...[
-                    const SizedBox(height: 18),
-                    _buildResultsHeader(),
+                    const SizedBox(height: 14),
+                    _ResultsHeader(count: _results.length),
                   ],
                 ],
               ),
@@ -169,10 +147,15 @@ class _SearchPageState extends State<SearchPage> {
           else
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              sliver: SliverList.separated(
+              sliver: SliverGrid.builder(
                 itemCount: _results.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) => _CardResultTile(card: _results[index]),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 190,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.714,
+                ),
+                itemBuilder: (context, index) => _CardImageTile(card: _results[index]),
               ),
             ),
         ],
@@ -180,94 +163,187 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildStatusRow() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        _StatusPill(
-          icon: _checkingAvailability
-              ? Icons.hourglass_top_rounded
-              : _defaultCardsAvailable
-                  ? Icons.offline_bolt_rounded
-                  : Icons.cloud_off_rounded,
-          label: _checkingAvailability
-              ? 'Prüfe Daten'
-              : _defaultCardsAvailable
-                  ? 'Offline-Suche bereit'
-                  : 'Offline-Suche fehlt',
-          tone: _defaultCardsAvailable ? _StatusTone.success : _StatusTone.warning,
+  Future<void> _runExampleSearch(String query) async {
+    _searchController.text = query;
+    await _performSearch();
+  }
+}
+
+class _OfflineStatusIcon extends StatelessWidget {
+  const _OfflineStatusIcon({
+    required this.checking,
+    required this.ready,
+    required this.onRefresh,
+  });
+
+  final bool checking;
+  final bool ready;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    if (checking) {
+      return const Padding(
+        padding: EdgeInsets.all(14),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
-        _StatusPill(
-          icon: _allCardsAvailable ? Icons.inventory_2_rounded : Icons.inventory_2_outlined,
-          label: _allCardsAvailable ? 'Collection-Daten bereit' : 'Collection-Daten fehlen',
-          tone: _allCardsAvailable ? _StatusTone.neutral : _StatusTone.warning,
-        ),
-      ],
+      );
+    }
+
+    return IconButton(
+      tooltip: ready ? 'Offline-Suche bereit' : 'Offline-Daten fehlen',
+      onPressed: onRefresh,
+      icon: Icon(
+        ready ? Icons.offline_bolt_rounded : Icons.cloud_off_rounded,
+        color: ready ? AppTheme.vaultAmber : Theme.of(context).colorScheme.error,
+      ),
     );
   }
+}
 
-  Widget _buildResultSourceInfo() {
-    final sourceText = switch (_lastResultSource) {
-      ScryfallSearchResultSource.localDefaultCards => 'Lokale Suche',
-      ScryfallSearchResultSource.remoteScryfallApi => 'Online-Fallback',
-      null => null,
-    };
+class _CompactSearchBar extends StatefulWidget {
+  const _CompactSearchBar({
+    required this.controller,
+    required this.isSearching,
+    required this.onSearch,
+  });
 
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        if (sourceText != null)
-          _StatusPill(
-            icon: _lastResultSource == ScryfallSearchResultSource.localDefaultCards
-                ? Icons.offline_bolt_rounded
-                : Icons.cloud_sync_rounded,
-            label: sourceText,
-            tone: _lastResultSource == ScryfallSearchResultSource.localDefaultCards
-                ? _StatusTone.success
-                : _StatusTone.info,
-          ),
-        if (_lastFallbackReason != null && _lastFallbackReason!.isNotEmpty)
-          _StatusPill(
-            icon: Icons.info_outline_rounded,
-            label: _lastFallbackReason!,
-            tone: _StatusTone.info,
-          ),
-      ],
-    );
+  final TextEditingController controller;
+  final bool isSearching;
+  final Future<void> Function() onSearch;
+
+  @override
+  State<_CompactSearchBar> createState() => _CompactSearchBarState();
+}
+
+class _CompactSearchBarState extends State<_CompactSearchBar> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onTextChanged);
   }
 
-  Widget _buildResultsHeader() {
+  @override
+  void didUpdateWidget(covariant _CompactSearchBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onTextChanged);
+      widget.controller.addListener(_onTextChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+
+  void _onTextChanged() => setState(() {});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: borderColor.withOpacity(0.65)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: widget.controller,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  hintText: 'Kartensuche: t:dragon, o:draw, arcane signet...',
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
+                  suffixIcon: widget.controller.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Eingabe löschen',
+                          onPressed: () => widget.controller.clear(),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                ),
+                textInputAction: TextInputAction.search,
+                onSubmitted: (_) => widget.onSearch(),
+              ),
+            ),
+            const SizedBox(width: 6),
+            FilledButton(
+              onPressed: widget.isSearching ? null : widget.onSearch,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: widget.isSearching
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_rounded),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ResultsHeader extends StatelessWidget {
+  const _ResultsHeader({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
           child: Text(
-            '${_results.length} Treffer',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            '$count Treffer',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
         Text(
-          'max. 120 lokal',
+          'Antippen für Details später',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.58),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
               ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildErrorCard(String message) {
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colorScheme.errorContainer.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -284,184 +360,6 @@ class _SearchPageState extends State<SearchPage> {
       ),
     );
   }
-
-  Future<void> _runExampleSearch(String query) async {
-    _searchController.text = query;
-    await _performSearch();
-  }
-}
-
-class _SearchHero extends StatelessWidget {
-  const _SearchHero({
-    required this.controller,
-    required this.isSearching,
-    required this.onSearch,
-  });
-
-  final TextEditingController controller;
-  final bool isSearching;
-  final Future<void> Function() onSearch;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = isDark ? AppTheme.vaultSurface : Colors.white;
-    final borderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: borderColor.withOpacity(0.65)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppTheme.vaultAmber.withOpacity(isDark ? 0.20 : 0.14),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.travel_explore_rounded, color: AppTheme.vaultAmber),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Karten durchsuchen',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                            ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Scryfall-Syntax lokal nutzen, Fallback online.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.62),
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: controller,
-                    decoration: InputDecoration(
-                      prefixIcon: const Icon(Icons.search_rounded),
-                      hintText: 'z. B. ci:uw mv<=3 o:draw',
-                      suffixIcon: controller.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Eingabe löschen',
-                              onPressed: () => controller.clear(),
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                    ),
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: (_) => onSearch(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                FilledButton.icon(
-                  onPressed: isSearching ? null : onSearch,
-                  icon: isSearching
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.arrow_forward_rounded),
-                  label: const Text('Suchen'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-enum _StatusTone { neutral, success, warning, info }
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({
-    required this.icon,
-    required this.label,
-    required this.tone,
-  });
-
-  final IconData icon;
-  final String label;
-  final _StatusTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colors = _colorsForTone(isDark);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: colors.$1,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: colors.$2.withOpacity(0.45)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: colors.$2),
-          const SizedBox(width: 6),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.$3,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  (Color, Color, Color) _colorsForTone(bool isDark) {
-    switch (tone) {
-      case _StatusTone.success:
-        return isDark
-            ? (const Color(0xFF17392B), const Color(0xFF6DD6A1), AppTheme.vaultOnDark)
-            : (const Color(0xFFE7F7EF), const Color(0xFF23875B), AppTheme.vaultInk);
-      case _StatusTone.warning:
-        return isDark
-            ? (const Color(0xFF3A2815), AppTheme.vaultAmber, AppTheme.vaultOnDark)
-            : (const Color(0xFFFFF2DD), const Color(0xFFC77A12), AppTheme.vaultInk);
-      case _StatusTone.info:
-        return isDark
-            ? (const Color(0xFF183246), const Color(0xFF76BCEB), AppTheme.vaultOnDark)
-            : (const Color(0xFFE8F2FA), const Color(0xFF2B79A8), AppTheme.vaultInk);
-      case _StatusTone.neutral:
-        return isDark
-            ? (AppTheme.vaultSurfaceLight, AppTheme.vaultInkMuted, AppTheme.vaultOnDark)
-            : (Colors.white, AppTheme.vaultInkMuted, AppTheme.vaultInk);
-    }
-  }
 }
 
 class _EmptySearchState extends StatelessWidget {
@@ -472,10 +370,10 @@ class _EmptySearchState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final examples = const [
+      'arcane signet',
       't:dragon',
       'o:draw mv<=3',
       'ci:uw t:legendary',
-      'set:otj rarity:mythic',
     ];
 
     return Padding(
@@ -484,23 +382,23 @@ class _EmptySearchState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 84,
-            height: 84,
+            width: 74,
+            height: 74,
             decoration: BoxDecoration(
               color: AppTheme.vaultAmber.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(24),
             ),
-            child: const Icon(Icons.auto_awesome_rounded, size: 38, color: AppTheme.vaultAmber),
+            child: const Icon(Icons.auto_awesome_rounded, size: 34, color: AppTheme.vaultAmber),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Text(
-            'Bereit für die Suche',
+            'Was suchst du?',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(
-            'Nutze einfache Namen oder Scryfall-Filter. Häufige Suchfelder laufen lokal, spezielle Tags wechseln automatisch online.',
+            'Name eingeben oder Scryfall-Filter nutzen.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.64),
@@ -526,152 +424,64 @@ class _EmptySearchState extends StatelessWidget {
   }
 }
 
-class _CardResultTile extends StatelessWidget {
-  const _CardResultTile({required this.card});
+class _CardImageTile extends StatelessWidget {
+  const _CardImageTile({required this.card});
 
   final ScryfallCardPrint card;
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = card.imageNormal ?? card.imageSmall;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: borderColor.withOpacity(0.7)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _CardThumbnail(card: card),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            card.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                          ),
-                        ),
-                        if (card.manaCost != null && card.manaCost!.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            card.manaCost!,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: AppTheme.vaultAmber,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 5),
-                    if (card.typeLine.isNotEmpty)
-                      Text(
-                        card.typeLine,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.68),
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                    if (card.oracleText.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        card.oracleText,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.25),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        if (card.setCode.isNotEmpty || card.collectorNumber.isNotEmpty)
-                          _MiniTag('${card.setCode.toUpperCase()} #${card.collectorNumber}'),
-                        if (card.rarity.isNotEmpty) _MiniTag(card.rarity),
-                        if (card.lang.isNotEmpty && card.lang != 'en') _MiniTag(card.lang.toUpperCase()),
-                        if (card.eur != null) _MiniTag('${card.eur!.toStringAsFixed(2)} €'),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CardThumbnail extends StatelessWidget {
-  const _CardThumbnail({required this.card});
-
-  final ScryfallCardPrint card;
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrl = card.imageSmall ?? card.imageNormal;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final placeholderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultMist;
+    final placeholderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 64,
-        height: 90,
-        color: placeholderColor,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: placeholderColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.25 : 0.10),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
         child: imageUrl == null
-            ? const Icon(Icons.style_outlined)
+            ? _MissingImageCard(card: card)
             : Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.style_outlined),
+                errorBuilder: (_, __, ___) => _MissingImageCard(card: card),
               ),
       ),
     );
   }
 }
 
-class _MiniTag extends StatelessWidget {
-  const _MiniTag(this.label);
+class _MissingImageCard extends StatelessWidget {
+  const _MissingImageCard({required this.card});
 
-  final String label;
+  final ScryfallCardPrint card;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultMist,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.72),
-            ),
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.style_outlined, size: 32),
+          const SizedBox(height: 10),
+          Text(
+            card.name,
+            textAlign: TextAlign.center,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ],
       ),
     );
   }
