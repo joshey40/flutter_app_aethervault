@@ -101,14 +101,20 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       final service = DownloadService.instance;
       await _ensureBulkDataFile(
         service: service,
-        type: ScryfallBulkDataType.defaultCards,
+        type: ScryfallBulkDataType.oracleCards,
         progressStart: 0.0,
-        progressEnd: 0.35,
+        progressEnd: 0.20,
+      );
+      await _ensureBulkDataFile(
+        service: service,
+        type: ScryfallBulkDataType.defaultCards,
+        progressStart: 0.20,
+        progressEnd: 0.45,
       );
       await _ensureBulkDataFile(
         service: service,
         type: ScryfallBulkDataType.allCards,
-        progressStart: 0.35,
+        progressStart: 0.45,
         progressEnd: 1.0,
       );
 
