@@ -203,7 +203,8 @@ class DownloadService {
 
     Stream<List<int>> stream = streamed.stream;
     final responseEncoding = streamed.headers['content-encoding']?.toLowerCase();
-    final shouldDecompress = responseEncoding == 'gzip';
+    final metadataEncoding = metadata.contentEncoding?.toLowerCase();
+    final shouldDecompress = responseEncoding == 'gzip' || metadataEncoding == 'gzip';
     if (shouldDecompress) stream = stream.transform(gzip.decoder);
 
     try {
