@@ -21,12 +21,13 @@ class _SearchPageState extends State<SearchPage> {
   late final ScryfallRemoteSearchDataSource _remoteDataSource;
 
   final TextEditingController _searchController = TextEditingController();
-  bool _defaultCardsAvailable = false;
+  bool _oracleCardsAvailable = false;
   bool _checkingAvailability = true;
   bool _isSearching = false;
   int _searchGeneration = 0;
   String? _searchError;
   ScryfallSearchResultSource? _lastResultSource;
+  _SearchSortMode _sortMode = _SearchSortMode.nameAsc;
   List<ScryfallCardPrint> _results = const <ScryfallCardPrint>[];
 
   @override
@@ -51,12 +52,12 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _checkScryfallAvailability() async {
     setState(() => _checkingAvailability = true);
     try {
-      final available = await DownloadService.instance.isDefaultCardsAvailable();
+      final available = await DownloadService.instance.isOracleCardsAvailable();
       if (!mounted) return;
-      setState(() => _defaultCardsAvailable = available);
+      setState(() => _oracleCardsAvailable = available);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _defaultCardsAvailable = false);
+      setState(() => _oracleCardsAvailable = false);
     } finally {
       if (mounted) setState(() => _checkingAvailability = false);
     }
@@ -86,7 +87,7 @@ class _SearchPageState extends State<SearchPage> {
       final result = await _searchRepository.search(query);
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
-        _results = result.cards;
+        _results = _sorted(result.cards);
         _lastResultSource = result.source;
       });
     } catch (error) {
@@ -103,6 +104,36 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  List<ScryfallCardPrint> _sorted(List<ScryfallCardPrint> cards) {
+    final sorted = [...cards];
+    sorted.sort((a, b) {
+      switch (_sortMode) {
+        case _SearchSortMode.nameAsc:
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case _SearchSortMode.nameDesc:
+          return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+        case _SearchSortMode.manaValueAsc:
+          return (a.manaValue ?? 999).compareTo(b.manaValue ?? 999);
+        case _SearchSortMode.newestFirst:
+          return (b.releasedAt ?? DateTime(0)).compareTo(a.releasedAt ?? DateTime(0));
+        case _SearchSortMode.oldestFirst:
+          return (a.releasedAt ?? DateTime(9999)).compareTo(b.releasedAt ?? DateTime(9999));
+        case _SearchSortMode.setAsc:
+          final setCompare = a.setCode.compareTo(b.setCode);
+          if (setCompare != 0) return setCompare;
+          return a.collectorNumber.compareTo(b.collectorNumber);
+      }
+    });
+    return sorted;
+  }
+
+  void _setSortMode(_SearchSortMode sortMode) {
+    setState(() {
+      _sortMode = sortMode;
+      _results = _sorted(_results);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final loc = appLocalizations;
@@ -111,13 +142,12 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         title: Text(loc.translate('nav.search')),
         actions: [
-          if (_lastResultSource != null)
-            _SearchSourceIcon(source: _lastResultSource!),
+          if (_lastResultSource != null) _SearchSourceIcon(source: _lastResultSource!),
           Padding(
             padding: const EdgeInsets.only(right: 6),
             child: _OfflineStatusIcon(
               checking: _checkingAvailability,
-              ready: _defaultCardsAvailable,
+              ready: _oracleCardsAvailable,
               onRefresh: _checkScryfallAvailability,
             ),
           ),
@@ -143,7 +173,11 @@ class _SearchPageState extends State<SearchPage> {
                   ],
                   if (_results.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    _ResultsHeader(count: _results.length),
+                    _ResultsHeader(
+                      count: _results.length,
+                      sortMode: _sortMode,
+                      onSortModeChanged: _setSortMode,
+                    ),
                   ],
                 ],
               ),
@@ -184,6 +218,18 @@ class _SearchPageState extends State<SearchPage> {
   }
 }
 
+enum _SearchSortMode {
+  nameAsc('Name A–Z'),
+  nameDesc('Name Z–A'),
+  manaValueAsc('Mana Value'),
+  newestFirst('Neueste zuerst'),
+  oldestFirst('Älteste zuerst'),
+  setAsc('Set / Nummer');
+
+  const _SearchSortMode(this.label);
+  final String label;
+}
+
 class _SearchSourceIcon extends StatelessWidget {
   const _SearchSourceIcon({required this.source});
 
@@ -191,15 +237,18 @@ class _SearchSourceIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLocal = source == ScryfallSearchResultSource.localDefaultCards;
+    final (icon, tooltip) = switch (source) {
+      ScryfallSearchResultSource.localOracleCards => (Icons.auto_stories_rounded, 'Letzte Suche: Oracle Cards'),
+      ScryfallSearchResultSource.localDefaultCards => (Icons.storage_rounded, 'Letzte Suche: Default Cards'),
+      ScryfallSearchResultSource.localAllCards => (Icons.inventory_2_rounded, 'Letzte Suche: All Cards'),
+      ScryfallSearchResultSource.remoteScryfallApi => (Icons.cloud_sync_rounded, 'Letzte Suche: online'),
+    };
+
     return Tooltip(
-      message: isLocal ? 'Letzte Suche: lokal' : 'Letzte Suche: online',
+      message: tooltip,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        child: Icon(
-          isLocal ? Icons.storage_rounded : Icons.cloud_sync_rounded,
-          color: isLocal ? AppTheme.vaultAmber : Theme.of(context).colorScheme.primary,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        child: Icon(icon, color: AppTheme.vaultAmber),
       ),
     );
   }
@@ -340,9 +389,15 @@ class _CompactSearchBarState extends State<_CompactSearchBar> {
 }
 
 class _ResultsHeader extends StatelessWidget {
-  const _ResultsHeader({required this.count});
+  const _ResultsHeader({
+    required this.count,
+    required this.sortMode,
+    required this.onSortModeChanged,
+  });
 
   final int count;
+  final _SearchSortMode sortMode;
+  final ValueChanged<_SearchSortMode> onSortModeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -354,11 +409,37 @@ class _ResultsHeader extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
         ),
-        Text(
-          'Antippen für Details später',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.55),
+        PopupMenuButton<_SearchSortMode>(
+          tooltip: 'Sortierung ändern',
+          initialValue: sortMode,
+          onSelected: onSortModeChanged,
+          itemBuilder: (context) => [
+            for (final mode in _SearchSortMode.values)
+              PopupMenuItem(
+                value: mode,
+                child: Row(
+                  children: [
+                    if (mode == sortMode) const Icon(Icons.check_rounded, size: 18) else const SizedBox(width: 18),
+                    const SizedBox(width: 8),
+                    Text(mode.label),
+                  ],
+                ),
               ),
+          ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                sortMode.label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.sort_rounded, size: 18),
+            ],
+          ),
         ),
       ],
     );
@@ -460,37 +541,75 @@ class _EmptySearchState extends StatelessWidget {
   }
 }
 
-class _CardImageTile extends StatelessWidget {
+class _CardImageTile extends StatefulWidget {
   const _CardImageTile({required this.card});
 
   final ScryfallCardPrint card;
 
   @override
+  State<_CardImageTile> createState() => _CardImageTileState();
+}
+
+class _CardImageTileState extends State<_CardImageTile> {
+  int _faceIndex = 0;
+
+  @override
+  void didUpdateWidget(covariant _CardImageTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.card.id != widget.card.id) {
+      _faceIndex = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final card = widget.card;
     final imageUrls = card.displayImageNormals.isNotEmpty
         ? card.displayImageNormals
         : card.displayImageSmalls;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final placeholderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
+    final selectedUrl = imageUrls.isEmpty ? null : imageUrls[_faceIndex.clamp(0, imageUrls.length - 1)];
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(14),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: placeholderColor,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.25 : 0.10),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: placeholderColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(isDark ? 0.25 : 0.10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: selectedUrl == null
+                  ? _MissingImageCard(card: card)
+                  : _NetworkCardImage(url: selectedUrl, card: card),
             ),
-          ],
-        ),
-        child: imageUrls.isEmpty
-            ? _MissingImageCard(card: card)
-            : imageUrls.length == 1
-                ? _NetworkCardImage(url: imageUrls.first, card: card)
-                : _DoubleFacedCardImages(urls: imageUrls.take(2).toList(growable: false), card: card),
+          ),
+          if (imageUrls.length > 1)
+            Positioned(
+              top: 34,
+              right: 7,
+              child: Material(
+                color: Colors.black.withOpacity(0.58),
+                shape: const CircleBorder(),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => setState(() => _faceIndex = (_faceIndex + 1) % imageUrls.length),
+                  child: const Padding(
+                    padding: EdgeInsets.all(7),
+                    child: Icon(Icons.flip_rounded, color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -508,31 +627,6 @@ class _NetworkCardImage extends StatelessWidget {
       url,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => _MissingImageCard(card: card),
-    );
-  }
-}
-
-class _DoubleFacedCardImages extends StatelessWidget {
-  const _DoubleFacedCardImages({required this.urls, required this.card});
-
-  final List<String> urls;
-  final ScryfallCardPrint card;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final url in urls)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(2),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: _NetworkCardImage(url: url, card: card),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }
