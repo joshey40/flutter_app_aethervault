@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/localization_service.dart';
+import '../../../services/scryfall/bulk_data_type.dart';
 import '../../../services/scryfall/download_service.dart';
 import '../../../services/scryfall/scryfall_card_print.dart';
 import '../../../services/scryfall/scryfall_indexed_search_data_source.dart';
 import '../../../services/scryfall/scryfall_remote_search_data_source.dart';
 import '../../../services/scryfall/scryfall_search_query.dart';
 import '../../../services/scryfall/scryfall_search_repository.dart';
+import '../../../services/scryfall/scryfall_sqlite_search_index.dart';
 import '../../../theme/app_theme.dart';
 
 class SearchPage extends StatefulWidget {
@@ -21,13 +23,13 @@ class _SearchPageState extends State<SearchPage> {
   late final ScryfallRemoteSearchDataSource _remoteDataSource;
 
   final TextEditingController _searchController = TextEditingController();
-  bool _oracleCardsAvailable = false;
-  bool _checkingAvailability = true;
+  bool _checkingIndexStatus = true;
   bool _isSearching = false;
   int _searchGeneration = 0;
   String? _searchError;
   ScryfallSearchResultSource? _lastResultSource;
   _SearchSortMode _sortMode = _SearchSortMode.nameAsc;
+  Map<ScryfallBulkDataType, _IndexStatus> _indexStatuses = const <ScryfallBulkDataType, _IndexStatus>{};
   List<ScryfallCardPrint> _results = const <ScryfallCardPrint>[];
 
   @override
@@ -39,7 +41,7 @@ class _SearchPageState extends State<SearchPage> {
       remoteDataSource: _remoteDataSource,
       planner: ScryfallSearchPlanner(),
     );
-    _checkScryfallAvailability();
+    _refreshIndexStatuses();
   }
 
   @override
@@ -49,18 +51,34 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
-  Future<void> _checkScryfallAvailability() async {
-    setState(() => _checkingAvailability = true);
-    try {
-      final available = await DownloadService.instance.isOracleCardsAvailable();
-      if (!mounted) return;
-      setState(() => _oracleCardsAvailable = available);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _oracleCardsAvailable = false);
-    } finally {
-      if (mounted) setState(() => _checkingAvailability = false);
+  Future<void> _refreshIndexStatuses() async {
+    if (mounted) setState(() => _checkingIndexStatus = true);
+    final service = DownloadService.instance;
+    final statuses = <ScryfallBulkDataType, _IndexStatus>{};
+
+    for (final type in ScryfallBulkDataType.values) {
+      try {
+        final file = await service.getLocalFile(type: type);
+        if (file == null) {
+          statuses[type] = _IndexStatus.missing;
+          continue;
+        }
+
+        final ready = await ScryfallSqliteSearchIndex.instance.isIndexReady(
+          type: type,
+          sourceFile: file,
+        );
+        statuses[type] = ready ? _IndexStatus.ready : _IndexStatus.preparing;
+      } catch (_) {
+        statuses[type] = _IndexStatus.missing;
+      }
     }
+
+    if (!mounted) return;
+    setState(() {
+      _indexStatuses = statuses;
+      _checkingIndexStatus = false;
+    });
   }
 
   Future<void> _performSearch() async {
@@ -84,12 +102,16 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      final result = await _searchRepository.search(query);
+      final result = await _searchRepository.search(
+        query,
+        sortMode: _sortMode.repositorySortMode,
+      );
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
-        _results = _sorted(result.cards);
+        _results = result.cards;
         _lastResultSource = result.source;
       });
+      await _refreshIndexStatuses();
     } catch (error) {
       if (!mounted || generation != _searchGeneration) return;
       setState(() {
@@ -104,34 +126,11 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  List<ScryfallCardPrint> _sorted(List<ScryfallCardPrint> cards) {
-    final sorted = [...cards];
-    sorted.sort((a, b) {
-      switch (_sortMode) {
-        case _SearchSortMode.nameAsc:
-          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case _SearchSortMode.nameDesc:
-          return b.name.toLowerCase().compareTo(a.name.toLowerCase());
-        case _SearchSortMode.manaValueAsc:
-          return (a.manaValue ?? 999).compareTo(b.manaValue ?? 999);
-        case _SearchSortMode.newestFirst:
-          return (b.releasedAt ?? DateTime(0)).compareTo(a.releasedAt ?? DateTime(0));
-        case _SearchSortMode.oldestFirst:
-          return (a.releasedAt ?? DateTime(9999)).compareTo(b.releasedAt ?? DateTime(9999));
-        case _SearchSortMode.setAsc:
-          final setCompare = a.setCode.compareTo(b.setCode);
-          if (setCompare != 0) return setCompare;
-          return a.collectorNumber.compareTo(b.collectorNumber);
-      }
-    });
-    return sorted;
-  }
-
-  void _setSortMode(_SearchSortMode sortMode) {
-    setState(() {
-      _sortMode = sortMode;
-      _results = _sorted(_results);
-    });
+  Future<void> _setSortMode(_SearchSortMode sortMode) async {
+    setState(() => _sortMode = sortMode);
+    if (_results.isNotEmpty || _searchController.text.trim().isNotEmpty) {
+      await _performSearch();
+    }
   }
 
   @override
@@ -143,14 +142,12 @@ class _SearchPageState extends State<SearchPage> {
         title: Text(loc.translate('nav.search')),
         actions: [
           if (_lastResultSource != null) _SearchSourceIcon(source: _lastResultSource!),
-          Padding(
-            padding: const EdgeInsets.only(right: 6),
-            child: _OfflineStatusIcon(
-              checking: _checkingAvailability,
-              ready: _oracleCardsAvailable,
-              onRefresh: _checkScryfallAvailability,
-            ),
+          _IndexStatusIcons(
+            checking: _checkingIndexStatus,
+            statuses: _indexStatuses,
+            onRefresh: _refreshIndexStatuses,
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: CustomScrollView(
@@ -228,7 +225,26 @@ enum _SearchSortMode {
 
   const _SearchSortMode(this.label);
   final String label;
+
+  ScryfallSearchSortMode get repositorySortMode {
+    switch (this) {
+      case _SearchSortMode.nameAsc:
+        return ScryfallSearchSortMode.nameAsc;
+      case _SearchSortMode.nameDesc:
+        return ScryfallSearchSortMode.nameDesc;
+      case _SearchSortMode.manaValueAsc:
+        return ScryfallSearchSortMode.manaValueAsc;
+      case _SearchSortMode.newestFirst:
+        return ScryfallSearchSortMode.newestFirst;
+      case _SearchSortMode.oldestFirst:
+        return ScryfallSearchSortMode.oldestFirst;
+      case _SearchSortMode.setAsc:
+        return ScryfallSearchSortMode.setAsc;
+    }
+  }
 }
+
+enum _IndexStatus { ready, preparing, missing }
 
 class _SearchSourceIcon extends StatelessWidget {
   const _SearchSourceIcon({required this.source});
@@ -254,22 +270,22 @@ class _SearchSourceIcon extends StatelessWidget {
   }
 }
 
-class _OfflineStatusIcon extends StatelessWidget {
-  const _OfflineStatusIcon({
+class _IndexStatusIcons extends StatelessWidget {
+  const _IndexStatusIcons({
     required this.checking,
-    required this.ready,
+    required this.statuses,
     required this.onRefresh,
   });
 
   final bool checking;
-  final bool ready;
+  final Map<ScryfallBulkDataType, _IndexStatus> statuses;
   final Future<void> Function() onRefresh;
 
   @override
   Widget build(BuildContext context) {
     if (checking) {
       return const Padding(
-        padding: EdgeInsets.all(14),
+        padding: EdgeInsets.symmetric(horizontal: 10),
         child: SizedBox(
           width: 18,
           height: 18,
@@ -278,14 +294,65 @@ class _OfflineStatusIcon extends StatelessWidget {
       );
     }
 
-    return IconButton(
-      tooltip: ready ? 'Offline-Suche bereit' : 'Offline-Daten fehlen',
-      onPressed: onRefresh,
-      icon: Icon(
-        ready ? Icons.offline_bolt_rounded : Icons.cloud_off_rounded,
-        color: ready ? AppTheme.vaultAmber : Theme.of(context).colorScheme.error,
-      ),
+    return PopupMenuButton<void>(
+      tooltip: 'Scryfall-Indexstatus',
+      icon: const Icon(Icons.storage_rounded),
+      onSelected: (_) => onRefresh(),
+      itemBuilder: (context) => [
+        for (final type in ScryfallBulkDataType.values)
+          PopupMenuItem<void>(
+            enabled: false,
+            child: Row(
+              children: [
+                _IndexStatusIcon(status: statuses[type] ?? _IndexStatus.missing),
+                const SizedBox(width: 10),
+                Expanded(child: Text(type.userFacingName)),
+                Text(_statusLabel(statuses[type] ?? _IndexStatus.missing)),
+              ],
+            ),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<void>(
+          value: null,
+          child: Row(
+            children: [
+              Icon(Icons.refresh_rounded),
+              SizedBox(width: 10),
+              Text('Status aktualisieren'),
+            ],
+          ),
+        ),
+      ],
     );
+  }
+
+  static String _statusLabel(_IndexStatus status) {
+    switch (status) {
+      case _IndexStatus.ready:
+        return 'bereit';
+      case _IndexStatus.preparing:
+        return 'wird vorbereitet';
+      case _IndexStatus.missing:
+        return 'fehlt';
+    }
+  }
+}
+
+class _IndexStatusIcon extends StatelessWidget {
+  const _IndexStatusIcon({required this.status});
+
+  final _IndexStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case _IndexStatus.ready:
+        return const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20);
+      case _IndexStatus.preparing:
+        return const Icon(Icons.pending_rounded, color: AppTheme.vaultAmber, size: 20);
+      case _IndexStatus.missing:
+        return Icon(Icons.error_rounded, color: Theme.of(context).colorScheme.error, size: 20);
+    }
   }
 }
 
