@@ -29,7 +29,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     ScryfallSearchSortMode sortMode = ScryfallSearchSortMode.nameAsc,
   }) async {
     final normalizedQuery = rawQuery.trim();
-    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}|extras:false|sort:${sortMode.name}';
+    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}|extras:auto|sort:${sortMode.name}';
     final cached = _cache.remove(cacheKey);
     if (cached != null) {
       _cache[cacheKey] = cached;
@@ -69,12 +69,13 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     required ScryfallSearchSortMode sortMode,
   }) async {
     final query = ParsedScryfallSearch.parse(rawQuery);
+    final includeExtras = ScryfallSearchEvaluator.shouldIncludeExtras(query);
     final results = <ScryfallCardPrint>[];
 
     await for (final cardJson in ScryfallJsonSearchUtils.readTopLevelJsonObjects(path)) {
       final decoded = jsonDecode(cardJson);
       if (decoded is! Map<String, dynamic>) continue;
-      if (ScryfallJsonSearchUtils.isExtra(decoded)) continue;
+      if (!includeExtras && ScryfallJsonSearchUtils.isExtra(decoded)) continue;
       if (!ScryfallSearchEvaluator.matchesQuery(decoded, query)) continue;
 
       results.add(ScryfallCardPrint.fromJson(decoded));
