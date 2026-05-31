@@ -27,7 +27,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     required ScryfallBulkDataType type,
   }) async {
     final normalizedQuery = rawQuery.trim();
-    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}';
+    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}|extras:false';
     final cached = _cache.remove(cacheKey);
     if (cached != null) {
       _cache[cacheKey] = cached;
@@ -70,7 +70,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     await for (final cardJson in _readTopLevelJsonObjects(path)) {
       final decoded = jsonDecode(cardJson);
       if (decoded is! Map<String, dynamic>) continue;
-
+      if (_isExtra(decoded)) continue;
       if (!query.matchesJson(decoded)) continue;
 
       results.add(ScryfallCardPrint.fromJson(decoded));
@@ -78,6 +78,17 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     }
 
     return results;
+  }
+
+  static bool _isExtra(Map<String, dynamic> json) {
+    final layout = json['layout'] as String? ?? '';
+    if (layout == 'token' || layout == 'emblem' || layout == 'art_series') return true;
+
+    final typeLine = _LocalScryfallQuery._coalesceFaces(json, 'type_line');
+    if (typeLine.contains('token') || typeLine.contains('emblem')) return true;
+
+    final setType = json['set_type'] as String? ?? '';
+    return setType == 'token' || setType == 'memorabilia';
   }
 
   static Stream<String> _readTopLevelJsonObjects(String path) async* {
