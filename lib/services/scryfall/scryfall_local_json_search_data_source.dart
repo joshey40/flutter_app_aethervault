@@ -1,12 +1,12 @@
-import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:isolate';
 
 import 'bulk_data_type.dart';
 import 'download_service.dart';
 import 'scryfall_card_print.dart';
+import 'scryfall_search_filter.dart';
+import 'scryfall_search_json_utils.dart';
 import 'scryfall_search_repository.dart';
 
 class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource {
@@ -25,9 +25,10 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   Future<List<ScryfallCardPrint>> searchCards({
     required String rawQuery,
     required ScryfallBulkDataType type,
+    ScryfallSearchSortMode sortMode = ScryfallSearchSortMode.nameAsc,
   }) async {
     final normalizedQuery = rawQuery.trim();
-    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}|extras:false';
+    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}|extras:false|sort:${sortMode.name}';
     final cached = _cache.remove(cacheKey);
     if (cached != null) {
       _cache[cacheKey] = cached;
@@ -44,6 +45,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
         path: file.path,
         rawQuery: normalizedQuery,
         maxResults: maxResults,
+        sortMode: sortMode,
       ),
     );
 
@@ -63,309 +65,123 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     required String path,
     required String rawQuery,
     required int? maxResults,
+    required ScryfallSearchSortMode sortMode,
   }) async {
-    final query = _LocalScryfallQuery.parse(rawQuery);
+    final query = ParsedScryfallSearch.parse(rawQuery);
     final results = <ScryfallCardPrint>[];
 
-    await for (final cardJson in _readTopLevelJsonObjects(path)) {
+    await for (final cardJson in ScryfallJsonSearchUtils.readTopLevelJsonObjects(path)) {
       final decoded = jsonDecode(cardJson);
       if (decoded is! Map<String, dynamic>) continue;
-      if (_isExtra(decoded)) continue;
-      if (!query.matchesJson(decoded)) continue;
+      if (ScryfallJsonSearchUtils.isExtra(decoded)) continue;
+      if (!_matchesQuery(decoded, query)) continue;
 
       results.add(ScryfallCardPrint.fromJson(decoded));
-      if (maxResults != null && results.length >= maxResults) break;
     }
 
+    _sortCards(results, sortMode);
+    if (maxResults != null && results.length > maxResults) {
+      return results.take(maxResults).toList(growable: false);
+    }
     return results;
   }
 
-  static bool _isExtra(Map<String, dynamic> json) {
-    final games = _LocalScryfallQuery._jsonStringList(json['games']);
-    if (json['digital'] == true && !games.contains('paper')) return true;
-
-    final layout = json['layout'] as String? ?? '';
-    if (_extraLayouts.contains(layout)) return true;
-
-    final typeLine = _LocalScryfallQuery._coalesceFaces(json, 'type_line');
-    if (typeLine.contains('token') || typeLine.contains('emblem')) return true;
-
-    final setType = json['set_type'] as String? ?? '';
-    return _extraSetTypes.contains(setType);
+  static bool _matchesQuery(Map<String, dynamic> json, ParsedScryfallSearch query) {
+    for (final filter in query.filters) {
+      final matches = _matchesFilter(json, filter);
+      if (filter.negated ? matches : !matches) return false;
+    }
+    return true;
   }
 
-  static const Set<String> _extraLayouts = <String>{
-    'token',
-    'emblem',
-    'art_series',
-    'planar',
-    'scheme',
-    'vanguard',
-  };
-
-  static const Set<String> _extraSetTypes = <String>{
-    'token',
-    'funny',
-    'memorabilia',
-    'minigame',
-  };
-
-  static Stream<String> _readTopLevelJsonObjects(String path) async* {
-    final file = File(path);
-    final header = await file.openRead(0, 2).fold<List<int>>(
-      <int>[],
-      (previous, chunk) => previous..addAll(chunk),
-    );
-
-    Stream<List<int>> bytes = file.openRead();
-    if (_looksLikeGzip(header)) {
-      bytes = bytes.transform(gzip.decoder);
-    }
-
-    final chars = bytes.transform(utf8.decoder);
-    final buffer = StringBuffer();
-    var depth = 0;
-    var inString = false;
-    var escaping = false;
-    var capturing = false;
-
-    await for (final chunk in chars) {
-      for (var i = 0; i < chunk.length; i++) {
-        final char = chunk[i];
-
-        if (capturing) buffer.write(char);
-
-        if (inString) {
-          if (escaping) {
-            escaping = false;
-          } else if (char == r'\') {
-            escaping = true;
-          } else if (char == '"') {
-            inString = false;
-          }
-          continue;
-        }
-
-        if (char == '"') {
-          inString = true;
-          continue;
-        }
-
-        if (char == '{') {
-          if (!capturing) {
-            capturing = true;
-            buffer.clear();
-            buffer.write(char);
-          }
-          depth++;
-          continue;
-        }
-
-        if (char == '}') {
-          depth--;
-          if (capturing && depth == 0) {
-            yield buffer.toString();
-            buffer.clear();
-            capturing = false;
-          }
-        }
-      }
-    }
-  }
-
-  static bool _looksLikeGzip(List<int> bytes) =>
-      bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
-}
-
-class _LocalScryfallQuery {
-  const _LocalScryfallQuery(this.predicates);
-
-  final List<bool Function(Map<String, dynamic> cardJson)> predicates;
-
-  bool matchesJson(Map<String, dynamic> cardJson) => predicates.every((predicate) => predicate(cardJson));
-
-  static _LocalScryfallQuery parse(String rawQuery) {
-    final tokens = _tokenize(rawQuery);
-    final predicates = <bool Function(Map<String, dynamic> cardJson)>[];
-
-    for (final token in tokens) {
-      final negated = token.startsWith('-');
-      final cleanToken = negated ? token.substring(1) : token;
-      final predicate = _parseToken(cleanToken);
-      predicates.add(negated ? (json) => !predicate(json) : predicate);
-    }
-
-    if (predicates.isEmpty) {
-      return const _LocalScryfallQuery(<bool Function(Map<String, dynamic>)>[]);
-    }
-
-    return _LocalScryfallQuery(predicates);
-  }
-
-  static List<String> _tokenize(String rawQuery) {
-    final tokens = <String>[];
-    final buffer = StringBuffer();
-    var inQuotes = false;
-
-    for (var i = 0; i < rawQuery.length; i++) {
-      final char = rawQuery[i];
-      if (char == '"') {
-        inQuotes = !inQuotes;
-        continue;
-      }
-      if (!inQuotes && char.trim().isEmpty) {
-        if (buffer.isNotEmpty) {
-          tokens.add(buffer.toString());
-          buffer.clear();
-        }
-        continue;
-      }
-      buffer.write(char);
-    }
-
-    if (buffer.isNotEmpty) tokens.add(buffer.toString());
-    return tokens;
-  }
-
-  static bool Function(Map<String, dynamic> cardJson) _parseToken(String token) {
-    final comparison = RegExp(r'^([a-zA-Z][a-zA-Z0-9_]*)(<=|>=|!=|=|<|>|:)(.+)$').firstMatch(token);
-    if (comparison == null) {
-      final value = _normalize(token);
-      return (json) => _jsonText(json, 'name').contains(value);
-    }
-
-    final keyword = comparison.group(1)!.toLowerCase();
-    final operator = comparison.group(2)!;
-    final value = comparison.group(3)!.trim();
-    final normalizedValue = _normalize(value);
-
-    switch (keyword) {
+  static bool _matchesFilter(Map<String, dynamic> json, ScryfallSearchFilter filter) {
+    switch (filter.canonicalKeyword) {
       case 'name':
-      case 'n':
-        return (json) => _compareText(_jsonText(json, 'name'), normalizedValue, operator);
+        return _compareText(_jsonText(json, 'name'), filter.normalizedValue, filter.operator);
       case 'type':
-      case 't':
-        return (json) => _compareText(_coalesceFaces(json, 'type_line'), normalizedValue, operator);
+        return _compareText(_coalesceFaces(json, 'type_line'), filter.normalizedValue, filter.operator);
       case 'oracle':
-      case 'o':
-        return (json) => _compareText(_coalesceFaces(json, 'oracle_text'), normalizedValue, operator);
+        return _compareText(_coalesceFaces(json, 'oracle_text'), filter.normalizedValue, filter.operator);
       case 'artist':
-      case 'a':
-        return (json) => _compareText(_jsonText(json, 'artist'), normalizedValue, operator);
+        return _compareText(_jsonText(json, 'artist'), filter.normalizedValue, filter.operator);
       case 'set':
-      case 's':
-      case 'e':
-      case 'edition':
-        return (json) => _compareText(_jsonText(json, 'set'), normalizedValue, operator);
+        return _compareText(_jsonText(json, 'set'), filter.normalizedValue, filter.operator);
       case 'rarity':
-      case 'r':
-        return (json) => _compareText(_jsonText(json, 'rarity'), normalizedValue, operator);
+        return _compareText(_jsonText(json, 'rarity'), filter.normalizedValue, filter.operator);
       case 'lang':
-      case 'language':
-        return (json) => _compareText(_jsonText(json, 'lang'), normalizedValue, operator);
+        return _compareText(_jsonText(json, 'lang'), filter.normalizedValue, filter.operator);
       case 'game':
-        return (json) => _jsonStringList(json['games']).map(_normalize).contains(normalizedValue);
-      case 'c':
-      case 'color':
+        return ScryfallJsonSearchUtils.stringList(json['games']).map(ScryfallJsonSearchUtils.normalize).contains(filter.normalizedValue);
       case 'colors':
-        return (json) => _compareColorSet(_jsonStringList(json['colors']), normalizedValue, operator);
-      case 'ci':
-      case 'id':
+        return _compareColorSet(ScryfallJsonSearchUtils.stringList(json['colors']), filter.normalizedValue, filter.operator);
       case 'identity':
-      case 'commander':
-      case 'edh':
-        return (json) => _compareColorSet(_jsonStringList(json['color_identity']), normalizedValue, operator);
-      case 'mv':
-      case 'cmc':
-        return (json) => _compareNumber(_toDouble(json['cmc']), value, operator);
+        return _compareColorSet(ScryfallJsonSearchUtils.stringList(json['color_identity']), filter.normalizedValue, filter.operator);
+      case 'manaValue':
+        return _compareNumber(ScryfallJsonSearchUtils.toDouble(json['cmc']), filter.value, filter.operator);
       case 'usd':
-        return (json) => _compareNumber(_price(json, 'usd'), value, operator);
+        return _compareNumber(_price(json, 'usd'), filter.value, filter.operator);
       case 'eur':
-        return (json) => _compareNumber(_price(json, 'eur'), value, operator);
+        return _compareNumber(_price(json, 'eur'), filter.value, filter.operator);
       case 'year':
-        return (json) => _compareNumber(_releasedYear(json), value, operator);
+        return _compareNumber(_releasedYear(json), filter.value, filter.operator);
       case 'is':
-        return _parseIsPredicate(normalizedValue);
+        return _matchesIs(json, filter.normalizedValue);
       case 'in':
-        return _parseInPredicate(normalizedValue);
+        return _matchesIn(json, filter.normalizedValue);
       default:
-        throw UnsupportedError('Local search does not support "$keyword" yet.');
+        throw UnsupportedError('Local search does not support "${filter.keyword}" yet.');
     }
   }
 
-  static bool Function(Map<String, dynamic> cardJson) _parseIsPredicate(String value) {
+  static bool _matchesIs(Map<String, dynamic> json, String value) {
     switch (value) {
       case 'multicolored':
       case 'multicolor':
-        return (json) => _jsonStringList(json['colors']).length > 1;
+        return ScryfallJsonSearchUtils.stringList(json['colors']).length > 1;
       case 'monocolored':
       case 'monocolor':
-        return (json) => _jsonStringList(json['colors']).length == 1;
+        return ScryfallJsonSearchUtils.stringList(json['colors']).length == 1;
       case 'colorless':
-        return (json) => _jsonStringList(json['colors']).isEmpty;
+        return ScryfallJsonSearchUtils.stringList(json['colors']).isEmpty;
       case 'paper':
-        return (json) => _jsonStringList(json['games']).contains('paper');
+        return ScryfallJsonSearchUtils.stringList(json['games']).contains('paper');
       case 'digital':
-        return (json) => !_jsonStringList(json['games']).contains('paper');
+        return !ScryfallJsonSearchUtils.stringList(json['games']).contains('paper');
       case 'foil':
-        return (json) => _jsonStringList(json['finishes']).contains('foil');
+        return ScryfallJsonSearchUtils.stringList(json['finishes']).contains('foil');
       case 'nonfoil':
-        return (json) => _jsonStringList(json['finishes']).contains('nonfoil');
+        return ScryfallJsonSearchUtils.stringList(json['finishes']).contains('nonfoil');
       default:
         throw UnsupportedError('Local search does not support is:$value yet.');
     }
   }
 
-  static bool Function(Map<String, dynamic> cardJson) _parseInPredicate(String value) {
+  static bool _matchesIn(Map<String, dynamic> json, String value) {
     switch (value) {
       case 'paper':
-        return (json) => _jsonStringList(json['games']).contains('paper');
       case 'arena':
-        return (json) => _jsonStringList(json['games']).contains('arena');
       case 'mtgo':
-        return (json) => _jsonStringList(json['games']).contains('mtgo');
+        return ScryfallJsonSearchUtils.stringList(json['games']).contains(value);
       default:
         throw UnsupportedError('Local search does not support in:$value yet.');
     }
   }
 
-  static String _jsonText(Map<String, dynamic> json, String key) => _normalize(json[key] as String? ?? '');
+  static String _jsonText(Map<String, dynamic> json, String key) =>
+      ScryfallJsonSearchUtils.normalize(json[key] as String? ?? '');
 
-  static String _coalesceFaces(Map<String, dynamic> json, String key) {
-    final direct = json[key] as String?;
-    if (direct != null && direct.isNotEmpty) return _normalize(direct);
-
-    final faces = json['card_faces'];
-    if (faces is! List) return '';
-
-    return faces
-        .whereType<Map<String, dynamic>>()
-        .map((face) => face[key] as String? ?? '')
-        .where((value) => value.isNotEmpty)
-        .map(_normalize)
-        .join('\n---\n');
-  }
-
-  static List<String> _jsonStringList(Object? value) {
-    if (value is! List) return const <String>[];
-    return value.whereType<String>().toList(growable: false);
-  }
+  static String _coalesceFaces(Map<String, dynamic> json, String key) =>
+      ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(json, key));
 
   static double? _price(Map<String, dynamic> json, String key) {
     final prices = json['prices'];
     if (prices is! Map<String, dynamic>) return null;
-    return _toDouble(prices[key]);
+    return ScryfallJsonSearchUtils.toDouble(prices[key]);
   }
 
   static double? _releasedYear(Map<String, dynamic> json) {
     final releasedAt = DateTime.tryParse(json['released_at'] as String? ?? '');
     return releasedAt?.year.toDouble();
-  }
-
-  static double? _toDouble(Object? value) {
-    if (value is num) return value.toDouble();
-    if (value is String && value.isNotEmpty) return double.tryParse(value);
-    return null;
   }
 
   static bool _compareText(String normalizedActual, String expected, String operator) {
@@ -406,11 +222,8 @@ class _LocalScryfallQuery {
   }
 
   static bool _compareColorSet(List<String> actualColors, String expected, String operator) {
-    final actual = actualColors.map(_normalize).toSet();
-    final expectedSet = expected
-        .split('')
-        .where((char) => 'wubrg'.contains(char))
-        .toSet();
+    final actual = actualColors.map(ScryfallJsonSearchUtils.normalize).toSet();
+    final expectedSet = expected.split('').where((char) => 'wubrg'.contains(char)).toSet();
 
     switch (operator) {
       case ':':
@@ -427,5 +240,24 @@ class _LocalScryfallQuery {
     }
   }
 
-  static String _normalize(String value) => value.toLowerCase().trim();
+  static void _sortCards(List<ScryfallCardPrint> cards, ScryfallSearchSortMode sortMode) {
+    cards.sort((a, b) {
+      switch (sortMode) {
+        case ScryfallSearchSortMode.nameAsc:
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case ScryfallSearchSortMode.nameDesc:
+          return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+        case ScryfallSearchSortMode.manaValueAsc:
+          return (a.manaValue ?? 999).compareTo(b.manaValue ?? 999);
+        case ScryfallSearchSortMode.newestFirst:
+          return (b.releasedAt ?? DateTime(0)).compareTo(a.releasedAt ?? DateTime(0));
+        case ScryfallSearchSortMode.oldestFirst:
+          return (a.releasedAt ?? DateTime(9999)).compareTo(b.releasedAt ?? DateTime(9999));
+        case ScryfallSearchSortMode.setAsc:
+          final setCompare = a.setCode.compareTo(b.setCode);
+          if (setCompare != 0) return setCompare;
+          return a.collectorNumber.compareTo(b.collectorNumber);
+      }
+    });
+  }
 }
