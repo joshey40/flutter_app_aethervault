@@ -255,14 +255,19 @@ CREATE TABLE IF NOT EXISTS cards (
       switch (color) {
         case 'w':
           mask |= 1;
+          break;
         case 'u':
           mask |= 2;
+          break;
         case 'b':
           mask |= 4;
+          break;
         case 'r':
           mask |= 8;
+          break;
         case 'g':
           mask |= 16;
+          break;
       }
     }
     return mask;
@@ -400,7 +405,7 @@ class _SqliteScryfallQuery {
   static _SqlPredicate _textPredicate(String column, String operator, String expected) {
     switch (operator) {
       case ':':
-        return _SqlPredicate('$column LIKE ? ESCAPE \'\\\'', <Object?>['%${_escapeLike(expected)}%']);
+        return _SqlPredicate("$column LIKE ? ESCAPE '\\'", <Object?>['%${_escapeLike(expected)}%']);
       case '=':
         return _SqlPredicate('$column = ?', <Object?>[expected]);
       case '!=':
@@ -492,14 +497,19 @@ class _SqliteScryfallQuery {
       switch (char) {
         case 'w':
           mask |= 1;
+          break;
         case 'u':
           mask |= 2;
+          break;
         case 'b':
           mask |= 4;
+          break;
         case 'r':
           mask |= 8;
+          break;
         case 'g':
           mask |= 16;
+          break;
       }
     }
     return mask;
