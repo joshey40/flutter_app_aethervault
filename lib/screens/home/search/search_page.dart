@@ -9,7 +9,14 @@ import '../../../services/scryfall/scryfall_remote_search_data_source.dart';
 import '../../../services/scryfall/scryfall_search_query.dart';
 import '../../../services/scryfall/scryfall_search_repository.dart';
 import '../../../services/scryfall/scryfall_sqlite_search_index.dart';
-import '../../../theme/app_theme.dart';
+import 'search_sort_mode.dart';
+import 'widgets/compact_search_bar.dart';
+import 'widgets/search_card_image_tile.dart';
+import 'widgets/search_empty_state.dart';
+import 'widgets/search_error_banner.dart';
+import 'widgets/search_index_status_icons.dart';
+import 'widgets/search_results_header.dart';
+import 'widgets/search_source_icon.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -28,8 +35,8 @@ class _SearchPageState extends State<SearchPage> {
   int _searchGeneration = 0;
   String? _searchError;
   ScryfallSearchResultSource? _lastResultSource;
-  _SearchSortMode _sortMode = _SearchSortMode.nameAsc;
-  Map<ScryfallBulkDataType, _IndexStatus> _indexStatuses = const <ScryfallBulkDataType, _IndexStatus>{};
+  SearchSortMode _sortMode = SearchSortMode.nameAsc;
+  Map<ScryfallBulkDataType, SearchIndexStatus> _indexStatuses = const <ScryfallBulkDataType, SearchIndexStatus>{};
   List<ScryfallCardPrint> _results = const <ScryfallCardPrint>[];
 
   @override
@@ -54,13 +61,13 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _refreshIndexStatuses() async {
     if (mounted) setState(() => _checkingIndexStatus = true);
     final service = DownloadService.instance;
-    final statuses = <ScryfallBulkDataType, _IndexStatus>{};
+    final statuses = <ScryfallBulkDataType, SearchIndexStatus>{};
 
     for (final type in ScryfallBulkDataType.values) {
       try {
         final file = await service.getLocalFile(type: type);
         if (file == null) {
-          statuses[type] = _IndexStatus.missing;
+          statuses[type] = SearchIndexStatus.missing;
           continue;
         }
 
@@ -68,9 +75,9 @@ class _SearchPageState extends State<SearchPage> {
           type: type,
           sourceFile: file,
         );
-        statuses[type] = ready ? _IndexStatus.ready : _IndexStatus.preparing;
+        statuses[type] = ready ? SearchIndexStatus.ready : SearchIndexStatus.preparing;
       } catch (_) {
-        statuses[type] = _IndexStatus.missing;
+        statuses[type] = SearchIndexStatus.missing;
       }
     }
 
@@ -126,7 +133,7 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
-  Future<void> _setSortMode(_SearchSortMode sortMode) async {
+  Future<void> _setSortMode(SearchSortMode sortMode) async {
     setState(() => _sortMode = sortMode);
     if (_results.isNotEmpty || _searchController.text.trim().isNotEmpty) {
       await _performSearch();
@@ -141,8 +148,8 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         title: Text(loc.translate('nav.search')),
         actions: [
-          if (_lastResultSource != null) _SearchSourceIcon(source: _lastResultSource!),
-          _IndexStatusIcons(
+          if (_lastResultSource != null) SearchSourceIcon(source: _lastResultSource!),
+          SearchIndexStatusIcons(
             checking: _checkingIndexStatus,
             statuses: _indexStatuses,
             onRefresh: _refreshIndexStatuses,
@@ -159,18 +166,18 @@ class _SearchPageState extends State<SearchPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _CompactSearchBar(
+                  CompactSearchBar(
                     controller: _searchController,
                     isSearching: _isSearching,
                     onSearch: _performSearch,
                   ),
                   if (_searchError != null) ...[
                     const SizedBox(height: 10),
-                    _ErrorBanner(message: _searchError!),
+                    SearchErrorBanner(message: _searchError!),
                   ],
                   if (_results.isNotEmpty) ...[
                     const SizedBox(height: 14),
-                    _ResultsHeader(
+                    SearchResultsHeader(
                       count: _results.length,
                       sortMode: _sortMode,
                       onSortModeChanged: _setSortMode,
@@ -188,7 +195,7 @@ class _SearchPageState extends State<SearchPage> {
           else if (_results.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
-              child: _EmptySearchState(onExampleTap: _runExampleSearch),
+              child: SearchEmptyState(onExampleTap: _runExampleSearch),
             )
           else
             SliverPadding(
@@ -201,7 +208,7 @@ class _SearchPageState extends State<SearchPage> {
                   crossAxisSpacing: 12,
                   childAspectRatio: 0.714,
                 ),
-                itemBuilder: (context, index) => _CardImageTile(card: _results[index]),
+                itemBuilder: (context, index) => SearchCardImageTile(card: _results[index]),
               ),
             ),
         ],
@@ -212,515 +219,5 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _runExampleSearch(String query) async {
     _searchController.text = query;
     await _performSearch();
-  }
-}
-
-enum _SearchSortMode {
-  nameAsc('Name A–Z'),
-  nameDesc('Name Z–A'),
-  manaValueAsc('Mana Value'),
-  newestFirst('Neueste zuerst'),
-  oldestFirst('Älteste zuerst'),
-  setAsc('Set / Nummer');
-
-  const _SearchSortMode(this.label);
-  final String label;
-
-  ScryfallSearchSortMode get repositorySortMode {
-    switch (this) {
-      case _SearchSortMode.nameAsc:
-        return ScryfallSearchSortMode.nameAsc;
-      case _SearchSortMode.nameDesc:
-        return ScryfallSearchSortMode.nameDesc;
-      case _SearchSortMode.manaValueAsc:
-        return ScryfallSearchSortMode.manaValueAsc;
-      case _SearchSortMode.newestFirst:
-        return ScryfallSearchSortMode.newestFirst;
-      case _SearchSortMode.oldestFirst:
-        return ScryfallSearchSortMode.oldestFirst;
-      case _SearchSortMode.setAsc:
-        return ScryfallSearchSortMode.setAsc;
-    }
-  }
-}
-
-enum _IndexStatus { ready, preparing, missing }
-
-class _SearchSourceIcon extends StatelessWidget {
-  const _SearchSourceIcon({required this.source});
-
-  final ScryfallSearchResultSource source;
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, tooltip) = switch (source) {
-      ScryfallSearchResultSource.localOracleCards => (Icons.auto_stories_rounded, 'Letzte Suche: Oracle Cards'),
-      ScryfallSearchResultSource.localDefaultCards => (Icons.storage_rounded, 'Letzte Suche: Default Cards'),
-      ScryfallSearchResultSource.localAllCards => (Icons.inventory_2_rounded, 'Letzte Suche: All Cards'),
-      ScryfallSearchResultSource.remoteScryfallApi => (Icons.cloud_sync_rounded, 'Letzte Suche: online'),
-    };
-
-    return Tooltip(
-      message: tooltip,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Icon(icon, color: AppTheme.vaultAmber),
-      ),
-    );
-  }
-}
-
-class _IndexStatusIcons extends StatelessWidget {
-  const _IndexStatusIcons({
-    required this.checking,
-    required this.statuses,
-    required this.onRefresh,
-  });
-
-  final bool checking;
-  final Map<ScryfallBulkDataType, _IndexStatus> statuses;
-  final Future<void> Function() onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    if (checking) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        child: SizedBox(
-          width: 18,
-          height: 18,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      );
-    }
-
-    return PopupMenuButton<void>(
-      tooltip: 'Scryfall-Indexstatus',
-      icon: const Icon(Icons.storage_rounded),
-      onSelected: (_) => onRefresh(),
-      itemBuilder: (context) => [
-        for (final type in ScryfallBulkDataType.values)
-          PopupMenuItem<void>(
-            enabled: false,
-            child: Row(
-              children: [
-                _IndexStatusIcon(status: statuses[type] ?? _IndexStatus.missing),
-                const SizedBox(width: 10),
-                Expanded(child: Text(type.userFacingName)),
-                Text(_statusLabel(statuses[type] ?? _IndexStatus.missing)),
-              ],
-            ),
-          ),
-        const PopupMenuDivider(),
-        const PopupMenuItem<void>(
-          value: null,
-          child: Row(
-            children: [
-              Icon(Icons.refresh_rounded),
-              SizedBox(width: 10),
-              Text('Status aktualisieren'),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  static String _statusLabel(_IndexStatus status) {
-    switch (status) {
-      case _IndexStatus.ready:
-        return 'bereit';
-      case _IndexStatus.preparing:
-        return 'wird vorbereitet';
-      case _IndexStatus.missing:
-        return 'fehlt';
-    }
-  }
-}
-
-class _IndexStatusIcon extends StatelessWidget {
-  const _IndexStatusIcon({required this.status});
-
-  final _IndexStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    switch (status) {
-      case _IndexStatus.ready:
-        return const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20);
-      case _IndexStatus.preparing:
-        return const Icon(Icons.pending_rounded, color: AppTheme.vaultAmber, size: 20);
-      case _IndexStatus.missing:
-        return Icon(Icons.error_rounded, color: Theme.of(context).colorScheme.error, size: 20);
-    }
-  }
-}
-
-class _CompactSearchBar extends StatefulWidget {
-  const _CompactSearchBar({
-    required this.controller,
-    required this.isSearching,
-    required this.onSearch,
-  });
-
-  final TextEditingController controller;
-  final bool isSearching;
-  final Future<void> Function() onSearch;
-
-  @override
-  State<_CompactSearchBar> createState() => _CompactSearchBarState();
-}
-
-class _CompactSearchBarState extends State<_CompactSearchBar> {
-  @override
-  void initState() {
-    super.initState();
-    widget.controller.addListener(_onTextChanged);
-  }
-
-  @override
-  void didUpdateWidget(covariant _CompactSearchBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller != widget.controller) {
-      oldWidget.controller.removeListener(_onTextChanged);
-      widget.controller.addListener(_onTextChanged);
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.controller.removeListener(_onTextChanged);
-    super.dispose();
-  }
-
-  void _onTextChanged() => setState(() {});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final borderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: borderColor.withOpacity(0.65)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: widget.controller,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  hintText: 'Kartensuche: t:dragon, o:draw, arcane signet...',
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  filled: false,
-                  suffixIcon: widget.controller.text.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Eingabe löschen',
-                          onPressed: () => widget.controller.clear(),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                ),
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => widget.onSearch(),
-              ),
-            ),
-            const SizedBox(width: 6),
-            FilledButton(
-              onPressed: widget.isSearching ? null : widget.onSearch,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(48, 48),
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: widget.isSearching
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_rounded),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ResultsHeader extends StatelessWidget {
-  const _ResultsHeader({
-    required this.count,
-    required this.sortMode,
-    required this.onSortModeChanged,
-  });
-
-  final int count;
-  final _SearchSortMode sortMode;
-  final ValueChanged<_SearchSortMode> onSortModeChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            '$count Treffer',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ),
-        PopupMenuButton<_SearchSortMode>(
-          tooltip: 'Sortierung ändern',
-          initialValue: sortMode,
-          onSelected: onSortModeChanged,
-          itemBuilder: (context) => [
-            for (final mode in _SearchSortMode.values)
-              PopupMenuItem(
-                value: mode,
-                child: Row(
-                  children: [
-                    if (mode == sortMode) const Icon(Icons.check_rounded, size: 18) else const SizedBox(width: 18),
-                    const SizedBox(width: 8),
-                    Text(mode.label),
-                  ],
-                ),
-              ),
-          ],
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                sortMode.label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.65),
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.sort_rounded, size: 18),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colorScheme.errorContainer.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.error_outline_rounded, color: colorScheme.onErrorContainer),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: colorScheme.onErrorContainer),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptySearchState extends StatelessWidget {
-  const _EmptySearchState({required this.onExampleTap});
-
-  final Future<void> Function(String query) onExampleTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final examples = const [
-      'arcane signet',
-      't:dragon',
-      'o:draw mv<=3',
-      'ci:uw t:legendary',
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 74,
-            height: 74,
-            decoration: BoxDecoration(
-              color: AppTheme.vaultAmber.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: const Icon(Icons.auto_awesome_rounded, size: 34, color: AppTheme.vaultAmber),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Was suchst du?',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Name eingeben oder Scryfall-Filter nutzen.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.64),
-                ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final example in examples)
-                ActionChip(
-                  avatar: const Icon(Icons.search_rounded, size: 16),
-                  label: Text(example),
-                  onPressed: () => onExampleTap(example),
-                ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CardImageTile extends StatefulWidget {
-  const _CardImageTile({required this.card});
-
-  final ScryfallCardPrint card;
-
-  @override
-  State<_CardImageTile> createState() => _CardImageTileState();
-}
-
-class _CardImageTileState extends State<_CardImageTile> {
-  int _faceIndex = 0;
-
-  @override
-  void didUpdateWidget(covariant _CardImageTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.card.id != widget.card.id) {
-      _faceIndex = 0;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final card = widget.card;
-    final imageUrls = card.displayImageNormals.isNotEmpty
-        ? card.displayImageNormals
-        : card.displayImageSmalls;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final placeholderColor = isDark ? AppTheme.vaultSurfaceLight : AppTheme.vaultFog;
-    final selectedUrl = imageUrls.isEmpty ? null : imageUrls[_faceIndex.clamp(0, imageUrls.length - 1)];
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: placeholderColor,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.25 : 0.10),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: selectedUrl == null
-                  ? _MissingImageCard(card: card)
-                  : _NetworkCardImage(url: selectedUrl, card: card),
-            ),
-          ),
-          if (imageUrls.length > 1)
-            Positioned(
-              top: 34,
-              right: 7,
-              child: Material(
-                color: Colors.black.withOpacity(0.58),
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => setState(() => _faceIndex = (_faceIndex + 1) % imageUrls.length),
-                  child: const Padding(
-                    padding: EdgeInsets.all(7),
-                    child: Icon(Icons.flip_rounded, color: Colors.white, size: 18),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NetworkCardImage extends StatelessWidget {
-  const _NetworkCardImage({required this.url, required this.card});
-
-  final String url;
-  final ScryfallCardPrint card;
-
-  @override
-  Widget build(BuildContext context) {
-    return Image.network(
-      url,
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _MissingImageCard(card: card),
-    );
-  }
-}
-
-class _MissingImageCard extends StatelessWidget {
-  const _MissingImageCard({required this.card});
-
-  final ScryfallCardPrint card;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.style_outlined, size: 32),
-          const SizedBox(height: 10),
-          Text(
-            card.name,
-            textAlign: TextAlign.center,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
-    );
   }
 }
