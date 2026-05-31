@@ -9,13 +9,22 @@ import 'package:http/http.dart' as http;
 ///
 /// Examples:
 ///   dart run tool/compare_scryfall_search.dart --query "arcane signet"
-///   dart run tool/compare_scryfall_search.dart --query "t:dragon c:r" --bulk oracle_cards
-///   dart run tool/compare_scryfall_search.dart --queries tool/search_queries.txt --show 20
+///   dart run tool/compare_scryfall_search.dart --query "t:dragon" --limit 0
+///   dart run tool/compare_scryfall_search.dart --query "lang:de name:sol ring" --bulk all_cards --unique prints --limit 0
 ///
 /// By default, this script stores downloaded bulk JSON files in
 /// `.dart_tool/scryfall_compare/` and reuses them across runs.
 Future<void> main(List<String> args) async {
-  final options = _Options.parse(args);
+  late final _Options options;
+  try {
+    options = _Options.parse(args);
+  } on FormatException catch (error) {
+    stderr.writeln(error.message);
+    stderr.writeln(_usage);
+    exitCode = 64;
+    return;
+  }
+
   if (options.showHelp) {
     stdout.writeln(_usage);
     return;
@@ -40,7 +49,7 @@ Future<void> main(List<String> args) async {
     stdout.writeln('Local bulk: ${bulkFile.path}');
     stdout.writeln('Bulk type: ${options.bulkType.apiType}');
     stdout.writeln('Scryfall unique: ${options.unique}');
-    stdout.writeln('Limit: ${options.limit}');
+    stdout.writeln('Limit: ${options.limit == 0 ? 'all' : options.limit}');
     stdout.writeln('');
 
     for (final query in options.queries) {
@@ -69,11 +78,7 @@ Future<void> _compareQuery({
   stdout.writeln('='.padRight(80, '='));
   stdout.writeln('Query: $query');
 
-  final local = await _searchLocalBulk(
-    file: localFile,
-    rawQuery: query,
-    limit: limit,
-  );
+  final local = await _searchLocalBulk(file: localFile, rawQuery: query, limit: limit);
   final remote = await _searchScryfall(
     client: client,
     rawQuery: query,
@@ -81,14 +86,12 @@ Future<void> _compareQuery({
     limit: limit,
   );
 
-  final localIds = local.map((card) => card.compareId).toSet();
-  final remoteIds = remote.map((card) => card.compareId).toSet();
-
+  final localIds = local.map((card) => card.compareKey(unique)).toSet();
+  final remoteIds = remote.map((card) => card.compareKey(unique)).toSet();
   final missingIds = remoteIds.difference(localIds);
   final extraIds = localIds.difference(remoteIds);
-
-  final remoteById = {for (final card in remote) card.compareId: card};
-  final localById = {for (final card in local) card.compareId: card};
+  final remoteById = {for (final card in remote) card.compareKey(unique): card};
+  final localById = {for (final card in local) card.compareKey(unique): card};
 
   stdout.writeln('Local:  ${local.length}');
   stdout.writeln('Remote: ${remote.length}');
@@ -101,9 +104,7 @@ Future<void> _compareQuery({
     for (final id in missingIds.take(show)) {
       stdout.writeln('  - ${remoteById[id]}');
     }
-    if (missingIds.length > show) {
-      stdout.writeln('  ... ${missingIds.length - show} more');
-    }
+    if (missingIds.length > show) stdout.writeln('  ... ${missingIds.length - show} more');
   }
 
   if (extraIds.isNotEmpty) {
@@ -112,9 +113,7 @@ Future<void> _compareQuery({
     for (final id in extraIds.take(show)) {
       stdout.writeln('  + ${localById[id]}');
     }
-    if (extraIds.length > show) {
-      stdout.writeln('  ... ${extraIds.length - show} more');
-    }
+    if (extraIds.length > show) stdout.writeln('  ... ${extraIds.length - show} more');
   }
 
   stdout.writeln('');
@@ -132,7 +131,7 @@ Future<List<_CompareCard>> _searchScryfall({
     'unique': unique,
   });
 
-  while (nextPage != null && cards.length < limit) {
+  while (nextPage != null && _underLimit(cards.length, limit)) {
     final response = await client.get(
       nextPage,
       headers: const <String, String>{
@@ -154,7 +153,7 @@ Future<List<_CompareCard>> _searchScryfall({
     if (data is List) {
       for (final item in data.whereType<Map<String, dynamic>>()) {
         cards.add(_CompareCard.fromJson(item));
-        if (cards.length >= limit) break;
+        if (!_underLimit(cards.length, limit)) break;
       }
     }
 
@@ -180,11 +179,13 @@ Future<List<_CompareCard>> _searchLocalBulk({
     if (!query.matchesJson(decoded)) continue;
 
     cards.add(_CompareCard.fromJson(decoded));
-    if (cards.length >= limit) break;
+    if (!_underLimit(cards.length, limit)) break;
   }
 
   return cards;
 }
+
+bool _underLimit(int count, int limit) => limit == 0 || count < limit;
 
 Future<File> _ensureBulkFile({
   required http.Client client,
@@ -194,7 +195,6 @@ Future<File> _ensureBulkFile({
   final dir = Directory('.dart_tool/scryfall_compare');
   if (!await dir.exists()) await dir.create(recursive: true);
   final file = File('${dir.path}/${type.fileName}');
-
   if (await file.exists() && !forceRefresh) return file;
 
   stdout.writeln('Downloading ${type.apiType} metadata...');
@@ -212,10 +212,7 @@ Future<File> _ensureBulkFile({
   final metadata = jsonDecode(metadataResponse.body) as Map<String, dynamic>;
   final data = metadata['data'];
   if (data is! List) throw const FormatException('Bulk metadata data field is not a list.');
-
-  final entry = data
-      .whereType<Map<String, dynamic>>()
-      .firstWhere((item) => item['type'] == type.apiType);
+  final entry = data.whereType<Map<String, dynamic>>().firstWhere((item) => item['type'] == type.apiType);
   final downloadUri = Uri.parse(entry['download_uri'] as String);
   final contentEncoding = (entry['content_encoding'] as String?)?.toLowerCase();
 
@@ -259,9 +256,7 @@ Stream<String> _readTopLevelJsonObjects(File file) async* {
   );
 
   Stream<List<int>> bytes = file.openRead();
-  if (_looksLikeGzip(header)) {
-    bytes = bytes.transform(gzip.decoder);
-  }
+  if (_looksLikeGzip(header)) bytes = bytes.transform(gzip.decoder);
 
   final chars = bytes.transform(utf8.decoder);
   final buffer = StringBuffer();
@@ -273,7 +268,6 @@ Stream<String> _readTopLevelJsonObjects(File file) async* {
   await for (final chunk in chars) {
     for (var i = 0; i < chunk.length; i++) {
       final char = chunk[i];
-
       if (capturing) buffer.write(char);
 
       if (inString) {
@@ -291,7 +285,6 @@ Stream<String> _readTopLevelJsonObjects(File file) async* {
         inString = true;
         continue;
       }
-
       if (char == '{') {
         if (!capturing) {
           capturing = true;
@@ -301,7 +294,6 @@ Stream<String> _readTopLevelJsonObjects(File file) async* {
         depth++;
         continue;
       }
-
       if (char == '}') {
         depth--;
         if (capturing && depth == 0) {
@@ -314,27 +306,21 @@ Stream<String> _readTopLevelJsonObjects(File file) async* {
   }
 }
 
-bool _looksLikeGzip(List<int> bytes) =>
-    bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
+bool _looksLikeGzip(List<int> bytes) => bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
 
 class _LocalQuery {
   const _LocalQuery(this.predicates);
-
   final List<bool Function(Map<String, dynamic> cardJson)> predicates;
-
   bool matchesJson(Map<String, dynamic> cardJson) => predicates.every((predicate) => predicate(cardJson));
 
   static _LocalQuery parse(String rawQuery) {
-    final tokens = _tokenize(rawQuery);
     final predicates = <bool Function(Map<String, dynamic> cardJson)>[];
-
-    for (final token in tokens) {
+    for (final token in _tokenize(rawQuery)) {
       final negated = token.startsWith('-');
       final cleanToken = negated ? token.substring(1) : token;
       final predicate = _parseToken(cleanToken);
       predicates.add(negated ? (json) => !predicate(json) : predicate);
     }
-
     return _LocalQuery(predicates);
   }
 
@@ -342,7 +328,6 @@ class _LocalQuery {
     final tokens = <String>[];
     final buffer = StringBuffer();
     var inQuotes = false;
-
     for (var i = 0; i < rawQuery.length; i++) {
       final char = rawQuery[i];
       if (char == '"') {
@@ -358,7 +343,6 @@ class _LocalQuery {
       }
       buffer.write(char);
     }
-
     if (buffer.isNotEmpty) tokens.add(buffer.toString());
     return tokens;
   }
@@ -471,10 +455,8 @@ String _jsonText(Map<String, dynamic> json, String key) => _normalize(json[key] 
 String _coalesceFaces(Map<String, dynamic> json, String key) {
   final direct = json[key] as String?;
   if (direct != null && direct.isNotEmpty) return _normalize(direct);
-
   final faces = json['card_faces'];
   if (faces is! List) return '';
-
   return faces
       .whereType<Map<String, dynamic>>()
       .map((face) => face[key] as String? ?? '')
@@ -522,7 +504,6 @@ bool _compareNumber(double? actual, String expected, String operator) {
   if (actual == null) return false;
   final parsed = double.tryParse(expected);
   if (parsed == null) return false;
-
   switch (operator) {
     case ':':
     case '=':
@@ -544,11 +525,7 @@ bool _compareNumber(double? actual, String expected, String operator) {
 
 bool _compareColorSet(List<String> actualColors, String expected, String operator) {
   final actual = actualColors.map(_normalize).toSet();
-  final expectedSet = expected
-      .split('')
-      .where((char) => 'wubrg'.contains(char))
-      .toSet();
-
+  final expectedSet = expected.split('').where((char) => 'wubrg'.contains(char)).toSet();
   switch (operator) {
     case ':':
     case '<=':
@@ -581,7 +558,7 @@ class _CompareCard {
   final String set;
   final String collectorNumber;
 
-  String get compareId => oracleId ?? id;
+  String compareKey(String unique) => unique == 'prints' ? id : (oracleId ?? id);
 
   factory _CompareCard.fromJson(Map<String, dynamic> json) {
     return _CompareCard(
@@ -594,7 +571,7 @@ class _CompareCard {
   }
 
   @override
-  String toString() => '$name [$set #$collectorNumber] ($compareId)';
+  String toString() => '$name [$set #$collectorNumber] (${oracleId ?? id})';
 }
 
 enum _BulkType {
@@ -665,9 +642,11 @@ class _Options {
         case '-h':
         case '--help':
           showHelp = true;
+          break;
         case '-q':
         case '--query':
           queries.add(readValue());
+          break;
         case '--queries':
           final file = File(readValue());
           queries.addAll(
@@ -676,21 +655,29 @@ class _Options {
                 .map((line) => line.trim())
                 .where((line) => line.isNotEmpty && !line.startsWith('#')),
           );
+          break;
         case '--bulk':
           bulkType = _BulkType.parse(readValue());
+          break;
         case '--local-file':
           localFile = File(readValue());
+          break;
         case '--unique':
           unique = readValue();
           if (unique != 'cards' && unique != 'prints') {
-            throw FormatException('--unique must be cards or prints.');
+            throw const FormatException('--unique must be cards or prints.');
           }
+          break;
         case '--limit':
           limit = int.parse(readValue());
+          if (limit < 0) throw const FormatException('--limit must be >= 0. Use 0 for all results.');
+          break;
         case '--show':
           show = int.parse(readValue());
+          break;
         case '--refresh-bulk':
           refreshBulk = true;
+          break;
         default:
           throw FormatException('Unknown argument $arg');
       }
@@ -714,7 +701,8 @@ Compare local AetherVault-style Scryfall search against the Scryfall API.
 
 Usage:
   dart run tool/compare_scryfall_search.dart --query "arcane signet"
-  dart run tool/compare_scryfall_search.dart --query "t:dragon c:r" --bulk oracle_cards
+  dart run tool/compare_scryfall_search.dart --query "t:dragon" --limit 0
+  dart run tool/compare_scryfall_search.dart --query "lang:de name:sol ring" --bulk all_cards --unique prints --limit 0
   dart run tool/compare_scryfall_search.dart --queries tool/search_queries.txt --show 20
 
 Options:
@@ -723,7 +711,7 @@ Options:
       --bulk <type>         oracle_cards, default_cards, or all_cards. Default: oracle_cards.
       --local-file <path>   Use an existing local bulk JSON file instead of .dart_tool cache.
       --unique <mode>       Scryfall API unique mode: cards or prints. Default: cards.
-      --limit <n>           Max local/API results to compare. Default: 175.
+      --limit <n>           Max local/API results to compare. Use 0 for all results. Default: 175.
       --show <n>            Max missing/extra rows to print. Default: 10.
       --refresh-bulk        Redownload the selected bulk file.
   -h, --help                Show this help.
