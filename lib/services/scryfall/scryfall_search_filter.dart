@@ -91,20 +91,46 @@ class ScryfallSearchFilter {
       case 'oracle':
       case 'o':
         return 'oracle';
+      case 'flavor':
+      case 'ft':
+        return 'flavor';
       case 'artist':
       case 'a':
         return 'artist';
+      case 'artistid':
+      case 'artist_id':
+        return 'artistId';
+      case 'mana':
+      case 'm':
+        return 'mana';
       case 'set':
       case 's':
       case 'e':
       case 'edition':
         return 'set';
+      case 'setname':
+      case 'set_name':
+        return 'setName';
+      case 'st':
+      case 'settype':
+      case 'set_type':
+        return 'setType';
       case 'rarity':
       case 'r':
         return 'rarity';
       case 'lang':
       case 'language':
         return 'lang';
+      case 'collector':
+      case 'number':
+      case 'cn':
+        return 'collectorNumber';
+      case 'border':
+        return 'border';
+      case 'frame':
+        return 'frame';
+      case 'layout':
+        return 'layout';
       case 'game':
         return 'game';
       case 'c':
@@ -114,18 +140,42 @@ class ScryfallSearchFilter {
       case 'ci':
       case 'id':
       case 'identity':
-      case 'commander':
-      case 'edh':
         return 'identity';
+      case 'devotion':
+      case 'produces':
+      case 'produced':
+        return 'producedMana';
       case 'mv':
       case 'cmc':
         return 'manaValue';
+      case 'pow':
+      case 'power':
+        return 'power';
+      case 'tou':
+      case 'toughness':
+        return 'toughness';
+      case 'loy':
+      case 'loyalty':
+        return 'loyalty';
+      case 'def':
+      case 'defense':
+        return 'defense';
       case 'usd':
         return 'usd';
       case 'eur':
         return 'eur';
+      case 'tix':
+        return 'tix';
       case 'year':
         return 'year';
+      case 'date':
+        return 'date';
+      case 'legal':
+        return 'legal';
+      case 'banned':
+        return 'banned';
+      case 'restricted':
+        return 'restricted';
       case 'is':
         return 'is';
       case 'in':
