@@ -104,36 +104,14 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         service: service,
         type: ScryfallBulkDataType.oracleCards,
         progressStart: 0.0,
-        progressEnd: 0.20,
+        progressEnd: 0.70,
+        reportProgress: true,
       );
       await _ensureSearchIndex(
         service: service,
         type: ScryfallBulkDataType.oracleCards,
-        progress: 0.24,
-      );
-
-      await _ensureBulkDataFile(
-        service: service,
-        type: ScryfallBulkDataType.defaultCards,
-        progressStart: 0.25,
-        progressEnd: 0.45,
-      );
-      await _ensureSearchIndex(
-        service: service,
-        type: ScryfallBulkDataType.defaultCards,
-        progress: 0.49,
-      );
-
-      await _ensureBulkDataFile(
-        service: service,
-        type: ScryfallBulkDataType.allCards,
-        progressStart: 0.50,
-        progressEnd: 0.85,
-      );
-      await _ensureSearchIndex(
-        service: service,
-        type: ScryfallBulkDataType.allCards,
-        progress: 0.95,
+        progress: 0.92,
+        reportProgress: true,
       );
 
       if (mounted) {
@@ -142,6 +120,8 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
           _initProgress = 1.0;
         });
       }
+
+      unawaited(_prepareOptionalScryfallData(service));
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -156,16 +136,45 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     }
   }
 
+  Future<void> _prepareOptionalScryfallData(DownloadService service) async {
+    for (final type in const <ScryfallBulkDataType>[
+      ScryfallBulkDataType.defaultCards,
+      ScryfallBulkDataType.allCards,
+    ]) {
+      try {
+        await _ensureBulkDataFile(
+          service: service,
+          type: type,
+          progressStart: 0.0,
+          progressEnd: 1.0,
+          reportProgress: false,
+        );
+        await _ensureSearchIndex(
+          service: service,
+          type: type,
+          progress: 1.0,
+          reportProgress: false,
+        );
+      } catch (_) {
+        // Optional indexes are best-effort. If one fails, SearchRepository can
+        // still fall back to remote Scryfall for unsupported/local-missing data.
+      }
+    }
+  }
+
   Future<void> _ensureBulkDataFile({
     required DownloadService service,
     required ScryfallBulkDataType type,
     required double progressStart,
     required double progressEnd,
+    required bool reportProgress,
   }) async {
-    setState(() {
-      _initStatus = 'Checking ${type.userFacingName}...';
-      _initProgress = progressStart;
-    });
+    if (reportProgress && mounted) {
+      setState(() {
+        _initStatus = 'Checking ${type.userFacingName}...';
+        _initProgress = progressStart;
+      });
+    }
 
     final available = await service.isFileUpToDate(type: type);
     if (available) return;
@@ -173,19 +182,21 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     await service.downloadBulkData(
       type: type,
       force: false,
-      onProgress: (received, total) {
-        if (!mounted) return;
-        setState(() {
-          if (total != null && total > 0) {
-            final fileProgress = (received / total).clamp(0.0, 1.0);
-            _initProgress = progressStart + (progressEnd - progressStart) * fileProgress;
-            _initStatus =
-                'Downloading ${type.userFacingName}: ${(fileProgress * 100).toStringAsFixed(0)}%';
-          } else {
-            _initStatus = 'Downloading ${type.userFacingName}: $received bytes';
-          }
-        });
-      },
+      onProgress: reportProgress
+          ? (received, total) {
+              if (!mounted) return;
+              setState(() {
+                if (total != null && total > 0) {
+                  final fileProgress = (received / total).clamp(0.0, 1.0);
+                  _initProgress = progressStart + (progressEnd - progressStart) * fileProgress;
+                  _initStatus =
+                      'Downloading ${type.userFacingName}: ${(fileProgress * 100).toStringAsFixed(0)}%';
+                } else {
+                  _initStatus = 'Downloading ${type.userFacingName}: $received bytes';
+                }
+              });
+            }
+          : null,
     );
   }
 
@@ -193,6 +204,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     required DownloadService service,
     required ScryfallBulkDataType type,
     required double progress,
+    required bool reportProgress,
   }) async {
     final file = await service.getLocalFile(type: type);
     if (file == null) return;
@@ -203,7 +215,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     );
     if (ready) return;
 
-    if (mounted) {
+    if (reportProgress && mounted) {
       setState(() {
         _initStatus = 'Indexing ${type.userFacingName}...';
         _initProgress = progress;
