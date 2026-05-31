@@ -14,6 +14,7 @@ import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
 import 'services/scryfall/download_service.dart';
 import 'services/scryfall/bulk_data_type.dart';
+import 'services/scryfall/scryfall_sqlite_search_index.dart';
 import 'services/services_provider.dart';
 import 'theme/app_theme.dart';
 
@@ -105,17 +106,34 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         progressStart: 0.0,
         progressEnd: 0.20,
       );
+      await _ensureSearchIndex(
+        service: service,
+        type: ScryfallBulkDataType.oracleCards,
+        progress: 0.24,
+      );
+
       await _ensureBulkDataFile(
         service: service,
         type: ScryfallBulkDataType.defaultCards,
-        progressStart: 0.20,
+        progressStart: 0.25,
         progressEnd: 0.45,
       );
+      await _ensureSearchIndex(
+        service: service,
+        type: ScryfallBulkDataType.defaultCards,
+        progress: 0.49,
+      );
+
       await _ensureBulkDataFile(
         service: service,
         type: ScryfallBulkDataType.allCards,
-        progressStart: 0.45,
-        progressEnd: 1.0,
+        progressStart: 0.50,
+        progressEnd: 0.85,
+      );
+      await _ensureSearchIndex(
+        service: service,
+        type: ScryfallBulkDataType.allCards,
+        progress: 0.95,
       );
 
       if (mounted) {
@@ -171,6 +189,33 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     );
   }
 
+  Future<void> _ensureSearchIndex({
+    required DownloadService service,
+    required ScryfallBulkDataType type,
+    required double progress,
+  }) async {
+    final file = await service.getLocalFile(type: type);
+    if (file == null) return;
+
+    final ready = await ScryfallSqliteSearchIndex.instance.isIndexReady(
+      type: type,
+      sourceFile: file,
+    );
+    if (ready) return;
+
+    if (mounted) {
+      setState(() {
+        _initStatus = 'Indexing ${type.userFacingName}...';
+        _initProgress = progress;
+      });
+    }
+
+    await ScryfallSqliteSearchIndex.instance.ensureIndex(
+      type: type,
+      sourceFile: file,
+    );
+  }
+
   @override
   void dispose() {
     _authStateSubscription?.cancel();
@@ -178,119 +223,82 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   }
 
   Future<void> _setLocale(Locale locale) async {
+    if (_locale == locale) return;
     await initializeLocalizations(locale.languageCode);
-    setState(() {
-      _locale = locale;
-    });
     await widget.preferencesStorage.saveLocale(locale);
+    if (!mounted) return;
+    setState(() => _locale = locale);
   }
 
   Future<void> _setThemeMode(ThemeMode themeMode) async {
-    setState(() {
-      _themeMode = themeMode;
-    });
+    if (_themeMode == themeMode) return;
     await widget.preferencesStorage.saveThemeMode(themeMode);
+    if (!mounted) return;
+    setState(() => _themeMode = themeMode);
   }
 
-  void _showLogin() {
-    setState(() {
-      _showSignUp = false;
-    });
-  }
-
-  void _showSignUpPage() {
-    setState(() {
-      _showSignUp = true;
-    });
-  }
-
-  Future<void> _handleAuthenticated(VaultUser _) async {
-    setState(() {
-      _showSignUp = false;
-    });
-  }
-
-  Future<void> _handleSignOut() async {
-    await widget.authService.signOut();
-    setState(() {
-      _showSignUp = false;
-    });
-  }
+  void _toggleAuthMode() => setState(() => _showSignUp = !_showSignUp);
 
   @override
   Widget build(BuildContext context) {
-    if (_initializing) {
-      return MaterialApp(
-        title: 'Aethervault',
+    return ServicesProvider(
+      preferencesStorage: widget.preferencesStorage,
+      authService: widget.authService,
+      child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
+        title: 'AetherVault',
+        theme: buildAetherVaultTheme(Brightness.light),
+        darkTheme: buildAetherVaultTheme(Brightness.dark),
         themeMode: _themeMode,
         locale: _locale,
-        home: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 8),
-                  Text(_initStatus.isEmpty ? 'Preparing data...' : _initStatus),
-                  const SizedBox(height: 12),
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 12),
-                  if (_initProgress > 0 && _initProgress <= 1)
-                    Column(
-                      children: [
-                        LinearProgressIndicator(value: _initProgress),
-                        const SizedBox(height: 8),
-                        Text('${(_initProgress * 100).toStringAsFixed(0)}%'),
-                      ],
-                    ),
-                ],
+        home: _initializing
+            ? _StartupLoadingScreen(
+                progress: _initProgress,
+                status: _initStatus,
+              )
+            : widget.currentUser == null
+                ? _showSignUp
+                    ? SignUpPage(onLoginTap: _toggleAuthMode)
+                    : LoginPage(onSignUpTap: _toggleAuthMode)
+                : HomeShell(
+                    onLocaleChanged: _setLocale,
+                    onThemeModeChanged: _setThemeMode,
+                  ),
+      ),
+    );
+  }
+}
+
+class _StartupLoadingScreen extends StatelessWidget {
+  const _StartupLoadingScreen({
+    required this.progress,
+    required this.status,
+  });
+
+  final double progress;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.auto_awesome_rounded, size: 46, color: AppTheme.vaultAmber),
+              const SizedBox(height: 20),
+              Text(
+                'AetherVault',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
-            ),
+              const SizedBox(height: 20),
+              LinearProgressIndicator(value: progress.clamp(0.0, 1.0)),
+              const SizedBox(height: 12),
+              Text(status, textAlign: TextAlign.center),
+            ],
           ),
-        ),
-      );
-    }
-
-    return MaterialApp(
-      title: 'Aethervault',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _themeMode,
-      locale: _locale,
-      home: ServicesProvider(
-        child: StreamBuilder<VaultUser?>(
-          stream: widget.authService.authStateChanges(),
-          initialData: widget.currentUser,
-          builder: (context, snapshot) {
-            final currentUser = snapshot.data;
-            if (currentUser == null) {
-              return _showSignUp
-                  ? SignUpPage(
-                      authService: widget.authService,
-                      onLoginTap: _showLogin,
-                      onSignUpSuccess: _handleAuthenticated,
-                    )
-                  : LoginPage(
-                      authService: widget.authService,
-                      onSignUpTap: _showSignUpPage,
-                      onSignInSuccess: _handleAuthenticated,
-                    );
-            }
-
-            return HomeShell(
-              user: currentUser,
-              themeMode: _themeMode,
-              onThemeModeChanged: _setThemeMode,
-              locale: _locale,
-              onLocaleChanged: _setLocale,
-              onSignOut: _handleSignOut,
-            );
-          },
         ),
       ),
     );
