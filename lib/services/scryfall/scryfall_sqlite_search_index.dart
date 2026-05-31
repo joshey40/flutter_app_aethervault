@@ -18,6 +18,7 @@ class ScryfallSqliteSearchIndex {
 
   static const int schemaVersion = 2;
   static const int indexVersion = 2;
+  static const int busyTimeoutMs = 5000;
 
   File? _testDatabaseFile;
 
@@ -33,9 +34,9 @@ class ScryfallSqliteSearchIndex {
     if (!await databaseFile.exists()) return false;
 
     final stat = await sourceFile.stat();
-    final db = sqlite3.open(databaseFile.path);
+    final db = sqlite3.open(databaseFile.path, mode: OpenMode.readOnly);
     try {
-      _createSchema(db);
+      _setBusyTimeout(db);
       final row = db.select(
         'SELECT source_size, source_modified_ms, index_version FROM index_metadata WHERE bulk_type = ?',
         <Object?>[type.apiType],
@@ -45,6 +46,8 @@ class ScryfallSqliteSearchIndex {
       return row.first['source_size'] == stat.size &&
           row.first['source_modified_ms'] == stat.modified.millisecondsSinceEpoch &&
           row.first['index_version'] == indexVersion;
+    } on SqliteException {
+      return false;
     } finally {
       db.dispose();
     }
@@ -82,6 +85,7 @@ class ScryfallSqliteSearchIndex {
     final databaseFile = await _databaseFile();
     final db = sqlite3.open(databaseFile.path, mode: OpenMode.readOnly);
     try {
+      _setBusyTimeout(db);
       final query = _SqliteScryfallQuery.parse(rawQuery);
       final result = query.select(
         db: db,
@@ -104,6 +108,10 @@ class ScryfallSqliteSearchIndex {
     return File(p.join(supportDir.path, 'scryfall', 'scryfall_search_index.sqlite'));
   }
 
+  static void _setBusyTimeout(Database db) {
+    db.execute('PRAGMA busy_timeout = $busyTimeoutMs');
+  }
+
   static Future<void> _buildIndex({
     required String databasePath,
     required String sourcePath,
@@ -114,6 +122,7 @@ class ScryfallSqliteSearchIndex {
     final db = sqlite3.open(databasePath);
 
     try {
+      _setBusyTimeout(db);
       _createSchema(db);
       db.execute('PRAGMA journal_mode = WAL');
       db.execute('PRAGMA synchronous = NORMAL');
