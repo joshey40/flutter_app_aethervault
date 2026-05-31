@@ -56,19 +56,19 @@ class HybridScryfallSearchRepository {
 
     switch (plan.query.executionMode) {
       case ScryfallSearchExecutionMode.localOnly:
-        return ScryfallSearchResult(
-          cards: await localDataSource.searchCards(
-            rawQuery: normalizedQuery,
-            type: plan.searchBulkType,
-          ),
-          source: _sourceForBulkType(plan.searchBulkType),
-        );
+        try {
+          return ScryfallSearchResult(
+            cards: await localDataSource.searchCards(
+              rawQuery: normalizedQuery,
+              type: plan.searchBulkType,
+            ),
+            source: _sourceForBulkType(plan.searchBulkType),
+          );
+        } on UnsupportedError catch (error) {
+          return _remoteSearch(normalizedQuery, 'Local parser does not support this query yet: $error');
+        }
       case ScryfallSearchExecutionMode.remoteOnly:
-        return ScryfallSearchResult(
-          cards: await remoteDataSource.search(normalizedQuery),
-          source: ScryfallSearchResultSource.remoteScryfallApi,
-          fallbackReason: plan.query.reason,
-        );
+        return _remoteSearch(normalizedQuery, plan.query.reason);
       case ScryfallSearchExecutionMode.localThenRemoteFallback:
         try {
           return ScryfallSearchResult(
@@ -79,14 +79,20 @@ class HybridScryfallSearchRepository {
             source: _sourceForBulkType(plan.searchBulkType),
             fallbackReason: plan.query.reason,
           );
+        } on UnsupportedError {
+          return _remoteSearch(normalizedQuery, plan.query.reason);
         } catch (_) {
-          return ScryfallSearchResult(
-            cards: await remoteDataSource.search(normalizedQuery),
-            source: ScryfallSearchResultSource.remoteScryfallApi,
-            fallbackReason: plan.query.reason,
-          );
+          return _remoteSearch(normalizedQuery, plan.query.reason);
         }
     }
+  }
+
+  Future<ScryfallSearchResult> _remoteSearch(String query, String? reason) async {
+    return ScryfallSearchResult(
+      cards: await remoteDataSource.search(query),
+      source: ScryfallSearchResultSource.remoteScryfallApi,
+      fallbackReason: reason,
+    );
   }
 
   static ScryfallSearchResultSource _sourceForBulkType(ScryfallBulkDataType type) {
