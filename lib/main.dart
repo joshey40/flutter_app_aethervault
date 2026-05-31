@@ -68,6 +68,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   late ThemeMode _themeMode;
   late Locale _locale;
   bool _showSignUp = false;
+  VaultUser? _currentUser;
   StreamSubscription<VaultUser?>? _authStateSubscription;
   bool _initializing = true;
   double _initProgress = 0.0;
@@ -78,13 +79,14 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     super.initState();
     _themeMode = widget.initialThemeMode;
     _locale = widget.initialLocale;
+    _currentUser = widget.currentUser;
     _authStateSubscription = widget.authService.authStateChanges().listen((user) {
-      if (!mounted || user != null || !_showSignUp) {
-        return;
-      }
-
+      if (!mounted) return;
       setState(() {
-        _showSignUp = false;
+        _currentUser = user;
+        if (user != null) {
+          _showSignUp = false;
+        }
       });
     });
 
@@ -268,14 +270,30 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
                 progress: _initProgress,
                 status: _initStatus,
               )
-            : widget.currentUser == null
-                ? _showSignUp
-                    ? SignUpPage(onLoginTap: _toggleAuthMode)
-                    : LoginPage(onSignUpTap: _toggleAuthMode)
-                : HomeShell(
-                    onLocaleChanged: _setLocale,
-                    onThemeModeChanged: _setThemeMode,
-                  ),
+                    : _currentUser == null
+                        ? _showSignUp
+                            ? SignUpPage(
+                                authService: widget.authService,
+                                onLoginTap: _toggleAuthMode,
+                                onSignUpSuccess: (user) => setState(() => _currentUser = user),
+                              )
+                            : LoginPage(
+                                authService: widget.authService,
+                                onSignUpTap: _toggleAuthMode,
+                                onSignInSuccess: (user) => setState(() => _currentUser = user),
+                              )
+                        : HomeShell(
+                            user: _currentUser!,
+                            themeMode: _themeMode,
+                            onThemeModeChanged: _setThemeMode,
+                            locale: _locale,
+                            onLocaleChanged: _setLocale,
+                            onSignOut: () async {
+                              await widget.authService.signOut();
+                              if (!mounted) return;
+                              setState(() => _currentUser = null);
+                            },
+                          ),
       ),
     );
   }

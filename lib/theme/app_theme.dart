@@ -206,3 +206,6 @@ class AppTheme {
     ),
   );
 }
+
+ThemeData buildAetherVaultTheme(Brightness brightness) =>
+    brightness == Brightness.dark ? AppTheme.darkTheme : AppTheme.lightTheme;
