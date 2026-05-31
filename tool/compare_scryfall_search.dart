@@ -52,6 +52,7 @@ Future<void> main(List<String> args) async {
     stdout.writeln('Local bulk: ${bulkFile.path}');
     stdout.writeln('Bulk type: ${options.bulkType.apiType}');
     stdout.writeln('Scryfall unique: ${options.unique}');
+    stdout.writeln('Include extras: false');
     stdout.writeln('Limit: ${options.limit == 0 ? 'all' : options.limit}');
     stdout.writeln('');
 
@@ -133,6 +134,7 @@ Future<List<_CompareCard>> _searchScryfall({
   Uri? nextPage = Uri.https('api.scryfall.com', '/cards/search', <String, String>{
     'q': rawQuery,
     'unique': unique,
+    'include_extras': 'false',
   });
 
   while (nextPage != null && _underLimit(cards.length, limit)) {
@@ -180,6 +182,7 @@ Future<List<_CompareCard>> _searchLocalBulk({
   await for (final cardJson in _readTopLevelJsonObjects(file)) {
     final decoded = jsonDecode(cardJson);
     if (decoded is! Map<String, dynamic>) continue;
+    if (_isExtra(decoded)) continue;
     if (!query.matchesJson(decoded)) continue;
 
     cards.add(_CompareCard.fromJson(decoded));
@@ -187,6 +190,17 @@ Future<List<_CompareCard>> _searchLocalBulk({
   }
 
   return cards;
+}
+
+bool _isExtra(Map<String, dynamic> json) {
+  final layout = json['layout'] as String? ?? '';
+  if (layout == 'token' || layout == 'emblem' || layout == 'art_series') return true;
+
+  final typeLine = _coalesceFaces(json, 'type_line');
+  if (typeLine.contains('token') || typeLine.contains('emblem')) return true;
+
+  final setType = json['set_type'] as String? ?? '';
+  return setType == 'token' || setType == 'memorabilia';
 }
 
 bool _underLimit(int count, int limit) => limit == 0 || count < limit;
