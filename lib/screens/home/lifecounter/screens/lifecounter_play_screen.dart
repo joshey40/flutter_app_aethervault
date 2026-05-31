@@ -1,9 +1,11 @@
 // ignore_for_file: use_build_context_synchronously
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:multi_split_view/multi_split_view.dart';
 
 import '../../../../services/localization_service.dart';
-import 'package:multi_split_view/multi_split_view.dart';
 import '../data/lifecounter_model.dart';
 import '../data/lifecounter_storage.dart';
 import '../widgets/lifecounter_random.dart';
@@ -16,9 +18,11 @@ class LifecounterPlayScreen extends StatefulWidget {
   @override
   State<LifecounterPlayScreen> createState() => _LifecounterPlayScreenState();
 }
+
 class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   late LifecounterGame _game;
   final _storage = LifecounterStorage();
+  Timer? _saveDebounce;
   int? _commanderDamageTargetIndex;
   bool _showManaBar = false;
   final List<int> _manaCounts = List<int>.filled(6, 0);
@@ -30,39 +34,51 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     _game = widget.game;
   }
 
-  Future<void> _save() async {
+  Future<void> _saveNow() async {
     _game.normalizeCommanderDamageSlots();
     await _storage.saveGame(_game);
   }
 
-  
+  void _scheduleSave() {
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 450), () {
+      _saveDebounce = null;
+      unawaited(_saveNow());
+    });
+  }
+
+  void _flushPendingSave() {
+    _saveDebounce?.cancel();
+    _saveDebounce = null;
+    unawaited(_saveNow());
+  }
 
   void _changeLife(int index, int delta) {
     setState(() {
       _game.currentLives[index] = (_game.currentLives[index] + delta).clamp(-999, 9999);
     });
-    _save();
+    _scheduleSave();
   }
 
   void _changeTax(int index, int delta) {
     setState(() {
       _game.commanderTax[index] = (_game.commanderTax[index] + delta).clamp(0, 9999);
     });
-    _save();
+    _scheduleSave();
   }
 
   void _changePartnerTax(int index, int delta) {
     setState(() {
       _game.partnerTax[index] = (_game.partnerTax[index] + delta).clamp(0, 9999);
     });
-    _save();
+    _scheduleSave();
   }
 
   void _resetPlayer(int index) {
     setState(() {
       _game.currentLives[index] = _game.startLife;
     });
-    _save();
+    _scheduleSave();
   }
 
   // Helper to build a configured PlayerPanel for index `i`.
@@ -85,14 +101,20 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
               _game.partnerEnabled[i] = v;
               _game.normalizeCommanderDamageSlots();
             });
-            _save();
+            _scheduleSave();
           },
           partnerTax: _game.partnerTax[i],
           onPartnerTaxChange: (d) => _changePartnerTax(i, d),
           onCommanderPressed: () => _toggleCommanderDamage(i),
           showCommanderOverlay: _commanderDamageTargetIndex != null,
           onCommanderOverlayTap: () => _clearCommanderDamage(),
-          commanderDamageFromSource: _commanderDamageTargetIndex != null ? _getCommanderDamageValues(i, _commanderDamageTargetIndex!, _game.partnerEnabled[_commanderDamageTargetIndex!]) : null,
+          commanderDamageFromSource: _commanderDamageTargetIndex != null
+              ? _getCommanderDamageValues(
+                  i,
+                  _commanderDamageTargetIndex!,
+                  _game.partnerEnabled[_commanderDamageTargetIndex!],
+                )
+              : null,
           isCommanderTarget: _commanderDamageTargetIndex != null && _commanderDamageTargetIndex == i,
           onCommanderOverlayAdjust: (d, slot) {
             if (_commanderDamageTargetIndex == null) return;
@@ -149,11 +171,12 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
       while (list.length <= slot) {
         list.add(0);
       }
-      _game.commanderDamage[source][target][slot] = (_game.commanderDamage[source][target][slot] + delta).clamp(0, 9999);
+      _game.commanderDamage[source][target][slot] =
+          (_game.commanderDamage[source][target][slot] + delta).clamp(0, 9999);
       // Apply life change to the target: damage reduces life by delta (negative delta restores life)
       _game.currentLives[target] = (_game.currentLives[target] - delta).clamp(0, 9999);
     });
-    _save();
+    _scheduleSave();
   }
 
   // Positioning-by-alignment removed in favor of grid layout.
@@ -169,16 +192,17 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
           icon: const Icon(Icons.arrow_back),
           tooltip: appLocalizations.translate('back'),
           onPressed: () {
+            _flushPendingSave();
             if (widget.onBack != null) return widget.onBack!();
             Navigator.of(context).maybePop();
           },
         ),
         actions: [
           IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: loc.translate('lifecounter.resetGame'),
-              onPressed: () => _confirmReset(),
-            ),
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.translate('lifecounter.resetGame'),
+            onPressed: () => _confirmReset(),
+          ),
           // Mana toggle button
           IconButton(
             icon: const Icon(Icons.auto_awesome),
@@ -225,79 +249,78 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                           Colors.grey,
                         ];
 
-                        
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                            child: SizedBox(
-                              child: Material(
-                                color: colors[i],
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
-                                  child: Builder(builder: (ctx) {
-                                    final textColor = (i == 0 || i == 5) ? Colors.black87 : Colors.white;
-                                    return SizedBox(
-                                      width: 55,
-                                      height: 32,
-                                      child: Stack(
-                                        children: [
-                                          Positioned.fill(
-                                            child: Row(
-                                              children: [
-                                                Expanded(
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _manaCounts[i] = (_manaCounts[i] - 1).clamp(0, 9999);
-                                                      });
-                                                    },
-                                                    onLongPress: () {
-                                                      setState(() {
-                                                        _manaCounts[i] = 0;
-                                                      });
-                                                    },
-                                                    child: Align(
-                                                      alignment: Alignment.centerLeft,
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 0.0),
-                                                        child: Icon(Icons.remove_circle_outline, size: 16, color: textColor),
-                                                      ),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
+                          child: SizedBox(
+                            child: Material(
+                              color: colors[i],
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
+                                child: Builder(builder: (ctx) {
+                                  final textColor = (i == 0 || i == 5) ? Colors.black87 : Colors.white;
+                                  return SizedBox(
+                                    width: 55,
+                                    height: 32,
+                                    child: Stack(
+                                      children: [
+                                        Positioned.fill(
+                                          child: Row(
+                                            children: [
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      _manaCounts[i] = (_manaCounts[i] - 1).clamp(0, 9999);
+                                                    });
+                                                  },
+                                                  onLongPress: () {
+                                                    setState(() {
+                                                      _manaCounts[i] = 0;
+                                                    });
+                                                  },
+                                                  child: Align(
+                                                    alignment: Alignment.centerLeft,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 0.0),
+                                                      child: Icon(Icons.remove_circle_outline, size: 16, color: textColor),
                                                     ),
                                                   ),
                                                 ),
-                                                Expanded(
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _manaCounts[i] = (_manaCounts[i] + 1).clamp(0, 9999);
-                                                      });
-                                                    },
-                                                    child: Align(
-                                                      alignment: Alignment.centerRight,
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 0.0),
-                                                        child: Icon(Icons.add_circle_outline, size: 16, color: textColor),
-                                                      ),
+                                              ),
+                                              Expanded(
+                                                child: InkWell(
+                                                  onTap: () {
+                                                    setState(() {
+                                                      _manaCounts[i] = (_manaCounts[i] + 1).clamp(0, 9999);
+                                                    });
+                                                  },
+                                                  child: Align(
+                                                    alignment: Alignment.centerRight,
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 0.0),
+                                                      child: Icon(Icons.add_circle_outline, size: 16, color: textColor),
                                                     ),
                                                   ),
                                                 ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
-                                          Center(
-                                            child: IgnorePointer(
-                                              child: Text('${_manaCounts[i]}', style: TextStyle(fontSize: 13, color: textColor)),
-                                            ),
+                                        ),
+                                        Center(
+                                          child: IgnorePointer(
+                                            child: Text('${_manaCounts[i]}', style: TextStyle(fontSize: 13, color: textColor)),
                                           ),
-                                        ],
-                                      ),
-                                    );
-                                  }),
-                                ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
                               ),
                             ),
-                          );
-                        }),
+                          ),
+                        );
+                      }),
                     ),
                   ),
                 ),
@@ -305,80 +328,80 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
             ),
           ),
           Expanded(child: Builder(builder: (ctx) {
-        final count = _game.playerCount;
-        const double gap = 2.0;
-        if (count == 1) {
-          return Padding(
-            padding: const EdgeInsets.all(gap),
-            child: Center(child: _buildPlayer(0, 1)),
-          );
-        }
+            final count = _game.playerCount;
+            const double gap = 2.0;
+            if (count == 1) {
+              return Padding(
+                padding: const EdgeInsets.all(gap),
+                child: Center(child: _buildPlayer(0, 1)),
+              );
+            }
 
-        // Special-case 3 players: top row two players, bottom centered player
-        if (count == 3) {
-          return Padding(
-            padding: const EdgeInsets.all(gap),
-            child: MultiSplitView(
-              axis: Axis.vertical,
-              initialAreas: [
-                // top row: two equal panels
-                Area(
-                  flex: 3,
-                  builder: (c, a) => MultiSplitView(
-                    axis: Axis.horizontal,
-                    initialAreas: [
-                      Area(builder: (ctx, ar) => _buildPlayer(0, 1)),
-                      Area(builder: (ctx, ar) => _buildPlayer(1, 3)),
-                    ],
+            // Special-case 3 players: top row two players, bottom centered player
+            if (count == 3) {
+              return Padding(
+                padding: const EdgeInsets.all(gap),
+                child: MultiSplitView(
+                  axis: Axis.vertical,
+                  initialAreas: [
+                    // top row: two equal panels
+                    Area(
+                      flex: 3,
+                      builder: (c, a) => MultiSplitView(
+                        axis: Axis.horizontal,
+                        initialAreas: [
+                          Area(builder: (ctx, ar) => _buildPlayer(0, 1)),
+                          Area(builder: (ctx, ar) => _buildPlayer(1, 3)),
+                        ],
+                      ),
+                    ),
+                    // bottom centered panel
+                    Area(flex: 2, builder: (c, a) => _buildPlayer(2, 0)),
+                  ],
+                ),
+              );
+            }
+
+            // special-case 2 players: top and bottom
+            if (count == 2) {
+              return Padding(
+                padding: const EdgeInsets.all(gap),
+                child: MultiSplitView(
+                  axis: Axis.vertical,
+                  initialAreas: [
+                    Area(builder: (c, a) => _buildPlayer(0, 2)),
+                    Area(builder: (c, a) => _buildPlayer(1, 0)),
+                  ],
+                ),
+              );
+            }
+
+            final leftCount = (count / 2).ceil();
+            final rightCount = count - leftCount;
+            final leftIndices = List<int>.generate(leftCount, (i) => i);
+            final rightIndices = List<int>.generate(rightCount, (i) => leftCount + i);
+            final rightQuarter = 3;
+
+            return Padding(
+              padding: const EdgeInsets.all(gap),
+              child: MultiSplitView(
+                axis: Axis.horizontal,
+                initialAreas: [
+                  Area(
+                    builder: (c, a) => MultiSplitView(
+                      axis: Axis.vertical,
+                      initialAreas: leftIndices.map((i) => Area(builder: (ctx, ar) => _buildPlayer(i, 1))).toList(),
+                    ),
                   ),
-                ),
-                // bottom centered panel
-                Area(flex: 2, builder: (c, a) => _buildPlayer(2, 0)),
-              ],
-            ),
-          );
-        }
-
-        // special-case 2 players: top and bottom
-        if (count == 2) {
-          return Padding(
-            padding: const EdgeInsets.all(gap),
-            child: MultiSplitView(
-              axis: Axis.vertical,
-              initialAreas: [
-                Area(builder: (c, a) => _buildPlayer(0, 2)),
-                Area(builder: (c, a) => _buildPlayer(1, 0)),
-              ],
-            ),
-          );
-        }
-
-        final leftCount = (count / 2).ceil();
-        final rightCount = count - leftCount;
-        final leftIndices = List<int>.generate(leftCount, (i) => i);
-        final rightIndices = List<int>.generate(rightCount, (i) => leftCount + i);
-        final rightQuarter = 3;
-
-        return Padding(
-          padding: const EdgeInsets.all(gap),
-          child: MultiSplitView(
-            axis: Axis.horizontal,
-            initialAreas: [
-              Area(
-                builder: (c, a) => MultiSplitView(
-                  axis: Axis.vertical,
-                  initialAreas: leftIndices.map((i) => Area(builder: (ctx, ar) => _buildPlayer(i, 1))).toList(),
-                ),
+                  Area(
+                    builder: (c, a) => MultiSplitView(
+                      axis: Axis.vertical,
+                      initialAreas: rightIndices.map((i) => Area(builder: (ctx, ar) => _buildPlayer(i, rightQuarter))).toList(),
+                    ),
+                  ),
+                ],
               ),
-              Area(
-                builder: (c, a) => MultiSplitView(
-                  axis: Axis.vertical,
-                  initialAreas: rightIndices.map((i) => Area(builder: (ctx, ar) => _buildPlayer(i, rightQuarter))).toList(),
-                ),
-              ),
-            ],
-          ),
-        );
+            );
           })),
         ],
       ),
@@ -388,7 +411,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   @override
   void dispose() {
     // Ensure latest state is persisted when leaving the screen.
-    _save();
+    _flushPendingSave();
     super.dispose();
   }
 
@@ -403,10 +426,16 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
         }
       }
     });
-    _save();
+    _scheduleSave();
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(SnackBar(content: Text(appLocalizations.translate('lifecounter.gameReset') != 'lifecounter.gameReset' ? appLocalizations.translate('lifecounter.gameReset') : 'Game reset')));
+    messenger.showSnackBar(SnackBar(
+      content: Text(
+        appLocalizations.translate('lifecounter.gameReset') != 'lifecounter.gameReset'
+            ? appLocalizations.translate('lifecounter.gameReset')
+            : 'Game reset',
+      ),
+    ));
   }
 
   Future<void> _confirmReset() async {
@@ -415,7 +444,9 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(loc.translate('lifecounter.resetGame') != 'lifecounter.resetGame' ? loc.translate('lifecounter.resetGame') : 'Reset game'),
-        content: Text(loc.translate('lifecounter.resetConfirm') != 'lifecounter.resetConfirm' ? loc.translate('lifecounter.resetConfirm') : 'Are you sure you want to reset all players to start life?'),
+        content: Text(loc.translate('lifecounter.resetConfirm') != 'lifecounter.resetConfirm'
+            ? loc.translate('lifecounter.resetConfirm')
+            : 'Are you sure you want to reset all players to start life?'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(loc.translate('cancel') != 'cancel' ? loc.translate('cancel') : 'Cancel')),
           TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(loc.translate('confirm') != 'confirm' ? loc.translate('confirm') : 'Reset')),
