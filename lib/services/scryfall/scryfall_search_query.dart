@@ -56,6 +56,40 @@ class ScryfallSearchPlanner {
       'cube',
       'lore',
     },
+    this.locallySupportedKeywords = const <String>{
+      'a',
+      'artist',
+      'c',
+      'ci',
+      'cmc',
+      'color',
+      'colors',
+      'commander',
+      'e',
+      'edh',
+      'edition',
+      'eur',
+      'game',
+      'id',
+      'identity',
+      'in',
+      'is',
+      'lang',
+      'language',
+      'mv',
+      'n',
+      'name',
+      'o',
+      'oracle',
+      'r',
+      'rarity',
+      's',
+      'set',
+      't',
+      'type',
+      'usd',
+      'year',
+    },
     this.printSensitiveKeywords = const <String>{
       'artist',
       'a',
@@ -83,6 +117,7 @@ class ScryfallSearchPlanner {
   });
 
   final Set<String> remoteOnlyKeywords;
+  final Set<String> locallySupportedKeywords;
   final Set<String> printSensitiveKeywords;
   final Set<String> allCardsKeywords;
 
@@ -94,7 +129,7 @@ class ScryfallSearchPlanner {
 
     for (final term in terms) {
       final keyword = term.keyword.toLowerCase();
-      if (remoteOnlyKeywords.contains(keyword)) {
+      if (remoteOnlyKeywords.contains(keyword) || !locallySupportedKeywords.contains(keyword)) {
         remoteOnly.add(term.source);
       } else {
         local.add(term.source);
@@ -116,7 +151,7 @@ class ScryfallSearchPlanner {
 
     final reason = remoteOnly.isEmpty
         ? null
-        : 'Query contains terms that are not represented reliably in local bulk data: ${remoteOnly.join(', ')}';
+        : 'Query contains terms that are not represented reliably in local search: ${remoteOnly.join(', ')}';
 
     return ScryfallSearchPlan(
       searchBulkType: searchBulkType,
