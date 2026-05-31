@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart' as http_io;
 
 /// Diagnostic tool for comparing the app's local Scryfall-style search subset
 /// against the real Scryfall API.
@@ -37,11 +38,13 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  final client = http.Client();
+  final apiClient = http.Client();
+  final downloadClient = http_io.IOClient(HttpClient()..autoUncompress = false);
   try {
     final bulkFile = options.localFile ??
         await _ensureBulkFile(
-          client: client,
+          client: apiClient,
+          downloadClient: downloadClient,
           type: options.bulkType,
           forceRefresh: options.refreshBulk,
         );
@@ -54,7 +57,7 @@ Future<void> main(List<String> args) async {
 
     for (final query in options.queries) {
       await _compareQuery(
-        client: client,
+        client: apiClient,
         localFile: bulkFile,
         query: query,
         unique: options.unique,
@@ -63,7 +66,8 @@ Future<void> main(List<String> args) async {
       );
     }
   } finally {
-    client.close();
+    apiClient.close();
+    downloadClient.close();
   }
 }
 
@@ -189,6 +193,7 @@ bool _underLimit(int count, int limit) => limit == 0 || count < limit;
 
 Future<File> _ensureBulkFile({
   required http.Client client,
+  required http.Client downloadClient,
   required _BulkType type,
   required bool forceRefresh,
 }) async {
@@ -222,7 +227,7 @@ Future<File> _ensureBulkFile({
       'User-Agent': 'AetherVaultSearchCompare/0.1 (https://github.com/joshey40)',
       'Accept': 'application/json',
     });
-  final streamed = await client.send(request);
+  final streamed = await downloadClient.send(request);
   if (streamed.statusCode != 200) {
     throw HttpException('Failed to download bulk file: ${streamed.statusCode}', uri: downloadUri);
   }
