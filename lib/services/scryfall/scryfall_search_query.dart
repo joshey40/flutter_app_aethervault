@@ -1,4 +1,5 @@
 import 'bulk_data_type.dart';
+import 'scryfall_search_filter.dart';
 
 class ScryfallSearchQuery {
   const ScryfallSearchQuery({
@@ -55,64 +56,71 @@ class ScryfallSearchPlanner {
       'oracletag',
       'cube',
       'lore',
+      'prefer',
+      'order',
+      'unique',
+      'include',
     },
     this.locallySupportedKeywords = const <String>{
-      'a',
       'artist',
-      'c',
-      'ci',
-      'cmc',
-      'color',
+      'artistId',
+      'banned',
+      'border',
       'colors',
-      'commander',
-      'e',
-      'edh',
-      'edition',
+      'collectorNumber',
+      'date',
+      'defense',
       'eur',
+      'flavor',
+      'frame',
       'game',
-      'id',
       'identity',
       'in',
       'is',
       'lang',
-      'language',
-      'mv',
-      'n',
+      'layout',
+      'legal',
+      'loyalty',
+      'mana',
+      'manaValue',
       'name',
-      'o',
       'oracle',
-      'r',
+      'power',
+      'producedMana',
       'rarity',
-      's',
+      'restricted',
       'set',
-      't',
+      'setName',
+      'setType',
+      'tix',
+      'toughness',
       'type',
       'usd',
       'year',
     },
     this.printSensitiveKeywords = const <String>{
       'artist',
-      'a',
-      'collector',
-      'cn',
-      'e',
-      'edition',
+      'artistId',
+      'border',
+      'collectorNumber',
+      'date',
       'eur',
-      'f',
-      'finish',
+      'frame',
+      'game',
+      'in',
+      'is',
       'lang',
-      'language',
-      'number',
-      'r',
+      'layout',
       'rarity',
-      's',
       'set',
+      'setName',
+      'setType',
+      'tix',
       'usd',
       'year',
     },
     this.allCardsKeywords = const <String>{
       'lang',
-      'language',
     },
   });
 
@@ -122,23 +130,22 @@ class ScryfallSearchPlanner {
   final Set<String> allCardsKeywords;
 
   ScryfallSearchPlan plan(String rawQuery) {
-    final terms = _extractKeywordTerms(rawQuery);
+    final filters = ParsedScryfallSearch.parse(rawQuery).filters;
     final remoteOnly = <String>[];
     final local = <String>[];
     var searchBulkType = ScryfallBulkDataType.oracleCards;
 
-    for (final term in terms) {
-      final keyword = term.keyword.toLowerCase();
+    for (final filter in filters) {
+      final keyword = filter.canonicalKeyword;
       if (remoteOnlyKeywords.contains(keyword) || !locallySupportedKeywords.contains(keyword)) {
-        remoteOnly.add(term.source);
+        remoteOnly.add(filter.source);
       } else {
-        local.add(term.source);
+        local.add(filter.source);
       }
 
-      if (allCardsKeywords.contains(keyword)) {
+      if (_requiresAllCards(filter)) {
         searchBulkType = ScryfallBulkDataType.allCards;
-      } else if (printSensitiveKeywords.contains(keyword) &&
-          searchBulkType != ScryfallBulkDataType.allCards) {
+      } else if (_isPrintSensitive(filter) && searchBulkType != ScryfallBulkDataType.allCards) {
         searchBulkType = ScryfallBulkDataType.defaultCards;
       }
     }
@@ -166,25 +173,35 @@ class ScryfallSearchPlanner {
     );
   }
 
-  List<_KeywordTerm> _extractKeywordTerms(String rawQuery) {
-    final matches = RegExp(r'(^|[\s(\-])([a-zA-Z][a-zA-Z0-9_]*)(:|=|!=|>=|<=|>|<)')
-        .allMatches(rawQuery);
+  bool _requiresAllCards(ScryfallSearchFilter filter) {
+    if (allCardsKeywords.contains(filter.canonicalKeyword)) return true;
+    if (filter.canonicalKeyword == 'is') {
+      return const <String>{'extra', 'token', 'funny'}.contains(filter.normalizedValue);
+    }
+    return false;
+  }
 
-    return matches
-        .map((match) => _KeywordTerm(
-              keyword: match.group(2)!,
-              source: rawQuery.substring(match.start, match.end).trim(),
-            ))
-        .toList(growable: false);
+  bool _isPrintSensitive(ScryfallSearchFilter filter) {
+    if (printSensitiveKeywords.contains(filter.canonicalKeyword)) return true;
+    if (filter.canonicalKeyword == 'is') {
+      return const <String>{
+        'foil',
+        'nonfoil',
+        'etched',
+        'promo',
+        'variation',
+        'booster',
+        'story',
+        'fullart',
+        'textless',
+        'oversized',
+        'highres',
+      }.contains(filter.normalizedValue);
+    }
+    return false;
   }
 }
 
-class _KeywordTerm {
-  const _KeywordTerm({
-    required this.keyword,
-    required this.source,
-  });
-
-  final String keyword;
-  final String source;
+extension on ScryfallSearchFilter {
+  String get source => '${negated ? '-' : ''}$keyword$operator$value';
 }
