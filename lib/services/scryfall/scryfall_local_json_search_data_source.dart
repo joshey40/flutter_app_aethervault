@@ -12,12 +12,12 @@ import 'scryfall_search_repository.dart';
 class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource {
   ScryfallLocalJsonSearchDataSource({
     DownloadService? downloadService,
-    this.maxResults = 120,
+    this.maxResults,
     this.cacheSize = 20,
   }) : _downloadService = downloadService ?? DownloadService.instance;
 
   final DownloadService _downloadService;
-  final int maxResults;
+  final int? maxResults;
   final int cacheSize;
   final LinkedHashMap<String, List<ScryfallCardPrint>> _cache = LinkedHashMap();
 
@@ -27,7 +27,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
     required ScryfallBulkDataType type,
   }) async {
     final normalizedQuery = rawQuery.trim();
-    final cacheKey = '${type.apiType}|$normalizedQuery|$maxResults';
+    final cacheKey = '${type.apiType}|$normalizedQuery|${maxResults ?? 'all'}';
     final cached = _cache.remove(cacheKey);
     if (cached != null) {
       _cache[cacheKey] = cached;
@@ -62,7 +62,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   static Future<List<ScryfallCardPrint>> _searchCardsInFile({
     required String path,
     required String rawQuery,
-    required int maxResults,
+    required int? maxResults,
   }) async {
     final query = _LocalScryfallQuery.parse(rawQuery);
     final results = <ScryfallCardPrint>[];
@@ -74,7 +74,7 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
       if (!query.matchesJson(decoded)) continue;
 
       results.add(ScryfallCardPrint.fromJson(decoded));
-      if (results.length >= maxResults) break;
+      if (maxResults != null && results.length >= maxResults) break;
     }
 
     return results;
