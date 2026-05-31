@@ -4,6 +4,14 @@ import 'scryfall_search_json_utils.dart';
 class ScryfallSearchEvaluator {
   const ScryfallSearchEvaluator._();
 
+  static bool shouldIncludeExtras(ParsedScryfallSearch query) {
+    for (final filter in query.filters) {
+      if (filter.negated || filter.canonicalKeyword != 'is') continue;
+      if (const <String>{'extra', 'token', 'funny'}.contains(filter.normalizedValue)) return true;
+    }
+    return false;
+  }
+
   static bool matchesQuery(Map<String, dynamic> json, ParsedScryfallSearch query) {
     for (final filter in query.filters) {
       final matches = matchesFilter(json, filter);
@@ -25,7 +33,7 @@ class ScryfallSearchEvaluator {
       case 'artist':
         return compareText(jsonText(json, 'artist'), filter.normalizedValue, filter.operator);
       case 'mana':
-        return compareText(jsonText(json, 'mana_cost'), normalizeMana(filter.value), filter.operator);
+        return compareText(normalizeMana(json['mana_cost'] as String? ?? ''), normalizeMana(filter.value), filter.operator);
       case 'set':
         return compareText(jsonText(json, 'set'), filter.normalizedValue, filter.operator);
       case 'setName':
