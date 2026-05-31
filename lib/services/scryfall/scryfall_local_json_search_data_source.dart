@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -12,28 +13,50 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   ScryfallLocalJsonSearchDataSource({
     DownloadService? downloadService,
     this.maxResults = 120,
+    this.cacheSize = 20,
   }) : _downloadService = downloadService ?? DownloadService.instance;
 
   final DownloadService _downloadService;
   final int maxResults;
+  final int cacheSize;
+  final LinkedHashMap<String, List<ScryfallCardPrint>> _cache = LinkedHashMap();
 
   @override
   Future<List<ScryfallCardPrint>> searchCards({
     required String rawQuery,
     required ScryfallBulkDataType type,
   }) async {
+    final normalizedQuery = rawQuery.trim();
+    final cacheKey = '${type.apiType}|$normalizedQuery|$maxResults';
+    final cached = _cache.remove(cacheKey);
+    if (cached != null) {
+      _cache[cacheKey] = cached;
+      return cached;
+    }
+
     final file = await _downloadService.getLocalFile(type: type);
     if (file == null) {
       throw StateError('Scryfall ${type.apiType} file is not available.');
     }
 
-    return Isolate.run(
+    final result = await Isolate.run(
       () => _searchCardsInFile(
         path: file.path,
-        rawQuery: rawQuery,
+        rawQuery: normalizedQuery,
         maxResults: maxResults,
       ),
     );
+
+    _remember(cacheKey, result);
+    return result;
+  }
+
+  void _remember(String cacheKey, List<ScryfallCardPrint> result) {
+    if (cacheSize <= 0) return;
+    _cache[cacheKey] = List<ScryfallCardPrint>.unmodifiable(result);
+    while (_cache.length > cacheSize) {
+      _cache.remove(_cache.keys.first);
+    }
   }
 
   static Future<List<ScryfallCardPrint>> _searchCardsInFile({
@@ -48,11 +71,10 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
       final decoded = jsonDecode(cardJson);
       if (decoded is! Map<String, dynamic>) continue;
 
-      final card = ScryfallCardPrint.fromJson(decoded);
-      if (query.matches(card)) {
-        results.add(card);
-        if (results.length >= maxResults) break;
-      }
+      if (!query.matchesJson(decoded)) continue;
+
+      results.add(ScryfallCardPrint.fromJson(decoded));
+      if (results.length >= maxResults) break;
     }
 
     return results;
@@ -128,23 +150,23 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
 class _LocalScryfallQuery {
   const _LocalScryfallQuery(this.predicates);
 
-  final List<bool Function(ScryfallCardPrint card)> predicates;
+  final List<bool Function(Map<String, dynamic> cardJson)> predicates;
 
-  bool matches(ScryfallCardPrint card) => predicates.every((predicate) => predicate(card));
+  bool matchesJson(Map<String, dynamic> cardJson) => predicates.every((predicate) => predicate(cardJson));
 
   static _LocalScryfallQuery parse(String rawQuery) {
     final tokens = _tokenize(rawQuery);
-    final predicates = <bool Function(ScryfallCardPrint card)>[];
+    final predicates = <bool Function(Map<String, dynamic> cardJson)>[];
 
     for (final token in tokens) {
       final negated = token.startsWith('-');
       final cleanToken = negated ? token.substring(1) : token;
       final predicate = _parseToken(cleanToken);
-      predicates.add(negated ? (card) => !predicate(card) : predicate);
+      predicates.add(negated ? (json) => !predicate(json) : predicate);
     }
 
     if (predicates.isEmpty) {
-      return const _LocalScryfallQuery(<bool Function(ScryfallCardPrint)>[]);
+      return const _LocalScryfallQuery(<bool Function(Map<String, dynamic>)>[]);
     }
 
     return _LocalScryfallQuery(predicates);
@@ -175,11 +197,11 @@ class _LocalScryfallQuery {
     return tokens;
   }
 
-  static bool Function(ScryfallCardPrint card) _parseToken(String token) {
+  static bool Function(Map<String, dynamic> cardJson) _parseToken(String token) {
     final comparison = RegExp(r'^([a-zA-Z][a-zA-Z0-9_]*)(<=|>=|!=|=|<|>|:)(.+)$').firstMatch(token);
     if (comparison == null) {
       final value = _normalize(token);
-      return (card) => _normalize(card.name).contains(value);
+      return (json) => _jsonText(json, 'name').contains(value);
     }
 
     final keyword = comparison.group(1)!.toLowerCase();
@@ -190,48 +212,48 @@ class _LocalScryfallQuery {
     switch (keyword) {
       case 'name':
       case 'n':
-        return (card) => _compareText(card.name, normalizedValue, operator);
+        return (json) => _compareText(_jsonText(json, 'name'), normalizedValue, operator);
       case 'type':
       case 't':
-        return (card) => _compareText(card.typeLine, normalizedValue, operator);
+        return (json) => _compareText(_coalesceFaces(json, 'type_line'), normalizedValue, operator);
       case 'oracle':
       case 'o':
-        return (card) => _compareText(card.oracleText, normalizedValue, operator);
+        return (json) => _compareText(_coalesceFaces(json, 'oracle_text'), normalizedValue, operator);
       case 'artist':
       case 'a':
-        return (card) => _compareText(card.artist ?? '', normalizedValue, operator);
+        return (json) => _compareText(_jsonText(json, 'artist'), normalizedValue, operator);
       case 'set':
       case 's':
       case 'e':
       case 'edition':
-        return (card) => _compareText(card.setCode, normalizedValue, operator);
+        return (json) => _compareText(_jsonText(json, 'set'), normalizedValue, operator);
       case 'rarity':
       case 'r':
-        return (card) => _compareText(card.rarity, normalizedValue, operator);
+        return (json) => _compareText(_jsonText(json, 'rarity'), normalizedValue, operator);
       case 'lang':
       case 'language':
-        return (card) => _compareText(card.lang, normalizedValue, operator);
+        return (json) => _compareText(_jsonText(json, 'lang'), normalizedValue, operator);
       case 'game':
-        return (card) => card.games.map(_normalize).contains(normalizedValue);
+        return (json) => _jsonStringList(json['games']).map(_normalize).contains(normalizedValue);
       case 'c':
       case 'color':
       case 'colors':
-        return (card) => _compareColorSet(card.colors, normalizedValue, operator);
+        return (json) => _compareColorSet(_jsonStringList(json['colors']), normalizedValue, operator);
       case 'ci':
       case 'id':
       case 'identity':
       case 'commander':
       case 'edh':
-        return (card) => _compareColorSet(card.colorIdentity, normalizedValue, operator);
+        return (json) => _compareColorSet(_jsonStringList(json['color_identity']), normalizedValue, operator);
       case 'mv':
       case 'cmc':
-        return (card) => _compareNumber(card.manaValue, value, operator);
+        return (json) => _compareNumber(_toDouble(json['cmc']), value, operator);
       case 'usd':
-        return (card) => _compareNumber(card.usd, value, operator);
+        return (json) => _compareNumber(_price(json, 'usd'), value, operator);
       case 'eur':
-        return (card) => _compareNumber(card.eur, value, operator);
+        return (json) => _compareNumber(_price(json, 'eur'), value, operator);
       case 'year':
-        return (card) => _compareNumber(card.releasedAt?.year.toDouble(), value, operator);
+        return (json) => _compareNumber(_releasedYear(json), value, operator);
       case 'is':
         return _parseIsPredicate(normalizedValue);
       case 'in':
@@ -241,44 +263,82 @@ class _LocalScryfallQuery {
     }
   }
 
-  static bool Function(ScryfallCardPrint card) _parseIsPredicate(String value) {
+  static bool Function(Map<String, dynamic> cardJson) _parseIsPredicate(String value) {
     switch (value) {
       case 'multicolored':
       case 'multicolor':
-        return (card) => card.colors.length > 1;
+        return (json) => _jsonStringList(json['colors']).length > 1;
       case 'monocolored':
       case 'monocolor':
-        return (card) => card.colors.length == 1;
+        return (json) => _jsonStringList(json['colors']).length == 1;
       case 'colorless':
-        return (card) => card.colors.isEmpty;
+        return (json) => _jsonStringList(json['colors']).isEmpty;
       case 'paper':
-        return (card) => card.games.contains('paper');
+        return (json) => _jsonStringList(json['games']).contains('paper');
       case 'digital':
-        return (card) => !card.games.contains('paper');
+        return (json) => !_jsonStringList(json['games']).contains('paper');
       case 'foil':
-        return (card) => card.finishes.contains('foil');
+        return (json) => _jsonStringList(json['finishes']).contains('foil');
       case 'nonfoil':
-        return (card) => card.finishes.contains('nonfoil');
+        return (json) => _jsonStringList(json['finishes']).contains('nonfoil');
       default:
         throw UnsupportedError('Local search does not support is:$value yet.');
     }
   }
 
-  static bool Function(ScryfallCardPrint card) _parseInPredicate(String value) {
+  static bool Function(Map<String, dynamic> cardJson) _parseInPredicate(String value) {
     switch (value) {
       case 'paper':
-        return (card) => card.games.contains('paper');
+        return (json) => _jsonStringList(json['games']).contains('paper');
       case 'arena':
-        return (card) => card.games.contains('arena');
+        return (json) => _jsonStringList(json['games']).contains('arena');
       case 'mtgo':
-        return (card) => card.games.contains('mtgo');
+        return (json) => _jsonStringList(json['games']).contains('mtgo');
       default:
         throw UnsupportedError('Local search does not support in:$value yet.');
     }
   }
 
-  static bool _compareText(String actual, String expected, String operator) {
-    final normalizedActual = _normalize(actual);
+  static String _jsonText(Map<String, dynamic> json, String key) => _normalize(json[key] as String? ?? '');
+
+  static String _coalesceFaces(Map<String, dynamic> json, String key) {
+    final direct = json[key] as String?;
+    if (direct != null && direct.isNotEmpty) return _normalize(direct);
+
+    final faces = json['card_faces'];
+    if (faces is! List) return '';
+
+    return faces
+        .whereType<Map<String, dynamic>>()
+        .map((face) => face[key] as String? ?? '')
+        .where((value) => value.isNotEmpty)
+        .map(_normalize)
+        .join('\n---\n');
+  }
+
+  static List<String> _jsonStringList(Object? value) {
+    if (value is! List) return const <String>[];
+    return value.whereType<String>().toList(growable: false);
+  }
+
+  static double? _price(Map<String, dynamic> json, String key) {
+    final prices = json['prices'];
+    if (prices is! Map<String, dynamic>) return null;
+    return _toDouble(prices[key]);
+  }
+
+  static double? _releasedYear(Map<String, dynamic> json) {
+    final releasedAt = DateTime.tryParse(json['released_at'] as String? ?? '');
+    return releasedAt?.year.toDouble();
+  }
+
+  static double? _toDouble(Object? value) {
+    if (value is num) return value.toDouble();
+    if (value is String && value.isNotEmpty) return double.tryParse(value);
+    return null;
+  }
+
+  static bool _compareText(String normalizedActual, String expected, String operator) {
     switch (operator) {
       case ':':
         return normalizedActual.contains(expected);
