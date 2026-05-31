@@ -16,8 +16,8 @@ class ScryfallSqliteSearchIndex {
   ScryfallSqliteSearchIndex._();
   static final ScryfallSqliteSearchIndex instance = ScryfallSqliteSearchIndex._();
 
-  static const int schemaVersion = 2;
-  static const int indexVersion = 2;
+  static const int schemaVersion = 3;
+  static const int indexVersion = 3;
   static const int busyTimeoutMs = 5000;
 
   File? _testDatabaseFile;
@@ -142,9 +142,10 @@ class ScryfallSqliteSearchIndex {
 INSERT INTO cards (
   bulk_type, card_id, oracle_id, json,
   name_norm, type_line_norm, oracle_text_norm, artist_norm, set_code_norm, rarity_norm, lang_norm,
+  collector_number_norm, collector_number_prefix, collector_number_sort,
   games_blob, finishes_blob, colors_mask, color_identity_mask, cmc, usd, eur, released_year,
   layout, set_type, is_extra
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ''');
         final insertFts = db.prepare('''
 INSERT INTO cards_fts (rowid, name_norm, type_line_norm, oracle_text_norm, artist_norm)
@@ -169,6 +170,8 @@ VALUES (?, ?, ?, ?, ?)
             final typeLineNorm = ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(decoded, 'type_line'));
             final oracleTextNorm = ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(decoded, 'oracle_text'));
             final artistNorm = ScryfallJsonSearchUtils.normalize(decoded['artist'] as String? ?? '');
+            final collectorNumberNorm = ScryfallJsonSearchUtils.normalize(decoded['collector_number'] as String? ?? '');
+            final collectorSort = _collectorNumberSortParts(collectorNumberNorm);
 
             insertCard.execute(<Object?>[
               bulkType,
@@ -182,6 +185,9 @@ VALUES (?, ?, ?, ?, ?)
               ScryfallJsonSearchUtils.normalize(decoded['set'] as String? ?? ''),
               ScryfallJsonSearchUtils.normalize(decoded['rarity'] as String? ?? ''),
               ScryfallJsonSearchUtils.normalize(decoded['lang'] as String? ?? ''),
+              collectorNumberNorm,
+              collectorSort.prefix,
+              collectorSort.number,
               _stringListBlob(games),
               _stringListBlob(finishes),
               _colorMask(colors),
@@ -246,6 +252,10 @@ CREATE TABLE IF NOT EXISTS index_metadata (
 ''');
 
     db.execute('''
+DROP TABLE IF EXISTS cards
+''');
+
+    db.execute('''
 CREATE TABLE IF NOT EXISTS cards (
   rowid INTEGER PRIMARY KEY,
   bulk_type TEXT NOT NULL,
@@ -259,6 +269,9 @@ CREATE TABLE IF NOT EXISTS cards (
   set_code_norm TEXT NOT NULL,
   rarity_norm TEXT NOT NULL,
   lang_norm TEXT NOT NULL,
+  collector_number_norm TEXT NOT NULL,
+  collector_number_prefix TEXT NOT NULL,
+  collector_number_sort INTEGER NOT NULL,
   games_blob TEXT NOT NULL,
   finishes_blob TEXT NOT NULL,
   colors_mask INTEGER NOT NULL,
@@ -288,6 +301,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_lang ON cards (bulk_type, is_extra, lang_norm)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_cmc ON cards (bulk_type, is_extra, cmc)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_year ON cards (bulk_type, is_extra, released_year)');
+    db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_set_number ON cards (bulk_type, is_extra, set_code_norm, collector_number_sort, collector_number_prefix, collector_number_norm)');
   }
 
   static String _stringListBlob(List<String> values) => '|${values.map(ScryfallJsonSearchUtils.normalize).join('|')}|';
@@ -315,6 +329,21 @@ CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
     }
     return mask;
   }
+
+  static _CollectorNumberSortParts _collectorNumberSortParts(String value) {
+    final match = RegExp(r'^([^0-9]*)([0-9]+)').firstMatch(value);
+    if (match == null) return _CollectorNumberSortParts(value, 1 << 30);
+    final prefix = match.group(1) ?? '';
+    final number = int.tryParse(match.group(2) ?? '') ?? (1 << 30);
+    return _CollectorNumberSortParts(prefix, number);
+  }
+}
+
+class _CollectorNumberSortParts {
+  const _CollectorNumberSortParts(this.prefix, this.number);
+
+  final String prefix;
+  final int number;
 }
 
 class _SqliteScryfallQuery {
@@ -406,7 +435,7 @@ class _SqliteScryfallQuery {
       case ScryfallSearchSortMode.oldestFirst:
         return 'ORDER BY cards.released_year IS NULL ASC, cards.released_year ASC, cards.name_norm COLLATE NOCASE ASC';
       case ScryfallSearchSortMode.setAsc:
-        return 'ORDER BY cards.set_code_norm ASC, cards.card_id ASC';
+        return 'ORDER BY cards.set_code_norm ASC, cards.collector_number_sort ASC, cards.collector_number_prefix ASC, cards.collector_number_norm ASC';
     }
   }
 
