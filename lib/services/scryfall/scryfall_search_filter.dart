@@ -10,7 +10,7 @@ class ParsedScryfallSearch {
     for (final token in tokenize(rawQuery)) {
       final negated = token.startsWith('-');
       final cleanToken = negated ? token.substring(1) : token;
-      final comparison = RegExp(r'^([a-zA-Z][a-zA-Z0-9_]*)(<=|>=|!=|=|<|>|:)(.+)$').firstMatch(cleanToken);
+      final comparison = RegExp(r'^([a-zA-Z][a-zA-Z0-9_-]*)(<=|>=|!=|=|<|>|:)(.+)$').firstMatch(cleanToken);
 
       if (comparison == null) {
         filters.add(ScryfallSearchFilter(
@@ -99,6 +99,7 @@ class ScryfallSearchFilter {
         return 'artist';
       case 'artistid':
       case 'artist_id':
+      case 'artist-id':
         return 'artistId';
       case 'mana':
       case 'm':
@@ -110,10 +111,12 @@ class ScryfallSearchFilter {
         return 'set';
       case 'setname':
       case 'set_name':
+      case 'set-name':
         return 'setName';
       case 'st':
       case 'settype':
       case 'set_type':
+      case 'set-type':
         return 'setType';
       case 'rarity':
       case 'r':
@@ -140,13 +143,18 @@ class ScryfallSearchFilter {
       case 'ci':
       case 'id':
       case 'identity':
+      case 'commander':
+      case 'edh':
         return 'identity';
-      case 'devotion':
       case 'produces':
       case 'produced':
+      case 'produced-mana':
+      case 'produced_mana':
         return 'producedMana';
       case 'mv':
       case 'cmc':
+      case 'manavalue':
+      case 'mana-value':
         return 'manaValue';
       case 'pow':
       case 'power':
