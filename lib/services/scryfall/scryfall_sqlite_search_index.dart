@@ -252,10 +252,6 @@ CREATE TABLE IF NOT EXISTS index_metadata (
 ''');
 
     db.execute('''
-DROP TABLE IF EXISTS cards
-''');
-
-    db.execute('''
 CREATE TABLE IF NOT EXISTS cards (
   rowid INTEGER PRIMARY KEY,
   bulk_type TEXT NOT NULL,
@@ -269,9 +265,9 @@ CREATE TABLE IF NOT EXISTS cards (
   set_code_norm TEXT NOT NULL,
   rarity_norm TEXT NOT NULL,
   lang_norm TEXT NOT NULL,
-  collector_number_norm TEXT NOT NULL,
-  collector_number_prefix TEXT NOT NULL,
-  collector_number_sort INTEGER NOT NULL,
+  collector_number_norm TEXT NOT NULL DEFAULT '',
+  collector_number_prefix TEXT NOT NULL DEFAULT '',
+  collector_number_sort INTEGER NOT NULL DEFAULT 1073741824,
   games_blob TEXT NOT NULL,
   finishes_blob TEXT NOT NULL,
   colors_mask INTEGER NOT NULL,
@@ -285,6 +281,25 @@ CREATE TABLE IF NOT EXISTS cards (
   is_extra INTEGER NOT NULL DEFAULT 0
 )
 ''');
+
+    _ensureColumn(
+      db,
+      table: 'cards',
+      column: 'collector_number_norm',
+      definition: "TEXT NOT NULL DEFAULT ''",
+    );
+    _ensureColumn(
+      db,
+      table: 'cards',
+      column: 'collector_number_prefix',
+      definition: "TEXT NOT NULL DEFAULT ''",
+    );
+    _ensureColumn(
+      db,
+      table: 'cards',
+      column: 'collector_number_sort',
+      definition: 'INTEGER NOT NULL DEFAULT 1073741824',
+    );
 
     db.execute('''
 CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
@@ -302,6 +317,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_cmc ON cards (bulk_type, is_extra, cmc)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_year ON cards (bulk_type, is_extra, released_year)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_set_number ON cards (bulk_type, is_extra, set_code_norm, collector_number_sort, collector_number_prefix, collector_number_norm)');
+  }
+
+  static void _ensureColumn(
+    Database db, {
+    required String table,
+    required String column,
+    required String definition,
+  }) {
+    final columns = db.select('PRAGMA table_info($table)');
+    final exists = columns.any((row) => row['name'] == column);
+    if (!exists) {
+      db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+    }
   }
 
   static String _stringListBlob(List<String> values) => '|${values.map(ScryfallJsonSearchUtils.normalize).join('|')}|';
