@@ -347,7 +347,7 @@ class _IndexStatusIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     switch (status) {
       case _IndexStatus.ready:
-        return const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 20);
+        return const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20);
       case _IndexStatus.preparing:
         return const Icon(Icons.pending_rounded, color: AppTheme.vaultAmber, size: 20);
       case _IndexStatus.missing:
