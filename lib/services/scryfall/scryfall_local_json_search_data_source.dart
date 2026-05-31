@@ -81,15 +81,33 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   }
 
   static bool _isExtra(Map<String, dynamic> json) {
+    if (json['digital'] == true) return true;
+
     final layout = json['layout'] as String? ?? '';
-    if (layout == 'token' || layout == 'emblem' || layout == 'art_series') return true;
+    if (_extraLayouts.contains(layout)) return true;
 
     final typeLine = _LocalScryfallQuery._coalesceFaces(json, 'type_line');
     if (typeLine.contains('token') || typeLine.contains('emblem')) return true;
 
     final setType = json['set_type'] as String? ?? '';
-    return setType == 'token' || setType == 'memorabilia';
+    return _extraSetTypes.contains(setType);
   }
+
+  static const Set<String> _extraLayouts = <String>{
+    'token',
+    'emblem',
+    'art_series',
+    'planar',
+    'scheme',
+    'vanguard',
+  };
+
+  static const Set<String> _extraSetTypes = <String>{
+    'token',
+    'funny',
+    'memorabilia',
+    'minigame',
+  };
 
   static Stream<String> _readTopLevelJsonObjects(String path) async* {
     final file = File(path);
