@@ -10,7 +10,7 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
   ScryfallRemoteSearchDataSource({
     http.Client? client,
     Map<String, String>? headers,
-    this.maxCards = 175,
+    this.maxCards,
   })  : _client = client ?? http.Client(),
         _ownsClient = client == null,
         headers = headers ??
@@ -23,9 +23,9 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
   final bool _ownsClient;
   final Map<String, String> headers;
 
-  /// Safety cap for online fallback. Large Scryfall queries can contain many
-  /// pages, so UI callers should request more explicitly when needed.
-  final int maxCards;
+  /// Optional safety cap for online fallback. Null means all Scryfall pages are
+  /// loaded for the query.
+  final int? maxCards;
 
   @override
   Future<List<ScryfallCardPrint>> search(String rawQuery) async {
@@ -36,7 +36,7 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
       'unique': 'cards',
     });
 
-    while (nextPage != null && cards.length < maxCards) {
+    while (nextPage != null && _underLimit(cards.length)) {
       final response = await _client.get(nextPage, headers: headers);
       if (response.statusCode == 404) return const <ScryfallCardPrint>[];
       if (response.statusCode != 200) {
@@ -51,7 +51,7 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
       if (data is List) {
         for (final item in data.whereType<Map<String, dynamic>>()) {
           cards.add(ScryfallCardPrint.fromJson(item));
-          if (cards.length >= maxCards) break;
+          if (!_underLimit(cards.length)) break;
         }
       }
 
@@ -62,6 +62,8 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
 
     return cards;
   }
+
+  bool _underLimit(int count) => maxCards == null || count < maxCards!;
 
   void dispose() {
     if (_ownsClient) _client.close();
