@@ -32,8 +32,9 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
     final cards = <ScryfallCardPrint>[];
     Uri? nextPage = Uri.https('api.scryfall.com', '/cards/search', <String, String>{
       'q': rawQuery,
-      // Match Scryfall's user-facing default: collapse reprints into one card.
+      // Match Scryfall's user-facing defaults.
       'unique': 'cards',
+      'include_extras': 'false',
     });
 
     while (nextPage != null && _underLimit(cards.length)) {
