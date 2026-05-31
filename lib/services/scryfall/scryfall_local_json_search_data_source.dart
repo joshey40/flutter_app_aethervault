@@ -81,7 +81,8 @@ class ScryfallLocalJsonSearchDataSource implements LocalScryfallSearchDataSource
   }
 
   static bool _isExtra(Map<String, dynamic> json) {
-    if (json['digital'] == true) return true;
+    final games = _LocalScryfallQuery._jsonStringList(json['games']);
+    if (json['digital'] == true && !games.contains('paper')) return true;
 
     final layout = json['layout'] as String? ?? '';
     if (_extraLayouts.contains(layout)) return true;
