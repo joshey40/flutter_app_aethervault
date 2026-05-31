@@ -14,8 +14,8 @@ class ScryfallSqliteSearchIndex {
   ScryfallSqliteSearchIndex._();
   static final ScryfallSqliteSearchIndex instance = ScryfallSqliteSearchIndex._();
 
-  static const int schemaVersion = 1;
-  static const int indexVersion = 1;
+  static const int schemaVersion = 2;
+  static const int indexVersion = 2;
 
   File? _testDatabaseFile;
 
@@ -118,16 +118,24 @@ class ScryfallSqliteSearchIndex {
 
       db.execute('BEGIN IMMEDIATE');
       try {
+        db.execute(
+          'DELETE FROM cards_fts WHERE rowid IN (SELECT rowid FROM cards WHERE bulk_type = ?)',
+          <Object?>[bulkType],
+        );
         db.execute('DELETE FROM cards WHERE bulk_type = ?', <Object?>[bulkType]);
         db.execute('DELETE FROM index_metadata WHERE bulk_type = ?', <Object?>[bulkType]);
 
-        final insert = db.prepare('''
+        final insertCard = db.prepare('''
 INSERT INTO cards (
   bulk_type, card_id, oracle_id, json,
   name_norm, type_line_norm, oracle_text_norm, artist_norm, set_code_norm, rarity_norm, lang_norm,
   games_blob, finishes_blob, colors_mask, color_identity_mask, cmc, usd, eur, released_year,
   layout, set_type, is_extra
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+''');
+        final insertFts = db.prepare('''
+INSERT INTO cards_fts (rowid, name_norm, type_line_norm, oracle_text_norm, artist_norm)
+VALUES (?, ?, ?, ?, ?)
 ''');
 
         var inserted = 0;
@@ -144,16 +152,20 @@ INSERT INTO cards (
             final finishes = ScryfallJsonSearchUtils.stringList(decoded['finishes']);
             final colors = ScryfallJsonSearchUtils.stringList(decoded['colors']);
             final colorIdentity = ScryfallJsonSearchUtils.stringList(decoded['color_identity']);
+            final nameNorm = ScryfallJsonSearchUtils.normalize(decoded['name'] as String? ?? '');
+            final typeLineNorm = ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(decoded, 'type_line'));
+            final oracleTextNorm = ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(decoded, 'oracle_text'));
+            final artistNorm = ScryfallJsonSearchUtils.normalize(decoded['artist'] as String? ?? '');
 
-            insert.execute(<Object?>[
+            insertCard.execute(<Object?>[
               bulkType,
               decoded['id'] as String? ?? '',
               decoded['oracle_id'] as String?,
               cardJson,
-              ScryfallJsonSearchUtils.normalize(decoded['name'] as String? ?? ''),
-              ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(decoded, 'type_line')),
-              ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(decoded, 'oracle_text')),
-              ScryfallJsonSearchUtils.normalize(decoded['artist'] as String? ?? ''),
+              nameNorm,
+              typeLineNorm,
+              oracleTextNorm,
+              artistNorm,
               ScryfallJsonSearchUtils.normalize(decoded['set'] as String? ?? ''),
               ScryfallJsonSearchUtils.normalize(decoded['rarity'] as String? ?? ''),
               ScryfallJsonSearchUtils.normalize(decoded['lang'] as String? ?? ''),
@@ -169,10 +181,19 @@ INSERT INTO cards (
               decoded['set_type'] as String? ?? '',
               ScryfallJsonSearchUtils.isExtra(decoded) ? 1 : 0,
             ]);
+
+            insertFts.execute(<Object?>[
+              db.lastInsertRowId,
+              nameNorm,
+              typeLineNorm,
+              oracleTextNorm,
+              artistNorm,
+            ]);
             inserted++;
           }
         } finally {
-          insert.dispose();
+          insertCard.dispose();
+          insertFts.dispose();
         }
 
         db.execute(
@@ -239,8 +260,17 @@ CREATE TABLE IF NOT EXISTS cards (
 )
 ''');
 
+    db.execute('''
+CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
+  name_norm,
+  type_line_norm,
+  oracle_text_norm,
+  artist_norm,
+  tokenize = 'unicode61 remove_diacritics 2'
+)
+''');
+
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_name ON cards (bulk_type, is_extra, name_norm)');
-    db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_type ON cards (bulk_type, is_extra, type_line_norm)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_set ON cards (bulk_type, is_extra, set_code_norm)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_lang ON cards (bulk_type, is_extra, lang_norm)');
     db.execute('CREATE INDEX IF NOT EXISTS idx_cards_bulk_extra_cmc ON cards (bulk_type, is_extra, cmc)');
@@ -295,7 +325,7 @@ class _SqliteScryfallQuery {
     required String bulkType,
     required int? maxResults,
   }) {
-    final whereParts = <String>['bulk_type = ?', 'is_extra = 0'];
+    final whereParts = <String>['cards.bulk_type = ?', 'cards.is_extra = 0'];
     final args = <Object?>[bulkType];
 
     for (final predicate in predicates) {
@@ -307,7 +337,7 @@ class _SqliteScryfallQuery {
     if (maxResults != null) args.add(maxResults);
 
     return db.select(
-      'SELECT json FROM cards WHERE ${whereParts.join(' AND ')} ORDER BY name_norm COLLATE NOCASE$limitSql',
+      'SELECT cards.json FROM cards WHERE ${whereParts.join(' AND ')} ORDER BY cards.name_norm COLLATE NOCASE$limitSql',
       args,
     );
   }
@@ -405,18 +435,31 @@ class _SqliteScryfallQuery {
   static _SqlPredicate _textPredicate(String column, String operator, String expected) {
     switch (operator) {
       case ':':
-        return _SqlPredicate("$column LIKE ? ESCAPE '\\'", <Object?>['%${_escapeLike(expected)}%']);
+        if (_ftsColumns.contains(column)) {
+          return _SqlPredicate(
+            'cards.rowid IN (SELECT rowid FROM cards_fts WHERE $column MATCH ?)',
+            <Object?>[_ftsPrefixQuery(expected)],
+          );
+        }
+        return _SqlPredicate("cards.$column LIKE ? ESCAPE '\\'", <Object?>['%${_escapeLike(expected)}%']);
       case '=':
-        return _SqlPredicate('$column = ?', <Object?>[expected]);
+        return _SqlPredicate('cards.$column = ?', <Object?>[expected]);
       case '!=':
-        return _SqlPredicate('$column != ?', <Object?>[expected]);
+        return _SqlPredicate('cards.$column != ?', <Object?>[expected]);
       default:
         throw UnsupportedError('Text operator "$operator" is not supported by SQLite search yet.');
     }
   }
 
+  static const Set<String> _ftsColumns = <String>{
+    'name_norm',
+    'type_line_norm',
+    'oracle_text_norm',
+    'artist_norm',
+  };
+
   static _SqlPredicate _blobContainsPredicate(String column, String expected) =>
-      _SqlPredicate('$column LIKE ?', <Object?>['%|$expected|%']);
+      _SqlPredicate('cards.$column LIKE ?', <Object?>['%|$expected|%']);
 
   static _SqlPredicate _numberPredicate(String column, String expected, String operator) {
     final parsed = double.tryParse(expected);
@@ -425,14 +468,14 @@ class _SqliteScryfallQuery {
     switch (operator) {
       case ':':
       case '=':
-        return _SqlPredicate('$column = ?', <Object?>[parsed]);
+        return _SqlPredicate('cards.$column = ?', <Object?>[parsed]);
       case '!=':
-        return _SqlPredicate('($column IS NULL OR $column != ?)', <Object?>[parsed]);
+        return _SqlPredicate('(cards.$column IS NULL OR cards.$column != ?)', <Object?>[parsed]);
       case '<':
       case '<=':
       case '>':
       case '>=':
-        return _SqlPredicate('$column IS NOT NULL AND $column $operator ?', <Object?>[parsed]);
+        return _SqlPredicate('cards.$column IS NOT NULL AND cards.$column $operator ?', <Object?>[parsed]);
       default:
         return const _SqlPredicate('0 = 1', <Object?>[]);
     }
@@ -443,13 +486,13 @@ class _SqliteScryfallQuery {
     switch (operator) {
       case ':':
       case '<=':
-        return _SqlPredicate('($column & ~?) = 0', <Object?>[expectedMask]);
+        return _SqlPredicate('(cards.$column & ~?) = 0', <Object?>[expectedMask]);
       case '=':
-        return _SqlPredicate('$column = ?', <Object?>[expectedMask]);
+        return _SqlPredicate('cards.$column = ?', <Object?>[expectedMask]);
       case '>=':
-        return _SqlPredicate('($column & ?) = ?', <Object?>[expectedMask, expectedMask]);
+        return _SqlPredicate('(cards.$column & ?) = ?', <Object?>[expectedMask, expectedMask]);
       case '!=':
-        return _SqlPredicate('$column != ?', <Object?>[expectedMask]);
+        return _SqlPredicate('cards.$column != ?', <Object?>[expectedMask]);
       default:
         throw UnsupportedError('Color operator "$operator" is not supported by SQLite search yet.');
     }
@@ -459,16 +502,16 @@ class _SqliteScryfallQuery {
     switch (value) {
       case 'multicolored':
       case 'multicolor':
-        return const _SqlPredicate('colors_mask NOT IN (0, 1, 2, 4, 8, 16)', <Object?>[]);
+        return const _SqlPredicate('cards.colors_mask NOT IN (0, 1, 2, 4, 8, 16)', <Object?>[]);
       case 'monocolored':
       case 'monocolor':
-        return const _SqlPredicate('colors_mask IN (1, 2, 4, 8, 16)', <Object?>[]);
+        return const _SqlPredicate('cards.colors_mask IN (1, 2, 4, 8, 16)', <Object?>[]);
       case 'colorless':
-        return const _SqlPredicate('colors_mask = 0', <Object?>[]);
+        return const _SqlPredicate('cards.colors_mask = 0', <Object?>[]);
       case 'paper':
         return _blobContainsPredicate('games_blob', 'paper');
       case 'digital':
-        return const _SqlPredicate("games_blob NOT LIKE '%|paper|%'", <Object?>[]);
+        return const _SqlPredicate("cards.games_blob NOT LIKE '%|paper|%'", <Object?>[]);
       case 'foil':
         return _blobContainsPredicate('finishes_blob', 'foil');
       case 'nonfoil':
@@ -488,6 +531,19 @@ class _SqliteScryfallQuery {
         throw UnsupportedError('SQLite search does not support in:$value yet.');
     }
   }
+
+  static String _ftsPrefixQuery(String value) {
+    final terms = RegExp(r'[\p{L}\p{N}_]+', unicode: true)
+        .allMatches(value)
+        .map((match) => match.group(0)!)
+        .where((term) => term.isNotEmpty)
+        .toList(growable: false);
+
+    if (terms.isEmpty) return '"${_escapeFtsPhrase(value)}"';
+    return terms.map((term) => '"${_escapeFtsPhrase(term)}"*').join(' AND ');
+  }
+
+  static String _escapeFtsPhrase(String value) => value.replaceAll('"', '""');
 
   static String _escapeLike(String value) => value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
 
