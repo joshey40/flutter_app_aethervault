@@ -2,6 +2,15 @@ import 'bulk_data_type.dart';
 import 'scryfall_card_print.dart';
 import 'scryfall_search_query.dart';
 
+enum ScryfallSearchSortMode {
+  nameAsc,
+  nameDesc,
+  manaValueAsc,
+  newestFirst,
+  oldestFirst,
+  setAsc,
+}
+
 class ScryfallSearchResult {
   const ScryfallSearchResult({
     required this.cards,
@@ -25,6 +34,7 @@ abstract interface class LocalScryfallSearchDataSource {
   Future<List<ScryfallCardPrint>> searchCards({
     required String rawQuery,
     required ScryfallBulkDataType type,
+    ScryfallSearchSortMode sortMode = ScryfallSearchSortMode.nameAsc,
   });
 }
 
@@ -43,7 +53,10 @@ class HybridScryfallSearchRepository {
   final RemoteScryfallSearchDataSource remoteDataSource;
   final ScryfallSearchPlanner planner;
 
-  Future<ScryfallSearchResult> search(String rawQuery) async {
+  Future<ScryfallSearchResult> search(
+    String rawQuery, {
+    ScryfallSearchSortMode sortMode = ScryfallSearchSortMode.nameAsc,
+  }) async {
     final normalizedQuery = rawQuery.trim();
     if (normalizedQuery.isEmpty) {
       return const ScryfallSearchResult(
@@ -61,38 +74,70 @@ class HybridScryfallSearchRepository {
             cards: await localDataSource.searchCards(
               rawQuery: normalizedQuery,
               type: plan.searchBulkType,
+              sortMode: sortMode,
             ),
             source: _sourceForBulkType(plan.searchBulkType),
           );
         } on UnsupportedError catch (error) {
-          return _remoteSearch(normalizedQuery, 'Local parser does not support this query yet: $error');
+          return _remoteSearch(normalizedQuery, plan.query.reason ?? 'Local parser does not support this query yet: $error', sortMode);
         }
       case ScryfallSearchExecutionMode.remoteOnly:
-        return _remoteSearch(normalizedQuery, plan.query.reason);
+        return _remoteSearch(normalizedQuery, plan.query.reason, sortMode);
       case ScryfallSearchExecutionMode.localThenRemoteFallback:
         try {
           return ScryfallSearchResult(
             cards: await localDataSource.searchCards(
               rawQuery: normalizedQuery,
               type: plan.searchBulkType,
+              sortMode: sortMode,
             ),
             source: _sourceForBulkType(plan.searchBulkType),
             fallbackReason: plan.query.reason,
           );
         } on UnsupportedError {
-          return _remoteSearch(normalizedQuery, plan.query.reason);
+          return _remoteSearch(normalizedQuery, plan.query.reason, sortMode);
         } catch (_) {
-          return _remoteSearch(normalizedQuery, plan.query.reason);
+          return _remoteSearch(normalizedQuery, plan.query.reason, sortMode);
         }
     }
   }
 
-  Future<ScryfallSearchResult> _remoteSearch(String query, String? reason) async {
+  Future<ScryfallSearchResult> _remoteSearch(
+    String query,
+    String? reason,
+    ScryfallSearchSortMode sortMode,
+  ) async {
     return ScryfallSearchResult(
-      cards: await remoteDataSource.search(query),
+      cards: _sortCards(await remoteDataSource.search(query), sortMode),
       source: ScryfallSearchResultSource.remoteScryfallApi,
       fallbackReason: reason,
     );
+  }
+
+  static List<ScryfallCardPrint> _sortCards(
+    List<ScryfallCardPrint> cards,
+    ScryfallSearchSortMode sortMode,
+  ) {
+    final sorted = [...cards];
+    sorted.sort((a, b) {
+      switch (sortMode) {
+        case ScryfallSearchSortMode.nameAsc:
+          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        case ScryfallSearchSortMode.nameDesc:
+          return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+        case ScryfallSearchSortMode.manaValueAsc:
+          return (a.manaValue ?? 999).compareTo(b.manaValue ?? 999);
+        case ScryfallSearchSortMode.newestFirst:
+          return (b.releasedAt ?? DateTime(0)).compareTo(a.releasedAt ?? DateTime(0));
+        case ScryfallSearchSortMode.oldestFirst:
+          return (a.releasedAt ?? DateTime(9999)).compareTo(b.releasedAt ?? DateTime(9999));
+        case ScryfallSearchSortMode.setAsc:
+          final setCompare = a.setCode.compareTo(b.setCode);
+          if (setCompare != 0) return setCompare;
+          return a.collectorNumber.compareTo(b.collectorNumber);
+      }
+    });
+    return sorted;
   }
 
   static ScryfallSearchResultSource _sourceForBulkType(ScryfallBulkDataType type) {
