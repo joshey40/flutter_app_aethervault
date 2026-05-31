@@ -1,9 +1,9 @@
+import 'bulk_data_type.dart';
 import 'download_service.dart';
 import 'scryfall_card_print.dart';
 import 'scryfall_local_json_search_data_source.dart';
 import 'scryfall_search_repository.dart';
 import 'scryfall_sqlite_search_index.dart';
-import 'bulk_data_type.dart';
 
 class ScryfallIndexedSearchDataSource implements LocalScryfallSearchDataSource {
   ScryfallIndexedSearchDataSource({
@@ -24,6 +24,7 @@ class ScryfallIndexedSearchDataSource implements LocalScryfallSearchDataSource {
   Future<List<ScryfallCardPrint>> searchCards({
     required String rawQuery,
     required ScryfallBulkDataType type,
+    ScryfallSearchSortMode sortMode = ScryfallSearchSortMode.nameAsc,
   }) async {
     final file = await _downloadService.getLocalFile(type: type);
     if (file == null) {
@@ -36,9 +37,14 @@ class ScryfallIndexedSearchDataSource implements LocalScryfallSearchDataSource {
         sourceFile: file,
         rawQuery: rawQuery,
         maxResults: maxResults,
+        sortMode: sortMode,
       );
     } on UnsupportedError {
-      return _fallbackDataSource.searchCards(rawQuery: rawQuery, type: type);
+      return _fallbackDataSource.searchCards(
+        rawQuery: rawQuery,
+        type: type,
+        sortMode: sortMode,
+      );
     }
   }
 }
