@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_app_aethervault/services/scryfall/scryfall_search_filter.dart';
+import 'package:flutter_app_aethervault/services/scryfall/scryfall_search_json_utils.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart' as http_io;
 
@@ -12,9 +14,6 @@ import 'package:http/io_client.dart' as http_io;
 ///   dart run tool/compare_scryfall_search.dart --query "arcane signet"
 ///   dart run tool/compare_scryfall_search.dart --query "t:dragon" --limit 0
 ///   dart run tool/compare_scryfall_search.dart --query "lang:de name:sol ring" --bulk all_cards --unique prints --limit 0
-///
-/// By default, this script stores downloaded bulk JSON files in
-/// `.dart_tool/scryfall_compare/` and reuses them across runs.
 Future<void> main(List<String> args) async {
   late final _Options options;
   try {
@@ -176,14 +175,14 @@ Future<List<_CompareCard>> _searchLocalBulk({
   required String rawQuery,
   required int limit,
 }) async {
-  final query = _LocalQuery.parse(rawQuery);
+  final query = ParsedScryfallSearch.parse(rawQuery);
   final cards = <_CompareCard>[];
 
-  await for (final cardJson in _readTopLevelJsonObjects(file)) {
+  await for (final cardJson in ScryfallJsonSearchUtils.readTopLevelJsonObjects(file.path)) {
     final decoded = jsonDecode(cardJson);
     if (decoded is! Map<String, dynamic>) continue;
-    if (_isExtra(decoded)) continue;
-    if (!query.matchesJson(decoded)) continue;
+    if (ScryfallJsonSearchUtils.isExtra(decoded)) continue;
+    if (!_matchesQuery(decoded, query)) continue;
 
     cards.add(_CompareCard.fromJson(decoded));
     if (!_underLimit(cards.length, limit)) break;
@@ -192,35 +191,159 @@ Future<List<_CompareCard>> _searchLocalBulk({
   return cards;
 }
 
-bool _isExtra(Map<String, dynamic> json) {
-  final games = _jsonStringList(json['games']);
-  if (json['digital'] == true && !games.contains('paper')) return true;
-
-  final layout = json['layout'] as String? ?? '';
-  if (_extraLayouts.contains(layout)) return true;
-
-  final typeLine = _coalesceFaces(json, 'type_line');
-  if (typeLine.contains('token') || typeLine.contains('emblem')) return true;
-
-  final setType = json['set_type'] as String? ?? '';
-  return _extraSetTypes.contains(setType);
+bool _matchesQuery(Map<String, dynamic> json, ParsedScryfallSearch query) {
+  for (final filter in query.filters) {
+    final matches = _matchesFilter(json, filter);
+    if (filter.negated ? matches : !matches) return false;
+  }
+  return true;
 }
 
-const Set<String> _extraLayouts = <String>{
-  'token',
-  'emblem',
-  'art_series',
-  'planar',
-  'scheme',
-  'vanguard',
-};
+bool _matchesFilter(Map<String, dynamic> json, ScryfallSearchFilter filter) {
+  switch (filter.canonicalKeyword) {
+    case 'name':
+      return _compareText(_jsonText(json, 'name'), filter.normalizedValue, filter.operator);
+    case 'type':
+      return _compareText(_coalesceFaces(json, 'type_line'), filter.normalizedValue, filter.operator);
+    case 'oracle':
+      return _compareText(_coalesceFaces(json, 'oracle_text'), filter.normalizedValue, filter.operator);
+    case 'artist':
+      return _compareText(_jsonText(json, 'artist'), filter.normalizedValue, filter.operator);
+    case 'set':
+      return _compareText(_jsonText(json, 'set'), filter.normalizedValue, filter.operator);
+    case 'rarity':
+      return _compareText(_jsonText(json, 'rarity'), filter.normalizedValue, filter.operator);
+    case 'lang':
+      return _compareText(_jsonText(json, 'lang'), filter.normalizedValue, filter.operator);
+    case 'game':
+      return ScryfallJsonSearchUtils.stringList(json['games']).map(ScryfallJsonSearchUtils.normalize).contains(filter.normalizedValue);
+    case 'colors':
+      return _compareColorSet(ScryfallJsonSearchUtils.stringList(json['colors']), filter.normalizedValue, filter.operator);
+    case 'identity':
+      return _compareColorSet(ScryfallJsonSearchUtils.stringList(json['color_identity']), filter.normalizedValue, filter.operator);
+    case 'manaValue':
+      return _compareNumber(ScryfallJsonSearchUtils.toDouble(json['cmc']), filter.value, filter.operator);
+    case 'usd':
+      return _compareNumber(_price(json, 'usd'), filter.value, filter.operator);
+    case 'eur':
+      return _compareNumber(_price(json, 'eur'), filter.value, filter.operator);
+    case 'year':
+      return _compareNumber(_releasedYear(json), filter.value, filter.operator);
+    case 'is':
+      return _matchesIs(json, filter.normalizedValue);
+    case 'in':
+      return _matchesIn(json, filter.normalizedValue);
+    default:
+      throw UnsupportedError('Local compare search does not support "${filter.keyword}" yet.');
+  }
+}
 
-const Set<String> _extraSetTypes = <String>{
-  'token',
-  'funny',
-  'memorabilia',
-  'minigame',
-};
+bool _matchesIs(Map<String, dynamic> json, String value) {
+  switch (value) {
+    case 'multicolored':
+    case 'multicolor':
+      return ScryfallJsonSearchUtils.stringList(json['colors']).length > 1;
+    case 'monocolored':
+    case 'monocolor':
+      return ScryfallJsonSearchUtils.stringList(json['colors']).length == 1;
+    case 'colorless':
+      return ScryfallJsonSearchUtils.stringList(json['colors']).isEmpty;
+    case 'paper':
+      return ScryfallJsonSearchUtils.stringList(json['games']).contains('paper');
+    case 'digital':
+      return !ScryfallJsonSearchUtils.stringList(json['games']).contains('paper');
+    case 'foil':
+      return ScryfallJsonSearchUtils.stringList(json['finishes']).contains('foil');
+    case 'nonfoil':
+      return ScryfallJsonSearchUtils.stringList(json['finishes']).contains('nonfoil');
+    default:
+      throw UnsupportedError('Local compare search does not support is:$value yet.');
+  }
+}
+
+bool _matchesIn(Map<String, dynamic> json, String value) {
+  switch (value) {
+    case 'paper':
+    case 'arena':
+    case 'mtgo':
+      return ScryfallJsonSearchUtils.stringList(json['games']).contains(value);
+    default:
+      throw UnsupportedError('Local compare search does not support in:$value yet.');
+  }
+}
+
+String _jsonText(Map<String, dynamic> json, String key) =>
+    ScryfallJsonSearchUtils.normalize(json[key] as String? ?? '');
+
+String _coalesceFaces(Map<String, dynamic> json, String key) =>
+    ScryfallJsonSearchUtils.normalize(ScryfallJsonSearchUtils.coalesceFaces(json, key));
+
+double? _price(Map<String, dynamic> json, String key) {
+  final prices = json['prices'];
+  if (prices is! Map<String, dynamic>) return null;
+  return ScryfallJsonSearchUtils.toDouble(prices[key]);
+}
+
+double? _releasedYear(Map<String, dynamic> json) {
+  final releasedAt = DateTime.tryParse(json['released_at'] as String? ?? '');
+  return releasedAt?.year.toDouble();
+}
+
+bool _compareText(String normalizedActual, String expected, String operator) {
+  switch (operator) {
+    case ':':
+      return normalizedActual.contains(expected);
+    case '=':
+      return normalizedActual == expected;
+    case '!=':
+      return normalizedActual != expected;
+    default:
+      throw UnsupportedError('Text operator "$operator" is not supported locally.');
+  }
+}
+
+bool _compareNumber(double? actual, String expected, String operator) {
+  if (actual == null) return false;
+  final parsed = double.tryParse(expected);
+  if (parsed == null) return false;
+
+  switch (operator) {
+    case ':':
+    case '=':
+      return actual == parsed;
+    case '!=':
+      return actual != parsed;
+    case '<':
+      return actual < parsed;
+    case '<=':
+      return actual <= parsed;
+    case '>':
+      return actual > parsed;
+    case '>=':
+      return actual >= parsed;
+    default:
+      return false;
+  }
+}
+
+bool _compareColorSet(List<String> actualColors, String expected, String operator) {
+  final actual = actualColors.map(ScryfallJsonSearchUtils.normalize).toSet();
+  final expectedSet = expected.split('').where((char) => 'wubrg'.contains(char)).toSet();
+
+  switch (operator) {
+    case ':':
+    case '<=':
+      return actual.difference(expectedSet).isEmpty;
+    case '=':
+      return actual.length == expectedSet.length && actual.containsAll(expectedSet);
+    case '>=':
+      return expectedSet.difference(actual).isEmpty;
+    case '!=':
+      return !(actual.length == expectedSet.length && actual.containsAll(expectedSet));
+    default:
+      throw UnsupportedError('Color operator "$operator" is not supported locally.');
+  }
+}
 
 bool _underLimit(int count, int limit) => limit == 0 || count < limit;
 
@@ -286,300 +409,6 @@ Future<File> _ensureBulkFile({
   if (await file.exists()) await file.delete();
   return temp.rename(file.path);
 }
-
-Stream<String> _readTopLevelJsonObjects(File file) async* {
-  final header = await file.openRead(0, 2).fold<List<int>>(
-    <int>[],
-    (previous, chunk) => previous..addAll(chunk),
-  );
-
-  Stream<List<int>> bytes = file.openRead();
-  if (_looksLikeGzip(header)) bytes = bytes.transform(gzip.decoder);
-
-  final chars = bytes.transform(utf8.decoder);
-  final buffer = StringBuffer();
-  var depth = 0;
-  var inString = false;
-  var escaping = false;
-  var capturing = false;
-
-  await for (final chunk in chars) {
-    for (var i = 0; i < chunk.length; i++) {
-      final char = chunk[i];
-      if (capturing) buffer.write(char);
-
-      if (inString) {
-        if (escaping) {
-          escaping = false;
-        } else if (char == r'\') {
-          escaping = true;
-        } else if (char == '"') {
-          inString = false;
-        }
-        continue;
-      }
-
-      if (char == '"') {
-        inString = true;
-        continue;
-      }
-      if (char == '{') {
-        if (!capturing) {
-          capturing = true;
-          buffer.clear();
-          buffer.write(char);
-        }
-        depth++;
-        continue;
-      }
-      if (char == '}') {
-        depth--;
-        if (capturing && depth == 0) {
-          yield buffer.toString();
-          buffer.clear();
-          capturing = false;
-        }
-      }
-    }
-  }
-}
-
-bool _looksLikeGzip(List<int> bytes) => bytes.length >= 2 && bytes[0] == 0x1f && bytes[1] == 0x8b;
-
-class _LocalQuery {
-  const _LocalQuery(this.predicates);
-  final List<bool Function(Map<String, dynamic> cardJson)> predicates;
-  bool matchesJson(Map<String, dynamic> cardJson) => predicates.every((predicate) => predicate(cardJson));
-
-  static _LocalQuery parse(String rawQuery) {
-    final predicates = <bool Function(Map<String, dynamic> cardJson)>[];
-    for (final token in _tokenize(rawQuery)) {
-      final negated = token.startsWith('-');
-      final cleanToken = negated ? token.substring(1) : token;
-      final predicate = _parseToken(cleanToken);
-      predicates.add(negated ? (json) => !predicate(json) : predicate);
-    }
-    return _LocalQuery(predicates);
-  }
-
-  static List<String> _tokenize(String rawQuery) {
-    final tokens = <String>[];
-    final buffer = StringBuffer();
-    var inQuotes = false;
-    for (var i = 0; i < rawQuery.length; i++) {
-      final char = rawQuery[i];
-      if (char == '"') {
-        inQuotes = !inQuotes;
-        continue;
-      }
-      if (!inQuotes && char.trim().isEmpty) {
-        if (buffer.isNotEmpty) {
-          tokens.add(buffer.toString());
-          buffer.clear();
-        }
-        continue;
-      }
-      buffer.write(char);
-    }
-    if (buffer.isNotEmpty) tokens.add(buffer.toString());
-    return tokens;
-  }
-
-  static bool Function(Map<String, dynamic> cardJson) _parseToken(String token) {
-    final comparison = RegExp(r'^([a-zA-Z][a-zA-Z0-9_]*)(<=|>=|!=|=|<|>|:)(.+)$').firstMatch(token);
-    if (comparison == null) {
-      final value = _normalize(token);
-      return (json) => _jsonText(json, 'name').contains(value);
-    }
-
-    final keyword = comparison.group(1)!.toLowerCase();
-    final operator = comparison.group(2)!;
-    final value = comparison.group(3)!.trim();
-    final normalizedValue = _normalize(value);
-
-    switch (keyword) {
-      case 'name':
-      case 'n':
-        return (json) => _compareText(_jsonText(json, 'name'), normalizedValue, operator);
-      case 'type':
-      case 't':
-        return (json) => _compareText(_coalesceFaces(json, 'type_line'), normalizedValue, operator);
-      case 'oracle':
-      case 'o':
-        return (json) => _compareText(_coalesceFaces(json, 'oracle_text'), normalizedValue, operator);
-      case 'artist':
-      case 'a':
-        return (json) => _compareText(_jsonText(json, 'artist'), normalizedValue, operator);
-      case 'set':
-      case 's':
-      case 'e':
-      case 'edition':
-        return (json) => _compareText(_jsonText(json, 'set'), normalizedValue, operator);
-      case 'rarity':
-      case 'r':
-        return (json) => _compareText(_jsonText(json, 'rarity'), normalizedValue, operator);
-      case 'lang':
-      case 'language':
-        return (json) => _compareText(_jsonText(json, 'lang'), normalizedValue, operator);
-      case 'game':
-        return (json) => _jsonStringList(json['games']).map(_normalize).contains(normalizedValue);
-      case 'c':
-      case 'color':
-      case 'colors':
-        return (json) => _compareColorSet(_jsonStringList(json['colors']), normalizedValue, operator);
-      case 'ci':
-      case 'id':
-      case 'identity':
-      case 'commander':
-      case 'edh':
-        return (json) => _compareColorSet(_jsonStringList(json['color_identity']), normalizedValue, operator);
-      case 'mv':
-      case 'cmc':
-        return (json) => _compareNumber(_toDouble(json['cmc']), value, operator);
-      case 'usd':
-        return (json) => _compareNumber(_price(json, 'usd'), value, operator);
-      case 'eur':
-        return (json) => _compareNumber(_price(json, 'eur'), value, operator);
-      case 'year':
-        return (json) => _compareNumber(_releasedYear(json), value, operator);
-      case 'is':
-        return _parseIsPredicate(normalizedValue);
-      case 'in':
-        return _parseInPredicate(normalizedValue);
-      default:
-        throw UnsupportedError('Local search does not support "$keyword" yet.');
-    }
-  }
-
-  static bool Function(Map<String, dynamic> cardJson) _parseIsPredicate(String value) {
-    switch (value) {
-      case 'multicolored':
-      case 'multicolor':
-        return (json) => _jsonStringList(json['colors']).length > 1;
-      case 'monocolored':
-      case 'monocolor':
-        return (json) => _jsonStringList(json['colors']).length == 1;
-      case 'colorless':
-        return (json) => _jsonStringList(json['colors']).isEmpty;
-      case 'paper':
-        return (json) => _jsonStringList(json['games']).contains('paper');
-      case 'digital':
-        return (json) => !_jsonStringList(json['games']).contains('paper');
-      case 'foil':
-        return (json) => _jsonStringList(json['finishes']).contains('foil');
-      case 'nonfoil':
-        return (json) => _jsonStringList(json['finishes']).contains('nonfoil');
-      default:
-        throw UnsupportedError('Local search does not support is:$value yet.');
-    }
-  }
-
-  static bool Function(Map<String, dynamic> cardJson) _parseInPredicate(String value) {
-    switch (value) {
-      case 'paper':
-        return (json) => _jsonStringList(json['games']).contains('paper');
-      case 'arena':
-        return (json) => _jsonStringList(json['games']).contains('arena');
-      case 'mtgo':
-        return (json) => _jsonStringList(json['games']).contains('mtgo');
-      default:
-        throw UnsupportedError('Local search does not support in:$value yet.');
-    }
-  }
-}
-
-String _jsonText(Map<String, dynamic> json, String key) => _normalize(json[key] as String? ?? '');
-
-String _coalesceFaces(Map<String, dynamic> json, String key) {
-  final direct = json[key] as String?;
-  if (direct != null && direct.isNotEmpty) return _normalize(direct);
-  final faces = json['card_faces'];
-  if (faces is! List) return '';
-  return faces
-      .whereType<Map<String, dynamic>>()
-      .map((face) => face[key] as String? ?? '')
-      .where((value) => value.isNotEmpty)
-      .map(_normalize)
-      .join('\n---\n');
-}
-
-List<String> _jsonStringList(Object? value) {
-  if (value is! List) return const <String>[];
-  return value.whereType<String>().toList(growable: false);
-}
-
-double? _price(Map<String, dynamic> json, String key) {
-  final prices = json['prices'];
-  if (prices is! Map<String, dynamic>) return null;
-  return _toDouble(prices[key]);
-}
-
-double? _releasedYear(Map<String, dynamic> json) {
-  final releasedAt = DateTime.tryParse(json['released_at'] as String? ?? '');
-  return releasedAt?.year.toDouble();
-}
-
-double? _toDouble(Object? value) {
-  if (value is num) return value.toDouble();
-  if (value is String && value.isNotEmpty) return double.tryParse(value);
-  return null;
-}
-
-bool _compareText(String normalizedActual, String expected, String operator) {
-  switch (operator) {
-    case ':':
-      return normalizedActual.contains(expected);
-    case '=':
-      return normalizedActual == expected;
-    case '!=':
-      return normalizedActual != expected;
-    default:
-      throw UnsupportedError('Text operator "$operator" is not supported locally.');
-  }
-}
-
-bool _compareNumber(double? actual, String expected, String operator) {
-  if (actual == null) return false;
-  final parsed = double.tryParse(expected);
-  if (parsed == null) return false;
-  switch (operator) {
-    case ':':
-    case '=':
-      return actual == parsed;
-    case '!=':
-      return actual != parsed;
-    case '<':
-      return actual < parsed;
-    case '<=':
-      return actual <= parsed;
-    case '>':
-      return actual > parsed;
-    case '>=':
-      return actual >= parsed;
-    default:
-      return false;
-  }
-}
-
-bool _compareColorSet(List<String> actualColors, String expected, String operator) {
-  final actual = actualColors.map(_normalize).toSet();
-  final expectedSet = expected.split('').where((char) => 'wubrg'.contains(char)).toSet();
-  switch (operator) {
-    case ':':
-    case '<=':
-      return actual.difference(expectedSet).isEmpty;
-    case '=':
-      return actual.length == expectedSet.length && actual.containsAll(expectedSet);
-    case '>=':
-      return expectedSet.difference(actual).isEmpty;
-    case '!=':
-      return !(actual.length == expectedSet.length && actual.containsAll(expectedSet));
-    default:
-      throw UnsupportedError('Color operator "$operator" is not supported locally.');
-  }
-}
-
-String _normalize(String value) => value.toLowerCase().trim();
 
 class _CompareCard {
   const _CompareCard({
