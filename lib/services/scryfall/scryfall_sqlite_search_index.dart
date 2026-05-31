@@ -8,7 +8,9 @@ import 'package:sqlite3/sqlite3.dart';
 
 import 'bulk_data_type.dart';
 import 'scryfall_card_print.dart';
+import 'scryfall_search_filter.dart';
 import 'scryfall_search_json_utils.dart';
+import 'scryfall_search_repository.dart';
 
 class ScryfallSqliteSearchIndex {
   ScryfallSqliteSearchIndex._();
@@ -73,6 +75,7 @@ class ScryfallSqliteSearchIndex {
     required File sourceFile,
     required String rawQuery,
     int? maxResults,
+    ScryfallSearchSortMode sortMode = ScryfallSearchSortMode.nameAsc,
   }) async {
     await ensureIndex(type: type, sourceFile: sourceFile);
 
@@ -84,6 +87,7 @@ class ScryfallSqliteSearchIndex {
         db: db,
         bulkType: type.apiType,
         maxResults: maxResults,
+        sortMode: sortMode,
       );
 
       return result
@@ -305,30 +309,24 @@ CREATE VIRTUAL TABLE IF NOT EXISTS cards_fts USING fts5(
 }
 
 class _SqliteScryfallQuery {
-  const _SqliteScryfallQuery(this.predicates);
+  const _SqliteScryfallQuery(this.filters);
 
-  final List<_SqlPredicate> predicates;
+  final List<ScryfallSearchFilter> filters;
 
-  static _SqliteScryfallQuery parse(String rawQuery) {
-    final predicates = <_SqlPredicate>[];
-    for (final token in _tokenize(rawQuery)) {
-      final negated = token.startsWith('-');
-      final cleanToken = negated ? token.substring(1) : token;
-      final predicate = _parseToken(cleanToken);
-      predicates.add(negated ? predicate.negated() : predicate);
-    }
-    return _SqliteScryfallQuery(predicates);
-  }
+  static _SqliteScryfallQuery parse(String rawQuery) =>
+      _SqliteScryfallQuery(ParsedScryfallSearch.parse(rawQuery).filters);
 
   ResultSet select({
     required Database db,
     required String bulkType,
     required int? maxResults,
+    required ScryfallSearchSortMode sortMode,
   }) {
     final whereParts = <String>['cards.bulk_type = ?', 'cards.is_extra = 0'];
     final args = <Object?>[bulkType];
 
-    for (final predicate in predicates) {
+    for (final filter in filters) {
+      final predicate = _parseFilter(filter);
       whereParts.add(predicate.sql);
       args.addAll(predicate.args);
     }
@@ -337,98 +335,69 @@ class _SqliteScryfallQuery {
     if (maxResults != null) args.add(maxResults);
 
     return db.select(
-      'SELECT cards.json FROM cards WHERE ${whereParts.join(' AND ')} ORDER BY cards.name_norm COLLATE NOCASE$limitSql',
+      'SELECT cards.json FROM cards WHERE ${whereParts.join(' AND ')} ${_orderBy(sortMode)}$limitSql',
       args,
     );
   }
 
-  static List<String> _tokenize(String rawQuery) {
-    final tokens = <String>[];
-    final buffer = StringBuffer();
-    var inQuotes = false;
-
-    for (var i = 0; i < rawQuery.length; i++) {
-      final char = rawQuery[i];
-      if (char == '"') {
-        inQuotes = !inQuotes;
-        continue;
-      }
-      if (!inQuotes && char.trim().isEmpty) {
-        if (buffer.isNotEmpty) {
-          tokens.add(buffer.toString());
-          buffer.clear();
-        }
-        continue;
-      }
-      buffer.write(char);
-    }
-
-    if (buffer.isNotEmpty) tokens.add(buffer.toString());
-    return tokens;
+  static _SqlPredicate _parseFilter(ScryfallSearchFilter filter) {
+    final predicate = _parsePositiveFilter(filter);
+    return filter.negated ? predicate.negated() : predicate;
   }
 
-  static _SqlPredicate _parseToken(String token) {
-    final comparison = RegExp(r'^([a-zA-Z][a-zA-Z0-9_]*)(<=|>=|!=|=|<|>|:)(.+)$').firstMatch(token);
-    if (comparison == null) {
-      return _textPredicate('name_norm', ':', ScryfallJsonSearchUtils.normalize(token));
-    }
-
-    final keyword = comparison.group(1)!.toLowerCase();
-    final operator = comparison.group(2)!;
-    final value = comparison.group(3)!.trim();
-    final normalizedValue = ScryfallJsonSearchUtils.normalize(value);
-
-    switch (keyword) {
+  static _SqlPredicate _parsePositiveFilter(ScryfallSearchFilter filter) {
+    switch (filter.canonicalKeyword) {
       case 'name':
-      case 'n':
-        return _textPredicate('name_norm', operator, normalizedValue);
+        return _textPredicate('name_norm', filter.operator, filter.normalizedValue);
       case 'type':
-      case 't':
-        return _textPredicate('type_line_norm', operator, normalizedValue);
+        return _textPredicate('type_line_norm', filter.operator, filter.normalizedValue);
       case 'oracle':
-      case 'o':
-        return _textPredicate('oracle_text_norm', operator, normalizedValue);
+        return _textPredicate('oracle_text_norm', filter.operator, filter.normalizedValue);
       case 'artist':
-      case 'a':
-        return _textPredicate('artist_norm', operator, normalizedValue);
+        return _textPredicate('artist_norm', filter.operator, filter.normalizedValue);
       case 'set':
-      case 's':
-      case 'e':
-      case 'edition':
-        return _textPredicate('set_code_norm', operator, normalizedValue);
+        return _textPredicate('set_code_norm', filter.operator, filter.normalizedValue);
       case 'rarity':
-      case 'r':
-        return _textPredicate('rarity_norm', operator, normalizedValue);
+        return _textPredicate('rarity_norm', filter.operator, filter.normalizedValue);
       case 'lang':
-      case 'language':
-        return _textPredicate('lang_norm', operator, normalizedValue);
+        return _textPredicate('lang_norm', filter.operator, filter.normalizedValue);
       case 'game':
-        return _blobContainsPredicate('games_blob', normalizedValue);
-      case 'c':
-      case 'color':
+        return _blobContainsPredicate('games_blob', filter.normalizedValue);
       case 'colors':
-        return _colorPredicate('colors_mask', normalizedValue, operator);
-      case 'ci':
-      case 'id':
+        return _colorPredicate('colors_mask', filter.normalizedValue, filter.operator);
       case 'identity':
-      case 'commander':
-      case 'edh':
-        return _colorPredicate('color_identity_mask', normalizedValue, operator);
-      case 'mv':
-      case 'cmc':
-        return _numberPredicate('cmc', value, operator);
+        return _colorPredicate('color_identity_mask', filter.normalizedValue, filter.operator);
+      case 'manaValue':
+        return _numberPredicate('cmc', filter.value, filter.operator);
       case 'usd':
-        return _numberPredicate('usd', value, operator);
+        return _numberPredicate('usd', filter.value, filter.operator);
       case 'eur':
-        return _numberPredicate('eur', value, operator);
+        return _numberPredicate('eur', filter.value, filter.operator);
       case 'year':
-        return _numberPredicate('released_year', value, operator);
+        return _numberPredicate('released_year', filter.value, filter.operator);
       case 'is':
-        return _isPredicate(normalizedValue);
+        return _isPredicate(filter.normalizedValue);
       case 'in':
-        return _inPredicate(normalizedValue);
+        return _inPredicate(filter.normalizedValue);
       default:
-        throw UnsupportedError('SQLite search does not support "$keyword" yet.');
+        throw UnsupportedError('SQLite search does not support "${filter.keyword}" yet.');
+    }
+  }
+
+  static String _orderBy(ScryfallSearchSortMode sortMode) {
+    switch (sortMode) {
+      case ScryfallSearchSortMode.nameAsc:
+        return 'ORDER BY cards.name_norm COLLATE NOCASE ASC';
+      case ScryfallSearchSortMode.nameDesc:
+        return 'ORDER BY cards.name_norm COLLATE NOCASE DESC';
+      case ScryfallSearchSortMode.manaValueAsc:
+        return 'ORDER BY cards.cmc IS NULL ASC, cards.cmc ASC, cards.name_norm COLLATE NOCASE ASC';
+      case ScryfallSearchSortMode.newestFirst:
+        return 'ORDER BY cards.released_year IS NULL ASC, cards.released_year DESC, cards.name_norm COLLATE NOCASE ASC';
+      case ScryfallSearchSortMode.oldestFirst:
+        return 'ORDER BY cards.released_year IS NULL ASC, cards.released_year ASC, cards.name_norm COLLATE NOCASE ASC';
+      case ScryfallSearchSortMode.setAsc:
+        return 'ORDER BY cards.set_code_norm ASC, cards.card_id ASC';
     }
   }
 
