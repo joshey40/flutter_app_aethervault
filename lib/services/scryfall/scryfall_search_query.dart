@@ -130,6 +130,20 @@ class ScryfallSearchPlanner {
   final Set<String> allCardsKeywords;
 
   ScryfallSearchPlan plan(String rawQuery) {
+    if (_hasComplexBooleanSyntax(rawQuery)) {
+      return ScryfallSearchPlan(
+        searchBulkType: ScryfallBulkDataType.oracleCards,
+        collectionBulkType: ScryfallBulkDataType.allCards,
+        query: ScryfallSearchQuery(
+          rawQuery: rawQuery,
+          executionMode: ScryfallSearchExecutionMode.remoteOnly,
+          localTerms: const <String>[],
+          remoteOnlyTerms: const <String>['boolean syntax'],
+          reason: 'Query uses Scryfall boolean syntax that is delegated to the Scryfall API.',
+        ),
+      );
+    }
+
     final filters = ParsedScryfallSearch.parse(rawQuery).filters;
     final remoteOnly = <String>[];
     final local = <String>[];
@@ -199,6 +213,14 @@ class ScryfallSearchPlanner {
       }.contains(filter.normalizedValue);
     }
     return false;
+  }
+
+  bool _hasComplexBooleanSyntax(String rawQuery) {
+    final tokens = ParsedScryfallSearch.tokenize(rawQuery);
+    return tokens.any((token) {
+      final normalized = token.toLowerCase();
+      return normalized == 'or' || normalized == 'and' || token.contains('(') || token.contains(')');
+    });
   }
 }
 
