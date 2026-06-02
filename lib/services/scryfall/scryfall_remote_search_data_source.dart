@@ -29,13 +29,51 @@ class ScryfallRemoteSearchDataSource implements RemoteScryfallSearchDataSource {
 
   @override
   Future<List<ScryfallCardPrint>> search(String rawQuery) async {
+    return _searchCards(
+      rawQuery: rawQuery,
+      unique: 'cards',
+      includeExtras: false,
+      includeMultilingual: false,
+    );
+  }
+
+  Future<List<ScryfallCardPrint>> searchPrintings(ScryfallCardPrint card) async {
+    final query = card.oracleId != null && card.oracleId!.isNotEmpty
+        ? 'oracleid:${card.oracleId}'
+        : '!"${card.name.replaceAll('"', '\\"')}"';
+
+    final printings = await _searchCards(
+      rawQuery: query,
+      unique: 'prints',
+      includeExtras: false,
+      includeMultilingual: true,
+      order: 'released',
+      dir: 'desc',
+    );
+
+    if (printings.isEmpty) return <ScryfallCardPrint>[card];
+    return printings;
+  }
+
+  Future<List<ScryfallCardPrint>> _searchCards({
+    required String rawQuery,
+    required String unique,
+    required bool includeExtras,
+    required bool includeMultilingual,
+    String? order,
+    String? dir,
+  }) async {
     final cards = <ScryfallCardPrint>[];
-    Uri? nextPage = Uri.https('api.scryfall.com', '/cards/search', <String, String>{
+    final queryParameters = <String, String>{
       'q': rawQuery,
-      // Match Scryfall's user-facing defaults.
-      'unique': 'cards',
-      'include_extras': 'false',
-    });
+      'unique': unique,
+      'include_extras': includeExtras ? 'true' : 'false',
+      'include_multilingual': includeMultilingual ? 'true' : 'false',
+      if (order != null) 'order': order,
+      if (dir != null) 'dir': dir,
+    };
+
+    Uri? nextPage = Uri.https('api.scryfall.com', '/cards/search', queryParameters);
 
     while (nextPage != null && _underLimit(cards.length)) {
       final response = await _client.get(nextPage, headers: headers);
