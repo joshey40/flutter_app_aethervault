@@ -32,8 +32,7 @@
     "players": "Spieler",
     "startNewGame": "Start New Game",
     "startGame": "Start Game",
-    "resumeGame": "Resume Game"
-    ,
+    "resumeGame": "Resume Game",
     "playerSettingsTitle": "Settings: Player {index}",
     "partner": "Partner",
     "playerLabel": "Player {index}",
@@ -59,7 +58,24 @@
   "decks": {
     "title": "Decks",
     "subtitle": "Track decks, formats, and sideboard ideas.",
-    "createDeck": "Create deck"
+    "createDeck": "Create deck",
+    "deckName": "Deck name",
+    "format": "Format",
+    "cards": "cards",
+    "emptyListTitle": "No decks yet",
+    "emptyListBody": "Create your first deck, then add cards from Search.",
+    "emptyDeckTitle": "This deck is empty",
+    "emptyDeckBody": "Search for cards and add them to {name}.",
+    "builderHint": "Simple builder mode is active. Cards are stored with zone, tag, folder and category-ready fields, but this first version only edits mainboard quantities.",
+    "addToDeck": "Add to deck",
+    "createDeckFirst": "Create a deck first, then add cards from Search.",
+    "cardAdded": "Added {card} to {deck}.",
+    "increaseQuantity": "Increase quantity",
+    "decreaseQuantity": "Decrease quantity",
+    "removeCard": "Remove card",
+    "deleteDeck": "Delete deck",
+    "deleteDeckConfirm": "Delete {name}? This cannot be undone.",
+    "loadFailed": "Decks could not be loaded"
   },
   "search": {
     "placeholder": "e.g. t:creature c:r mv<=3",
@@ -200,8 +216,7 @@
     "invalidCredentials": "The email or password is incorrect.",
     "weakPassword": "The password is too weak.",
     "reauthRequired": "Please sign in again to continue."
-  }
-  ,
+  },
   "coin": {
     "heads": "Heads",
     "tails": "Tails"
