@@ -381,8 +381,10 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
     final theme = Theme.of(context);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.92;
     final faces = _selectedCard.displayFaces;
-    final selectedFace = faces[_faceIndex.clamp(0, faces.length - 1)];
-    final imageUrl = _bestImageUrl(_selectedCard, selectedFace);
+    final imageFaces = _imageFaces(_selectedCard);
+    final canFlipImage = imageFaces.length > 1;
+    final selectedImageFace = imageFaces.isEmpty ? null : imageFaces[_faceIndex.clamp(0, imageFaces.length - 1)];
+    final imageUrl = _bestImageUrl(_selectedCard, selectedImageFace);
 
     return SafeArea(
       child: ConstrainedBox(
@@ -416,14 +418,14 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
                                 ),
                         ),
                       ),
-                      if (faces.length > 1)
+                      if (canFlipImage)
                         Positioned(
                           right: 10,
                           top: 10,
                           child: FilledButton.tonalIcon(
-                            onPressed: () => setState(() => _faceIndex = (_faceIndex + 1) % faces.length),
+                            onPressed: () => setState(() => _faceIndex = (_faceIndex + 1) % imageFaces.length),
                             icon: const Icon(Icons.flip_rounded),
-                            label: Text('${_faceIndex + 1}/${faces.length}'),
+                            label: Text('${_faceIndex + 1}/${imageFaces.length}'),
                           ),
                         ),
                     ],
@@ -431,7 +433,7 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
                 ),
               ),
               const SizedBox(height: 18),
-              Text(
+              SelectableText(
                 _selectedCard.name,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
@@ -474,15 +476,16 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
                 ),
               ],
               const SizedBox(height: 18),
-              ...faces.asMap().entries.map(
-                    (entry) => _FaceDetailsCard(
-                      face: entry.value,
-                      symbols: _symbols,
-                      loadingSymbols: _loadingSymbols,
-                      isSelectedImageFace: entry.key == _faceIndex,
-                      onShowFace: faces.length > 1 ? () => setState(() => _faceIndex = entry.key) : null,
-                    ),
-                  ),
+              ...faces.asMap().entries.map((entry) {
+                final imageFaceIndex = imageFaces.indexOf(entry.value);
+                return _FaceDetailsCard(
+                  face: entry.value,
+                  symbols: _symbols,
+                  loadingSymbols: _loadingSymbols,
+                  isSelectedImageFace: canFlipImage && imageFaceIndex == _faceIndex,
+                  onShowFace: canFlipImage && imageFaceIndex != -1 ? () => setState(() => _faceIndex = imageFaceIndex) : null,
+                );
+              }),
               const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: null,
@@ -502,10 +505,16 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
     );
   }
 
-  String? _bestImageUrl(ScryfallCardPrint card, ScryfallCardFace face) {
-    if (face.imageNormal != null) return face.imageNormal;
+  List<ScryfallCardFace> _imageFaces(ScryfallCardPrint card) {
+    return card.faces
+        .where((face) => face.imageNormal != null || face.imageSmall != null)
+        .toList(growable: false);
+  }
+
+  String? _bestImageUrl(ScryfallCardPrint card, ScryfallCardFace? face) {
+    if (face?.imageNormal != null) return face!.imageNormal;
+    if (face?.imageSmall != null) return face!.imageSmall;
     if (card.displayImageNormals.isNotEmpty) return card.displayImageNormals.first;
-    if (face.imageSmall != null) return face.imageSmall;
     if (card.displayImageSmalls.isNotEmpty) return card.displayImageSmalls.first;
     return null;
   }
@@ -537,7 +546,7 @@ class _SelectDeckSheet extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
-          Text(card.name),
+          SelectableText(card.name),
           const SizedBox(height: 16),
           ...decks.map(
             (deck) => Card(
@@ -587,10 +596,13 @@ class _FaceDetailsCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(face.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                      SelectableText(
+                        face.name,
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+                      ),
                       if (face.typeLine.isNotEmpty) ...[
                         const SizedBox(height: 4),
-                        Text(face.typeLine, style: theme.textTheme.bodyMedium),
+                        SelectableText(face.typeLine, style: theme.textTheme.bodyMedium),
                       ],
                     ],
                   ),
@@ -681,7 +693,7 @@ class _ManaText extends StatelessWidget {
       spans.add(TextSpan(text: text.substring(cursor)));
     }
 
-    return Text.rich(
+    return SelectableText.rich(
       TextSpan(
         style: Theme.of(context).textTheme.bodyMedium,
         children: spans,
