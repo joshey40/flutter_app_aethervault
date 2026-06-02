@@ -31,8 +31,7 @@
     "players": "Spieler",
     "startNewGame": "Neues Spiel starten",
     "startGame": "Spiel starten",
-    "resumeGame": "Spiel fortsetzen"
-    ,
+    "resumeGame": "Spiel fortsetzen",
     "playerSettingsTitle": "Einstellungen: Spieler {index}",
     "partner": "Partner",
     "playerLabel": "Spieler {index}",
@@ -58,7 +57,24 @@
   "decks": {
     "title": "Decks",
     "subtitle": "Decks, Formate und Sideboard-Ideen tracken.",
-    "createDeck": "Deck erstellen"
+    "createDeck": "Deck erstellen",
+    "deckName": "Deckname",
+    "format": "Format",
+    "cards": "Karten",
+    "emptyListTitle": "Noch keine Decks",
+    "emptyListBody": "Erstelle dein erstes Deck und füge danach Karten über die Suche hinzu.",
+    "emptyDeckTitle": "Dieses Deck ist leer",
+    "emptyDeckBody": "Suche Karten und füge sie zu {name} hinzu.",
+    "builderHint": "Der einfache Builder-Modus ist aktiv. Karten werden bereits mit Feldern für Zonen, Tags, Ordner und Kategorien gespeichert; diese erste Version bearbeitet aber nur Mainboard-Mengen.",
+    "addToDeck": "Zu Deck hinzufügen",
+    "createDeckFirst": "Erstelle zuerst ein Deck, dann kannst du Karten aus der Suche hinzufügen.",
+    "cardAdded": "{card} wurde zu {deck} hinzugefügt.",
+    "increaseQuantity": "Anzahl erhöhen",
+    "decreaseQuantity": "Anzahl verringern",
+    "removeCard": "Karte entfernen",
+    "deleteDeck": "Deck löschen",
+    "deleteDeckConfirm": "{name} löschen? Das kann nicht rückgängig gemacht werden.",
+    "loadFailed": "Decks konnten nicht geladen werden"
   },
   "search": {
     "placeholder": "z.B. t:creature c:r mv<=3",
@@ -145,7 +161,7 @@
     "filterPriceUsd": "USD-Preis (usd:)",
     "filterPriceEur": "EUR-Preis (eur:)",
     "filterPriceTix": "TIX-Preis (tix:)",
-    "filterYear": "Jahr (year:)",
+    "filterYear": "Jahr (year:",
     "filterSortOrder": "Sortieren nach",
     "filterSortDir": "Richtung",
     "filterSortAsc": "Aufsteigend",
@@ -199,8 +215,7 @@
     "invalidCredentials": "E-Mail oder Passwort ist falsch.",
     "weakPassword": "Das Passwort ist zu schwach.",
     "reauthRequired": "Bitte melde dich erneut an, um fortzufahren."
-  }
-  ,
+  },
   "coin": {
     "heads": "Kopf",
     "tails": "Zahl"
