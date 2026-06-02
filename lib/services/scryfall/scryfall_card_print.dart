@@ -22,6 +22,7 @@ class ScryfallCardPrint {
     this.imageSmall,
     this.faceImageNormals = const <String>[],
     this.faceImageSmalls = const <String>[],
+    this.faces = const <ScryfallCardFace>[],
     this.usd,
     this.eur,
   });
@@ -48,6 +49,7 @@ class ScryfallCardPrint {
   final String? imageSmall;
   final List<String> faceImageNormals;
   final List<String> faceImageSmalls;
+  final List<ScryfallCardFace> faces;
   final double? usd;
   final double? eur;
 
@@ -58,6 +60,7 @@ class ScryfallCardPrint {
     final prices = json['prices'] is Map<String, dynamic>
         ? json['prices'] as Map<String, dynamic>
         : null;
+    final faces = _faces(json);
 
     return ScryfallCardPrint(
       id: json['id'] as String,
@@ -80,14 +83,17 @@ class ScryfallCardPrint {
       artist: json['artist'] as String?,
       imageNormal: imageUris?['normal'] as String?,
       imageSmall: imageUris?['small'] as String?,
-      faceImageNormals: _faceImageUris(json, 'normal'),
-      faceImageSmalls: _faceImageUris(json, 'small'),
+      faceImageNormals: faces.map((face) => face.imageNormal).whereType<String>().toList(growable: false),
+      faceImageSmalls: faces.map((face) => face.imageSmall).whereType<String>().toList(growable: false),
+      faces: faces,
       usd: _toDouble(prices?['usd']),
       eur: _toDouble(prices?['eur']),
     );
   }
 
   bool get hasMultipleFaceImages => faceImageNormals.length > 1 || faceImageSmalls.length > 1;
+
+  bool get hasFaces => faces.isNotEmpty;
 
   List<String> get displayImageNormals {
     if (imageNormal != null) return <String>[imageNormal!];
@@ -101,6 +107,20 @@ class ScryfallCardPrint {
     if (faceImageSmalls.isNotEmpty) return faceImageSmalls;
     if (faceImageNormals.isNotEmpty) return faceImageNormals;
     return const <String>[];
+  }
+
+  List<ScryfallCardFace> get displayFaces {
+    if (faces.isNotEmpty) return faces;
+    return <ScryfallCardFace>[
+      ScryfallCardFace(
+        name: name,
+        manaCost: manaCost,
+        typeLine: typeLine,
+        oracleText: oracleText,
+        imageNormal: imageNormal,
+        imageSmall: imageSmall,
+      ),
+    ];
   }
 
   static String _coalesceFaces(Map<String, dynamic> json, String key) {
@@ -122,16 +142,13 @@ class ScryfallCardPrint {
     return value.isEmpty ? null : value;
   }
 
-  static List<String> _faceImageUris(Map<String, dynamic> json, String size) {
+  static List<ScryfallCardFace> _faces(Map<String, dynamic> json) {
     final faces = json['card_faces'];
-    if (faces is! List) return const <String>[];
+    if (faces is! List) return const <ScryfallCardFace>[];
 
     return faces
         .whereType<Map<String, dynamic>>()
-        .map((face) => face['image_uris'])
-        .whereType<Map<String, dynamic>>()
-        .map((uris) => uris[size] as String? ?? '')
-        .where((uri) => uri.isNotEmpty)
+        .map(ScryfallCardFace.fromJson)
         .toList(growable: false);
   }
 
@@ -144,5 +161,38 @@ class ScryfallCardPrint {
     if (value is num) return value.toDouble();
     if (value is String && value.isNotEmpty) return double.tryParse(value);
     return null;
+  }
+}
+
+class ScryfallCardFace {
+  const ScryfallCardFace({
+    required this.name,
+    required this.typeLine,
+    required this.oracleText,
+    this.manaCost,
+    this.imageNormal,
+    this.imageSmall,
+  });
+
+  final String name;
+  final String? manaCost;
+  final String typeLine;
+  final String oracleText;
+  final String? imageNormal;
+  final String? imageSmall;
+
+  factory ScryfallCardFace.fromJson(Map<String, dynamic> json) {
+    final imageUris = json['image_uris'] is Map<String, dynamic>
+        ? json['image_uris'] as Map<String, dynamic>
+        : null;
+
+    return ScryfallCardFace(
+      name: json['name'] as String? ?? '',
+      manaCost: json['mana_cost'] as String?,
+      typeLine: json['type_line'] as String? ?? '',
+      oracleText: json['oracle_text'] as String? ?? '',
+      imageNormal: imageUris?['normal'] as String?,
+      imageSmall: imageUris?['small'] as String?,
+    );
   }
 }
