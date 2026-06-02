@@ -150,6 +150,13 @@
     "cardDetailLang": "Sprache",
     "cardDetailLegalities": "Legalität",
     "cardDetailPrices": "Preise",
+    "printing": "Druck",
+    "printingsFailed": "Drucke konnten nicht geladen werden. Es wird nur die ausgewählte Karte angezeigt.",
+    "cardText": "Kartentext",
+    "collectorNumber": "Sammlernr.",
+    "rarity": "Seltenheit",
+    "artist": "Künstler",
+    "released": "Erschienen",
     "modeAllCardsReady": "Modus Alle Drucke (all_cards bereit)",
     "modeAllCardsOnDemand": "Modus Alle Drucke (all_cards bei Bedarf)",
     "modeDefaultCards": "Standardmodus (default_cards)",
@@ -184,7 +191,8 @@
     "filterInstants": "Spontanzauber",
     "filterRares": "Rare Karten",
     "placeholderTitle": "Hier kommen die Quellen der Kollektion hin",
-    "placeholderBody": "Verbinde diese Seite später mit deiner Kartendatenbank, einem Scanner oder einem Marktplatz-Sync."
+    "placeholderBody": "Verbinde diese Seite später mit deiner Kartendatenbank, einem Scanner oder einem Marktplatz-Sync.",
+    "addToCollection": "Zur Kollektion hinzufügen"
   },
   "settings": {
     "title": "Einstellungen",
