@@ -100,17 +100,17 @@ class VaultDeck {
     );
 
     if (index == -1) {
-      updatedEntries.add(newEntry.copyWith(quantity: delta.clamp(1, 999)));
+      updatedEntries.add(newEntry.copyWith(quantity: delta.clamp(1, 999).toInt()));
     } else {
       final existing = updatedEntries[index];
-      updatedEntries[index] = existing.copyWith(quantity: (existing.quantity + delta).clamp(1, 999));
+      updatedEntries[index] = existing.copyWith(quantity: (existing.quantity + delta).clamp(1, 999).toInt());
     }
 
     return copyWith(entries: updatedEntries, updatedAt: DateTime.now());
   }
 
   VaultDeck updateEntryQuantity(String entryId, int quantity) {
-    final normalizedQuantity = quantity.clamp(0, 999);
+    final normalizedQuantity = quantity.clamp(0, 999).toInt();
     final updatedEntries = entries
         .map((entry) => entry.id == entryId ? entry.copyWith(quantity: normalizedQuantity) : entry)
         .where((entry) => entry.quantity > 0)
