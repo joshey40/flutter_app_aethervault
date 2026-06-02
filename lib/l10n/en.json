@@ -151,6 +151,13 @@
     "cardDetailLang": "Language",
     "cardDetailLegalities": "Legalities",
     "cardDetailPrices": "Prices",
+    "printing": "Printing",
+    "printingsFailed": "Could not load printings. Showing the selected card only.",
+    "cardText": "Card text",
+    "collectorNumber": "Collector no.",
+    "rarity": "Rarity",
+    "artist": "Artist",
+    "released": "Released",
     "modeAllCardsReady": "All printings mode (all_cards ready)",
     "modeAllCardsOnDemand": "All printings mode (all_cards on demand)",
     "modeDefaultCards": "Default mode (default_cards)",
@@ -185,7 +192,8 @@
     "filterInstants": "Instants",
     "filterRares": "Rares",
     "placeholderTitle": "Collection sources go here",
-    "placeholderBody": "Wire this page to your card database, scanner, or marketplace sync when you are ready."
+    "placeholderBody": "Wire this page to your card database, scanner, or marketplace sync when you are ready.",
+    "addToCollection": "Add to collection"
   },
   "settings": {
     "title": "Settings",
