@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../models/vault_deck.dart';
+import '../../../services/deck_storage.dart';
 import '../../../services/localization_service.dart';
 import '../../../services/scryfall/bulk_data_type.dart';
 import '../../../services/scryfall/download_service.dart';
@@ -9,6 +12,7 @@ import '../../../services/scryfall/scryfall_remote_search_data_source.dart';
 import '../../../services/scryfall/scryfall_search_query.dart';
 import '../../../services/scryfall/scryfall_search_repository.dart';
 import '../../../services/scryfall/scryfall_sqlite_search_index.dart';
+import '../../../services/scryfall/scryfall_symbology_service.dart';
 import 'search_sort_mode.dart';
 import 'widgets/compact_search_bar.dart';
 import 'widgets/search_card_image_tile.dart';
@@ -28,6 +32,8 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   late final HybridScryfallSearchRepository _searchRepository;
   late final ScryfallRemoteSearchDataSource _remoteDataSource;
+  late final ScryfallSymbologyService _symbologyService;
+  final DeckStorage _deckStorage = DeckStorage();
 
   final TextEditingController _searchController = TextEditingController();
   bool _checkingIndexStatus = true;
@@ -43,6 +49,7 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _remoteDataSource = ScryfallRemoteSearchDataSource();
+    _symbologyService = ScryfallSymbologyService();
     _searchRepository = HybridScryfallSearchRepository(
       localDataSource: ScryfallIndexedSearchDataSource(),
       remoteDataSource: _remoteDataSource,
@@ -55,6 +62,7 @@ class _SearchPageState extends State<SearchPage> {
   void dispose() {
     _searchController.dispose();
     _remoteDataSource.dispose();
+    _symbologyService.dispose();
     super.dispose();
   }
 
@@ -140,6 +148,45 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  Future<void> _addCardToDeck(ScryfallCardPrint card) async {
+    try {
+      final decks = await _deckStorage.loadDecks();
+      if (!mounted) return;
+
+      if (decks.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(appLocalizations.translate('decks.createDeckFirst'))),
+        );
+        return;
+      }
+
+      final selectedDeck = await showModalBottomSheet<VaultDeck>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => _SelectDeckSheet(decks: decks, card: card),
+      );
+      if (selectedDeck == null) return;
+
+      final updatedDeck = selectedDeck.addOrIncrementCard(DeckEntry.fromScryfallCard(card));
+      await _deckStorage.upsertDeck(updatedDeck);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            appLocalizations
+                .translate('decks.cardAdded')
+                .replaceAll('{card}', card.name)
+                .replaceAll('{deck}', updatedDeck.name),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
   void _showCardPreview(ScryfallCardPrint card) {
     showModalBottomSheet<void>(
       context: context,
@@ -148,6 +195,8 @@ class _SearchPageState extends State<SearchPage> {
       builder: (context) => _CardDetailSheet(
         initialCard: card,
         loadPrintings: _remoteDataSource.searchPrintings,
+        loadSymbols: _symbologyService.loadSymbols,
+        onAddToDeck: _addCardToDeck,
       ),
     );
   }
@@ -244,10 +293,14 @@ class _CardDetailSheet extends StatefulWidget {
   const _CardDetailSheet({
     required this.initialCard,
     required this.loadPrintings,
+    required this.loadSymbols,
+    required this.onAddToDeck,
   });
 
   final ScryfallCardPrint initialCard;
   final Future<List<ScryfallCardPrint>> Function(ScryfallCardPrint card) loadPrintings;
+  final Future<Map<String, ScryfallSymbol>> Function() loadSymbols;
+  final ValueChanged<ScryfallCardPrint> onAddToDeck;
 
   @override
   State<_CardDetailSheet> createState() => _CardDetailSheetState();
@@ -256,14 +309,32 @@ class _CardDetailSheet extends StatefulWidget {
 class _CardDetailSheetState extends State<_CardDetailSheet> {
   late ScryfallCardPrint _selectedCard;
   List<ScryfallCardPrint> _printings = const <ScryfallCardPrint>[];
+  Map<String, ScryfallSymbol> _symbols = const <String, ScryfallSymbol>{};
   bool _loadingPrintings = true;
+  bool _loadingSymbols = true;
   String? _printingError;
+  int _faceIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _selectedCard = widget.initialCard;
     _loadPrintings();
+    _loadSymbols();
+  }
+
+  Future<void> _loadSymbols() async {
+    try {
+      final symbols = await widget.loadSymbols();
+      if (!mounted) return;
+      setState(() {
+        _symbols = symbols;
+        _loadingSymbols = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingSymbols = false);
+    }
   }
 
   Future<void> _loadPrintings() async {
@@ -281,6 +352,7 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
           (card) => card.id == widget.initialCard.id,
           orElse: () => _printings.first,
         );
+        _faceIndex = 0;
         _loadingPrintings = false;
       });
     } catch (error) {
@@ -289,6 +361,7 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
         _printings = <ScryfallCardPrint>[widget.initialCard];
         _selectedCard = widget.initialCard;
         _printingError = error.toString();
+        _faceIndex = 0;
         _loadingPrintings = false;
       });
     }
@@ -307,7 +380,9 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final maxHeight = MediaQuery.sizeOf(context).height * 0.92;
-    final imageUrl = _bestImageUrl(_selectedCard);
+    final faces = _selectedCard.displayFaces;
+    final selectedFace = faces[_faceIndex.clamp(0, faces.length - 1)];
+    final imageUrl = _bestImageUrl(_selectedCard, selectedFace);
 
     return SafeArea(
       child: ConstrainedBox(
@@ -319,25 +394,39 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
             children: [
               Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 300),
-                  child: AspectRatio(
-                    aspectRatio: 0.714,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: imageUrl == null
-                          ? ColoredBox(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.style_outlined, size: 52),
-                            )
-                          : Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => ColoredBox(
-                                color: theme.colorScheme.surfaceContainerHighest,
-                                child: const Icon(Icons.style_outlined, size: 52),
-                              ),
-                            ),
-                    ),
+                  constraints: const BoxConstraints(maxWidth: 310),
+                  child: Stack(
+                    children: [
+                      AspectRatio(
+                        aspectRatio: 0.714,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: imageUrl == null
+                              ? ColoredBox(
+                                  color: theme.colorScheme.surfaceContainerHighest,
+                                  child: const Icon(Icons.style_outlined, size: 52),
+                                )
+                              : Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => ColoredBox(
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                    child: const Icon(Icons.style_outlined, size: 52),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      if (faces.length > 1)
+                        Positioned(
+                          right: 10,
+                          top: 10,
+                          child: FilledButton.tonalIcon(
+                            onPressed: () => setState(() => _faceIndex = (_faceIndex + 1) % faces.length),
+                            icon: const Icon(Icons.flip_rounded),
+                            label: Text('${_faceIndex + 1}/${faces.length}'),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -347,16 +436,6 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
               ),
-              const SizedBox(height: 8),
-              Center(child: _ManaCostRow(manaCost: _selectedCard.manaCost)),
-              if (_selectedCard.typeLine.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  _selectedCard.typeLine,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium,
-                ),
-              ],
               const SizedBox(height: 18),
               if (_loadingPrintings)
                 const Center(child: CircularProgressIndicator())
@@ -381,7 +460,10 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
                   onChanged: (id) {
                     if (id == null) return;
                     final next = _printings.firstWhere((printing) => printing.id == id);
-                    setState(() => _selectedCard = next);
+                    setState(() {
+                      _selectedCard = next;
+                      _faceIndex = 0;
+                    });
                   },
                 ),
               if (_printingError != null) ...[
@@ -392,26 +474,26 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
                 ),
               ],
               const SizedBox(height: 18),
-              _InfoGrid(card: _selectedCard),
-              if (_selectedCard.oracleText.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                Text(
-                  appLocalizations.translate('search.cardText'),
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: _ManaText(text: _selectedCard.oracleText),
+              ...faces.asMap().entries.map(
+                    (entry) => _FaceDetailsCard(
+                      face: entry.value,
+                      symbols: _symbols,
+                      loadingSymbols: _loadingSymbols,
+                      isSelectedImageFace: entry.key == _faceIndex,
+                      onShowFace: faces.length > 1 ? () => setState(() => _faceIndex = entry.key) : null,
+                    ),
                   ),
-                ),
-              ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 12),
               FilledButton.icon(
                 onPressed: null,
                 icon: const Icon(Icons.inventory_2_outlined),
                 label: Text(appLocalizations.translate('collection.addToCollection')),
+              ),
+              const SizedBox(height: 8),
+              FilledButton.tonalIcon(
+                onPressed: () => widget.onAddToDeck(_selectedCard),
+                icon: const Icon(Icons.playlist_add),
+                label: Text(appLocalizations.translate('decks.addToDeck')),
               ),
             ],
           ),
@@ -420,8 +502,10 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
     );
   }
 
-  String? _bestImageUrl(ScryfallCardPrint card) {
+  String? _bestImageUrl(ScryfallCardPrint card, ScryfallCardFace face) {
+    if (face.imageNormal != null) return face.imageNormal;
     if (card.displayImageNormals.isNotEmpty) return card.displayImageNormals.first;
+    if (face.imageSmall != null) return face.imageSmall;
     if (card.displayImageSmalls.isNotEmpty) return card.displayImageSmalls.first;
     return null;
   }
@@ -435,78 +519,140 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
   }
 }
 
-class _InfoGrid extends StatelessWidget {
-  const _InfoGrid({required this.card});
+class _SelectDeckSheet extends StatelessWidget {
+  const _SelectDeckSheet({required this.decks, required this.card});
 
+  final List<VaultDeck> decks;
   final ScryfallCardPrint card;
 
   @override
   Widget build(BuildContext context) {
-    final values = <({String label, String value})>[
-      if (card.setCode.isNotEmpty) (label: appLocalizations.translate('search.cardDetailSet'), value: card.setCode.toUpperCase()),
-      if (card.collectorNumber.isNotEmpty) (label: appLocalizations.translate('search.collectorNumber'), value: card.collectorNumber),
-      if (card.lang.isNotEmpty) (label: appLocalizations.translate('search.cardDetailLang'), value: card.lang.toUpperCase()),
-      if (card.rarity.isNotEmpty) (label: appLocalizations.translate('search.rarity'), value: card.rarity),
-      if (card.artist != null && card.artist!.isNotEmpty) (label: appLocalizations.translate('search.artist'), value: card.artist!),
-      if (card.releasedAt != null) (label: appLocalizations.translate('search.released'), value: _formatDate(card.releasedAt!)),
-    ];
+    return SafeArea(
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+        children: [
+          Text(
+            appLocalizations.translate('decks.addToDeck'),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 4),
+          Text(card.name),
+          const SizedBox(height: 16),
+          ...decks.map(
+            (deck) => Card(
+              child: ListTile(
+                leading: const Icon(Icons.layers),
+                title: Text(deck.name),
+                subtitle: Text('${deck.format} · ${deck.totalCards} ${appLocalizations.translate('decks.cards')}'),
+                onTap: () => Navigator.of(context).pop(deck),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: values
-          .map(
-            (item) => SizedBox(
-              width: 150,
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
+class _FaceDetailsCard extends StatelessWidget {
+  const _FaceDetailsCard({
+    required this.face,
+    required this.symbols,
+    required this.loadingSymbols,
+    required this.isSelectedImageFace,
+    this.onShowFace,
+  });
+
+  final ScryfallCardFace face;
+  final Map<String, ScryfallSymbol> symbols;
+  final bool loadingSymbols;
+  final bool isSelectedImageFace;
+  final VoidCallback? onShowFace;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.label, style: Theme.of(context).textTheme.labelSmall),
-                      const SizedBox(height: 4),
-                      Text(item.value, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(face.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
+                      if (face.typeLine.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(face.typeLine, style: theme.textTheme.bodyMedium),
+                      ],
                     ],
                   ),
                 ),
-              ),
+                if (onShowFace != null)
+                  IconButton(
+                    tooltip: appLocalizations.translate('search.showFaceImage'),
+                    onPressed: onShowFace,
+                    icon: Icon(isSelectedImageFace ? Icons.visibility : Icons.visibility_outlined),
+                  ),
+              ],
             ),
-          )
-          .toList(growable: false),
+            const SizedBox(height: 10),
+            _ManaCostRow(manaCost: face.manaCost, symbols: symbols, loadingSymbols: loadingSymbols),
+            if (face.oracleText.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _ManaText(text: face.oracleText, symbols: symbols, loadingSymbols: loadingSymbols),
+            ],
+          ],
+        ),
+      ),
     );
-  }
-
-  static String _formatDate(DateTime date) {
-    final month = date.month.toString().padLeft(2, '0');
-    final day = date.day.toString().padLeft(2, '0');
-    return '${date.year}-$month-$day';
   }
 }
 
 class _ManaCostRow extends StatelessWidget {
-  const _ManaCostRow({required this.manaCost});
+  const _ManaCostRow({
+    required this.manaCost,
+    required this.symbols,
+    required this.loadingSymbols,
+  });
 
   final String? manaCost;
+  final Map<String, ScryfallSymbol> symbols;
+  final bool loadingSymbols;
 
   @override
   Widget build(BuildContext context) {
-    final symbols = _parseManaSymbols(manaCost ?? '');
-    if (symbols.isEmpty) return const SizedBox.shrink();
+    final parsedSymbols = _parseManaSymbols(manaCost ?? '');
+    if (parsedSymbols.isEmpty) return const SizedBox.shrink();
 
     return Wrap(
-      alignment: WrapAlignment.center,
+      alignment: WrapAlignment.start,
       spacing: 4,
       runSpacing: 4,
-      children: symbols.map((symbol) => _ManaSymbol(symbol: symbol)).toList(growable: false),
+      children: parsedSymbols
+          .map((symbol) => _ScryfallSymbolIcon(symbol: symbol, symbols: symbols, loadingSymbols: loadingSymbols))
+          .toList(growable: false),
     );
   }
 }
 
 class _ManaText extends StatelessWidget {
-  const _ManaText({required this.text});
+  const _ManaText({
+    required this.text,
+    required this.symbols,
+    required this.loadingSymbols,
+  });
 
   final String text;
+  final Map<String, ScryfallSymbol> symbols;
+  final bool loadingSymbols;
 
   @override
   Widget build(BuildContext context) {
@@ -518,12 +664,13 @@ class _ManaText extends StatelessWidget {
       if (match.start > cursor) {
         spans.add(TextSpan(text: text.substring(cursor, match.start)));
       }
+      final fullSymbol = match.group(0) ?? '';
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.middle,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 1),
-            child: _ManaSymbol(symbol: match.group(1) ?? ''),
+            child: _ScryfallSymbolIcon(symbol: fullSymbol, symbols: symbols, loadingSymbols: loadingSymbols, size: 18),
           ),
         ),
       );
@@ -543,89 +690,68 @@ class _ManaText extends StatelessWidget {
   }
 }
 
-class _ManaSymbol extends StatelessWidget {
-  const _ManaSymbol({required this.symbol});
+class _ScryfallSymbolIcon extends StatelessWidget {
+  const _ScryfallSymbolIcon({
+    required this.symbol,
+    required this.symbols,
+    required this.loadingSymbols,
+    this.size = 24,
+  });
 
   final String symbol;
+  final Map<String, ScryfallSymbol> symbols;
+  final bool loadingSymbols;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    final normalized = symbol.toUpperCase();
-    final colors = _colorsForSymbol(normalized);
-    final background = colors.length == 1 ? colors.first : null;
-    final foreground = _foregroundForSymbol(normalized);
+    final normalizedSymbol = symbol.startsWith('{') ? symbol : '{$symbol}';
+    final scryfallSymbol = symbols[normalizedSymbol];
+    final svgUri = scryfallSymbol?.svgUri;
 
+    if (!loadingSymbols && svgUri != null) {
+      return Tooltip(
+        message: scryfallSymbol?.english ?? normalizedSymbol,
+        child: SvgPicture.network(
+          svgUri.toString(),
+          width: size,
+          height: size,
+          placeholderBuilder: (_) => _FallbackManaSymbol(symbol: normalizedSymbol, size: size),
+        ),
+      );
+    }
+
+    return _FallbackManaSymbol(symbol: normalizedSymbol, size: size);
+  }
+}
+
+class _FallbackManaSymbol extends StatelessWidget {
+  const _FallbackManaSymbol({required this.symbol, required this.size});
+
+  final String symbol;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = symbol.replaceAll('{', '').replaceAll('}', '').replaceAll('/', '');
     return Container(
-      width: 24,
-      height: 24,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: background,
-        gradient: colors.length > 1
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: colors,
-              )
-            : null,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         border: Border.all(color: Colors.black.withOpacity(0.22)),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 2,
-            color: Colors.black.withOpacity(0.12),
-            offset: const Offset(0, 1),
-          ),
-        ],
       ),
       child: Text(
-        _symbolLabel(normalized),
-        style: TextStyle(
-          color: foreground,
-          fontSize: normalized.length > 1 ? 9 : 12,
-          fontWeight: FontWeight.w900,
-        ),
+        label,
+        style: TextStyle(fontSize: size <= 18 ? 8 : 10, fontWeight: FontWeight.w900),
       ),
     );
-  }
-
-  static String _symbolLabel(String symbol) {
-    return symbol.replaceAll('/', '');
-  }
-
-  static Color _foregroundForSymbol(String symbol) {
-    if (symbol.contains('B') || symbol.contains('U') || symbol.contains('R')) return Colors.white;
-    return Colors.black87;
-  }
-
-  static List<Color> _colorsForSymbol(String symbol) {
-    final parts = symbol.split('/');
-    final colors = parts.map(_singleSymbolColor).whereType<Color>().toList(growable: false);
-    if (colors.isNotEmpty) return colors;
-    return <Color>[_singleSymbolColor(symbol) ?? const Color(0xFFE0E0E0)];
-  }
-
-  static Color? _singleSymbolColor(String symbol) {
-    switch (symbol) {
-      case 'W':
-        return const Color(0xFFF5E7B2);
-      case 'U':
-        return const Color(0xFF4A90C2);
-      case 'B':
-        return const Color(0xFF2E2A28);
-      case 'R':
-        return const Color(0xFFD4513C);
-      case 'G':
-        return const Color(0xFF4F8F54);
-      case 'C':
-        return const Color(0xFFC9C4B8);
-      default:
-        return const Color(0xFFD7D2C3);
-    }
   }
 }
 
 List<String> _parseManaSymbols(String manaCost) {
-  final regex = RegExp(r'\{([^}]+)\}');
-  return regex.allMatches(manaCost).map((match) => match.group(1) ?? '').where((symbol) => symbol.isNotEmpty).toList(growable: false);
+  final regex = RegExp(r'\{[^}]+\}');
+  return regex.allMatches(manaCost).map((match) => match.group(0) ?? '').where((symbol) => symbol.isNotEmpty).toList(growable: false);
 }
