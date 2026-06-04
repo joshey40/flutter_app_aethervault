@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/collection_entry.dart';
 import '../../services/collection_storage.dart';
 import '../../services/localization_service.dart';
+import '../../services/scryfall/scryfall_card_print.dart';
 
 class CollectionPage extends StatefulWidget {
   const CollectionPage({super.key});
@@ -256,7 +257,7 @@ class CollectionEntryFormSheet extends StatefulWidget {
     this.existingEntry,
   }) : assert(card != null || existingEntry != null);
 
-  final dynamic card;
+  final ScryfallCardPrint? card;
   final CollectionEntry? existingEntry;
 
   @override
@@ -314,6 +315,7 @@ class _CollectionEntryFormSheetState extends State<CollectionEntryFormSheet> {
     }
 
     final card = widget.card;
+    if (card == null) return;
     Navigator.of(context).pop(
       CollectionEntry.fromScryfallCard(
         card,
@@ -332,7 +334,7 @@ class _CollectionEntryFormSheetState extends State<CollectionEntryFormSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final entry = widget.existingEntry;
-    final cardName = entry?.cardName ?? widget.card.name as String;
+    final cardName = entry?.cardName ?? widget.card?.name ?? '';
 
     return SafeArea(
       child: SingleChildScrollView(
