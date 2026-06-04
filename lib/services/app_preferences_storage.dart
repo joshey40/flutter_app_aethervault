@@ -6,6 +6,7 @@ class AppPreferencesStorage {
   static const String _localeKey = 'settings.locale';
   static const String _lifecounterKey = 'lifecounter.current_game';
   static const String _decksKey = 'decks.local_json';
+  static const String _collectionKey = 'collection.local_json';
 
   Future<ThemeMode> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -74,5 +75,21 @@ class AppPreferencesStorage {
   Future<void> clearDecksJson() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_decksKey);
+  }
+
+  // Collection persistence (JSON encoded list). Local-first, same as decks.
+  Future<void> saveCollectionJson(String json) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_collectionKey, json);
+  }
+
+  Future<String?> loadCollectionJson() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_collectionKey);
+  }
+
+  Future<void> clearCollectionJson() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_collectionKey);
   }
 }
