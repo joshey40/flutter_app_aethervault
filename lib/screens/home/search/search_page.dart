@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../../../models/collection_entry.dart';
 import '../../../models/vault_deck.dart';
+import '../../../services/collection_storage.dart';
 import '../../../services/deck_storage.dart';
 import '../../../services/localization_service.dart';
 import '../../../services/scryfall/bulk_data_type.dart';
@@ -13,6 +15,7 @@ import '../../../services/scryfall/scryfall_search_query.dart';
 import '../../../services/scryfall/scryfall_search_repository.dart';
 import '../../../services/scryfall/scryfall_sqlite_search_index.dart';
 import '../../../services/scryfall/scryfall_symbology_service.dart';
+import '../collection_page.dart';
 import 'search_sort_mode.dart';
 import 'widgets/compact_search_bar.dart';
 import 'widgets/search_card_image_tile.dart';
@@ -34,6 +37,7 @@ class _SearchPageState extends State<SearchPage> {
   late final ScryfallRemoteSearchDataSource _remoteDataSource;
   late final ScryfallSymbologyService _symbologyService;
   final DeckStorage _deckStorage = DeckStorage();
+  final CollectionStorage _collectionStorage = CollectionStorage();
 
   final TextEditingController _searchController = TextEditingController();
   bool _checkingIndexStatus = true;
@@ -187,6 +191,34 @@ class _SearchPageState extends State<SearchPage> {
     }
   }
 
+  Future<void> _addCardToCollection(ScryfallCardPrint card) async {
+    try {
+      final entry = await showModalBottomSheet<CollectionEntry>(
+        context: context,
+        showDragHandle: true,
+        isScrollControlled: true,
+        builder: (context) => CollectionEntryFormSheet(card: card),
+      );
+      if (entry == null) return;
+
+      final savedEntry = await _collectionStorage.addEntry(entry);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            appLocalizations
+                .translate('collection.cardAdded')
+                .replaceAll('{card}', savedEntry.cardName)
+                .replaceAll('{quantity}', savedEntry.quantity.toString()),
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
   void _showCardPreview(ScryfallCardPrint card) {
     showModalBottomSheet<void>(
       context: context,
@@ -197,6 +229,7 @@ class _SearchPageState extends State<SearchPage> {
         loadPrintings: _remoteDataSource.searchPrintings,
         loadSymbols: _symbologyService.loadSymbols,
         onAddToDeck: _addCardToDeck,
+        onAddToCollection: _addCardToCollection,
       ),
     );
   }
@@ -295,12 +328,14 @@ class _CardDetailSheet extends StatefulWidget {
     required this.loadPrintings,
     required this.loadSymbols,
     required this.onAddToDeck,
+    required this.onAddToCollection,
   });
 
   final ScryfallCardPrint initialCard;
   final Future<List<ScryfallCardPrint>> Function(ScryfallCardPrint card) loadPrintings;
   final Future<Map<String, ScryfallSymbol>> Function() loadSymbols;
   final ValueChanged<ScryfallCardPrint> onAddToDeck;
+  final ValueChanged<ScryfallCardPrint> onAddToCollection;
 
   @override
   State<_CardDetailSheet> createState() => _CardDetailSheetState();
@@ -488,7 +523,7 @@ class _CardDetailSheetState extends State<_CardDetailSheet> {
               }),
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: null,
+                onPressed: () => widget.onAddToCollection(_selectedCard),
                 icon: const Icon(Icons.inventory_2_outlined),
                 label: Text(appLocalizations.translate('collection.addToCollection')),
               ),
