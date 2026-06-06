@@ -210,7 +210,13 @@
     "loadFailed": "Collection could not be loaded",
     "deleteEntry": "Delete entry",
     "deleteEntryConfirm": "Delete {name} from your collection? This cannot be undone.",
-    "cardAdded": "Saved {quantity}× {card} to your collection."
+    "cardAdded": "Saved {quantity}× {card} to your collection.",
+    "searchLabel": "Search collection",
+    "searchHint": "Name, set, language, finish, note...",
+    "clearSearch": "Clear search",
+    "searchResults": "{entries} matching entries / {cards} cards",
+    "noSearchResultsTitle": "No matching cards",
+    "noSearchResultsBody": "No collection entries match \"{query}\"."
   },
   "settings": {
     "title": "Settings",
