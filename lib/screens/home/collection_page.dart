@@ -4,9 +4,8 @@ import '../../models/collection_entry.dart';
 import '../../services/collection_storage.dart';
 import '../../services/localization_service.dart';
 import '../../services/scryfall/bulk_data_type.dart';
+import '../../services/scryfall/collection_scryfall_search.dart';
 import '../../services/scryfall/scryfall_card_print.dart';
-import '../../services/scryfall/scryfall_indexed_search_data_source.dart';
-import '../../services/scryfall/scryfall_search_repository.dart';
 
 class CollectionPage extends StatefulWidget {
   const CollectionPage({super.key});
@@ -17,7 +16,7 @@ class CollectionPage extends StatefulWidget {
 
 class _CollectionPageState extends State<CollectionPage> {
   final CollectionStorage _storage = CollectionStorage();
-  final ScryfallIndexedSearchDataSource _scryfallSearchDataSource = ScryfallIndexedSearchDataSource();
+  final CollectionScryfallSearch _collectionSearch = CollectionScryfallSearch();
   final TextEditingController _searchController = TextEditingController();
 
   bool _loading = true;
@@ -91,20 +90,20 @@ class _CollectionPageState extends State<CollectionPage> {
   }
 
   Future<Set<String>> _searchScryfallIds(String query) async {
+    final ownedIds = _entries.map((entry) => entry.scryfallId).where((id) => id.isNotEmpty).toSet();
+
     try {
-      final cards = await _scryfallSearchDataSource.searchCards(
+      return await _collectionSearch.searchOwnedIds(
         rawQuery: query,
+        ownedScryfallIds: ownedIds,
         type: ScryfallBulkDataType.allCards,
-        sortMode: ScryfallSearchSortMode.nameAsc,
       );
-      return cards.map((card) => card.id).toSet();
     } catch (_) {
-      final cards = await _scryfallSearchDataSource.searchCards(
+      return _collectionSearch.searchOwnedIds(
         rawQuery: query,
+        ownedScryfallIds: ownedIds,
         type: ScryfallBulkDataType.defaultCards,
-        sortMode: ScryfallSearchSortMode.nameAsc,
       );
-      return cards.map((card) => card.id).toSet();
     }
   }
 
