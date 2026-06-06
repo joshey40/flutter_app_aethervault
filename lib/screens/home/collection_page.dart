@@ -14,6 +14,7 @@ class CollectionPage extends StatefulWidget {
 
 class _CollectionPageState extends State<CollectionPage> {
   final CollectionStorage _storage = CollectionStorage();
+  final TextEditingController _searchController = TextEditingController();
   bool _loading = true;
   String? _error;
   List<CollectionEntry> _entries = const <CollectionEntry>[];
@@ -21,7 +22,35 @@ class _CollectionPageState extends State<CollectionPage> {
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() => setState(() {}));
     _loadEntries();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<CollectionEntry> get _filteredEntries {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) return _entries;
+
+    return _entries.where((entry) {
+      final haystack = [
+        entry.cardName,
+        entry.setCode,
+        entry.collectorNumber,
+        entry.language,
+        entry.condition.userFacingName,
+        entry.finish.userFacingName,
+        if (entry.isSigned) appLocalizations.translate('collection.signed'),
+        if (entry.isAltered) appLocalizations.translate('collection.altered'),
+        if (entry.isProxy) appLocalizations.translate('collection.proxy'),
+        entry.note ?? '',
+      ].join(' ').toLowerCase();
+      return haystack.contains(query);
+    }).toList(growable: false);
   }
 
   Future<void> _loadEntries() async {
@@ -80,7 +109,11 @@ class _CollectionPageState extends State<CollectionPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final filteredEntries = _filteredEntries;
     final totalCards = _entries.fold<int>(0, (sum, entry) => sum + entry.quantity);
+    final filteredTotalCards = filteredEntries.fold<int>(0, (sum, entry) => sum + entry.quantity);
+    final query = _searchController.text.trim();
+    final isFiltering = query.isNotEmpty;
 
     return SafeArea(
       child: RefreshIndicator(
@@ -92,12 +125,38 @@ class _CollectionPageState extends State<CollectionPage> {
             const SizedBox(height: 8),
             Text(appLocalizations.translate('collection.subtitle')),
             const SizedBox(height: 14),
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: appLocalizations.translate('collection.searchLabel'),
+                hintText: appLocalizations.translate('collection.searchHint'),
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: isFiltering
+                    ? IconButton(
+                        tooltip: appLocalizations.translate('collection.clearSearch'),
+                        icon: const Icon(Icons.clear),
+                        onPressed: _searchController.clear,
+                      )
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 Chip(label: Text('${_entries.length} ${appLocalizations.translate('collection.entries')}')),
                 Chip(label: Text('$totalCards ${appLocalizations.translate('collection.totalCards')}')),
+                if (isFiltering)
+                  Chip(
+                    label: Text(
+                      appLocalizations
+                          .translate('collection.searchResults')
+                          .replaceAll('{entries}', filteredEntries.length.toString())
+                          .replaceAll('{cards}', filteredTotalCards.toString()),
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 18),
@@ -138,8 +197,24 @@ class _CollectionPageState extends State<CollectionPage> {
                   ),
                 ),
               )
+            else if (filteredEntries.isEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.search_off, size: 40, color: theme.colorScheme.primary),
+                      const SizedBox(height: 12),
+                      Text(appLocalizations.translate('collection.noSearchResultsTitle'), style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 8),
+                      Text(appLocalizations.translate('collection.noSearchResultsBody').replaceAll('{query}', query)),
+                    ],
+                  ),
+                ),
+              )
             else
-              ..._entries.map(
+              ...filteredEntries.map(
                 (entry) => _CollectionEntryCard(
                   entry: entry,
                   onTap: () => _editEntry(entry),
