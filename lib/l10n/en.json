@@ -212,11 +212,12 @@
     "deleteEntryConfirm": "Delete {name} from your collection? This cannot be undone.",
     "cardAdded": "Saved {quantity}× {card} to your collection.",
     "searchLabel": "Search collection",
-    "searchHint": "Name, set, language, finish, note...",
+    "searchHint": "Scryfall syntax, e.g. t:creature c:r mv<=3",
     "clearSearch": "Clear search",
     "searchResults": "{entries} matching entries / {cards} cards",
     "noSearchResultsTitle": "No matching cards",
-    "noSearchResultsBody": "No collection entries match \"{query}\"."
+    "noSearchResultsBody": "No collection entries match \"{query}\".",
+    "searchFallback": "Scryfall search is unavailable for this query. Using simple collection text search."
   },
   "settings": {
     "title": "Settings",
