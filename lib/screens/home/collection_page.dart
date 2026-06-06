@@ -340,7 +340,7 @@ class _CollectionHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
-            appLocalizations.translate('collection.totalCardsShort').replaceAll('{count}', totalCards.toString()),
+            '$totalCards ${appLocalizations.translate('collection.totalCards')}',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.onPrimaryContainer,
               fontWeight: FontWeight.w900,
@@ -400,7 +400,7 @@ class _CollectionSearchCard extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: searching ? null : onSearch,
                   icon: const Icon(Icons.manage_search),
-                  label: Text(appLocalizations.translate('collection.searchAction')),
+                  label: Text(appLocalizations.translate('nav.search')),
                 ),
               ],
             ),
@@ -540,9 +540,9 @@ class CollectionEntryDetailSheet extends StatelessWidget {
                 padding: const EdgeInsets.all(14),
                 child: Column(
                   children: [
-                    _DetailRow(label: appLocalizations.translate('collection.setCode'), value: entry.setCode.toUpperCase()),
-                    _DetailRow(label: appLocalizations.translate('collection.collectorNumber'), value: entry.collectorNumber),
-                    _DetailRow(label: appLocalizations.translate('collection.language'), value: entry.language.toUpperCase()),
+                    _DetailRow(label: appLocalizations.translate('search.cardDetailSet'), value: entry.setCode.toUpperCase()),
+                    _DetailRow(label: appLocalizations.translate('search.collectorNumber'), value: entry.collectorNumber),
+                    _DetailRow(label: appLocalizations.translate('search.cardDetailLang'), value: entry.language.toUpperCase()),
                     _DetailRow(label: 'Scryfall ID', value: entry.scryfallId),
                   ],
                 ),
