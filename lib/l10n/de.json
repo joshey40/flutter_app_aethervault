@@ -209,7 +209,13 @@
     "loadFailed": "Kollektion konnte nicht geladen werden",
     "deleteEntry": "Eintrag löschen",
     "deleteEntryConfirm": "{name} aus deiner Kollektion löschen? Das kann nicht rückgängig gemacht werden.",
-    "cardAdded": "{quantity}× {card} wurde in deiner Kollektion gespeichert."
+    "cardAdded": "{quantity}× {card} wurde in deiner Kollektion gespeichert.",
+    "searchLabel": "Kollektion durchsuchen",
+    "searchHint": "Name, Set, Sprache, Finish, Notiz...",
+    "clearSearch": "Suche leeren",
+    "searchResults": "{entries} passende Einträge / {cards} Karten",
+    "noSearchResultsTitle": "Keine passenden Karten",
+    "noSearchResultsBody": "Keine Kollektionseinträge passen zu \"{query}\"."
   },
   "settings": {
     "title": "Einstellungen",
