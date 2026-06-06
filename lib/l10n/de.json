@@ -211,11 +211,12 @@
     "deleteEntryConfirm": "{name} aus deiner Kollektion löschen? Das kann nicht rückgängig gemacht werden.",
     "cardAdded": "{quantity}× {card} wurde in deiner Kollektion gespeichert.",
     "searchLabel": "Kollektion durchsuchen",
-    "searchHint": "Name, Set, Sprache, Finish, Notiz...",
+    "searchHint": "Scryfall-Syntax, z.B. t:creature c:r mv<=3",
     "clearSearch": "Suche leeren",
     "searchResults": "{entries} passende Einträge / {cards} Karten",
     "noSearchResultsTitle": "Keine passenden Karten",
-    "noSearchResultsBody": "Keine Kollektionseinträge passen zu \"{query}\"."
+    "noSearchResultsBody": "Keine Kollektionseinträge passen zu \"{query}\".",
+    "searchFallback": "Scryfall-Suche ist für diese Anfrage nicht verfügbar. Einfache Textsuche in der Kollektion wird verwendet."
   },
   "settings": {
     "title": "Einstellungen",
