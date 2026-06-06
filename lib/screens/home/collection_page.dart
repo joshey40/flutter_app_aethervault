@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../models/collection_entry.dart';
@@ -22,11 +20,11 @@ class _CollectionPageState extends State<CollectionPage> {
   final ScryfallIndexedSearchDataSource _scryfallSearchDataSource = ScryfallIndexedSearchDataSource();
   final TextEditingController _searchController = TextEditingController();
 
-  Timer? _searchDebounce;
   bool _loading = true;
   bool _searchingCollection = false;
   bool _usingTextFallback = false;
   int _searchGeneration = 0;
+  String _activeSearchQuery = '';
   String? _error;
   String? _searchError;
   List<CollectionEntry> _entries = const <CollectionEntry>[];
@@ -35,40 +33,28 @@ class _CollectionPageState extends State<CollectionPage> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_scheduleCollectionSearch);
+    _searchController.addListener(() => setState(() {}));
     _loadEntries();
   }
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _scheduleCollectionSearch() {
-    _searchDebounce?.cancel();
-    _searchDebounce = Timer(const Duration(milliseconds: 300), _applyCollectionSearch);
-    setState(() {});
-  }
-
-  Future<void> _applyCollectionSearch() async {
+  Future<void> _submitCollectionSearch() async {
     final query = _searchController.text.trim();
     final generation = ++_searchGeneration;
 
     if (query.isEmpty) {
-      if (!mounted) return;
-      setState(() {
-        _filteredEntries = _entries;
-        _searchingCollection = false;
-        _usingTextFallback = false;
-        _searchError = null;
-      });
+      _clearSearch();
       return;
     }
 
     if (!mounted) return;
     setState(() {
+      _activeSearchQuery = query;
       _searchingCollection = true;
       _usingTextFallback = false;
       _searchError = null;
@@ -90,6 +76,18 @@ class _CollectionPageState extends State<CollectionPage> {
         _searchError = error.toString();
       });
     }
+  }
+
+  void _clearSearch() {
+    _searchGeneration++;
+    _searchController.clear();
+    setState(() {
+      _activeSearchQuery = '';
+      _filteredEntries = _entries;
+      _searchingCollection = false;
+      _usingTextFallback = false;
+      _searchError = null;
+    });
   }
 
   Future<Set<String>> _searchScryfallIds(String query) async {
@@ -140,10 +138,12 @@ class _CollectionPageState extends State<CollectionPage> {
       if (!mounted) return;
       setState(() {
         _entries = entries;
-        _filteredEntries = entries;
+        _filteredEntries = _activeSearchQuery.isEmpty ? entries : _filteredEntries;
         _loading = false;
       });
-      await _applyCollectionSearch();
+      if (_activeSearchQuery.isNotEmpty) {
+        await _submitCollectionSearch();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -151,6 +151,15 @@ class _CollectionPageState extends State<CollectionPage> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _showEntryDetails(CollectionEntry entry) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => CollectionEntryDetailSheet(entry: entry),
+    );
   }
 
   Future<void> _editEntry(CollectionEntry entry) async {
@@ -190,39 +199,24 @@ class _CollectionPageState extends State<CollectionPage> {
     final filteredEntries = _filteredEntries;
     final totalCards = _entries.fold<int>(0, (sum, entry) => sum + entry.quantity);
     final filteredTotalCards = filteredEntries.fold<int>(0, (sum, entry) => sum + entry.quantity);
-    final query = _searchController.text.trim();
-    final isFiltering = query.isNotEmpty;
+    final isFiltering = _activeSearchQuery.isNotEmpty;
+    final hasSearchInput = _searchController.text.trim().isNotEmpty;
 
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: _loadEntries,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
           children: [
-            Text(appLocalizations.translate('collection.title'), style: theme.textTheme.headlineMedium),
-            const SizedBox(height: 8),
-            Text(appLocalizations.translate('collection.subtitle')),
-            const SizedBox(height: 14),
-            TextField(
+            _CollectionHeader(totalCards: totalCards),
+            const SizedBox(height: 16),
+            _CollectionSearchCard(
               controller: _searchController,
-              decoration: InputDecoration(
-                labelText: appLocalizations.translate('collection.searchLabel'),
-                hintText: appLocalizations.translate('collection.searchHint'),
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: isFiltering
-                    ? IconButton(
-                        tooltip: appLocalizations.translate('collection.clearSearch'),
-                        icon: const Icon(Icons.clear),
-                        onPressed: _searchController.clear,
-                      )
-                    : null,
-              ),
+              searching: _searchingCollection,
+              hasInput: hasSearchInput,
+              onSearch: _submitCollectionSearch,
+              onClear: _clearSearch,
             ),
-            if (_searchingCollection) ...[
-              const SizedBox(height: 8),
-              const LinearProgressIndicator(),
-            ],
             if (_usingTextFallback) ...[
               const SizedBox(height: 8),
               Text(
@@ -236,24 +230,21 @@ class _CollectionPageState extends State<CollectionPage> {
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
               ),
             ],
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Chip(label: Text('${_entries.length} ${appLocalizations.translate('collection.entries')}')),
-                Chip(label: Text('$totalCards ${appLocalizations.translate('collection.totalCards')}')),
-                if (isFiltering)
-                  Chip(
-                    label: Text(
-                      appLocalizations
-                          .translate('collection.searchResults')
-                          .replaceAll('{entries}', filteredEntries.length.toString())
-                          .replaceAll('{cards}', filteredTotalCards.toString()),
-                    ),
+            if (isFiltering) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Chip(
+                  avatar: const Icon(Icons.filter_alt_outlined, size: 18),
+                  label: Text(
+                    appLocalizations
+                        .translate('collection.searchResults')
+                        .replaceAll('{entries}', filteredEntries.length.toString())
+                        .replaceAll('{cards}', filteredTotalCards.toString()),
                   ),
-              ],
-            ),
+                ),
+              ),
+            ],
             const SizedBox(height: 18),
             if (_loading)
               const Padding(
@@ -303,7 +294,7 @@ class _CollectionPageState extends State<CollectionPage> {
                       const SizedBox(height: 12),
                       Text(appLocalizations.translate('collection.noSearchResultsTitle'), style: theme.textTheme.titleLarge),
                       const SizedBox(height: 8),
-                      Text(appLocalizations.translate('collection.noSearchResultsBody').replaceAll('{query}', query)),
+                      Text(appLocalizations.translate('collection.noSearchResultsBody').replaceAll('{query}', _activeSearchQuery)),
                     ],
                   ),
                 ),
@@ -312,10 +303,111 @@ class _CollectionPageState extends State<CollectionPage> {
               ...filteredEntries.map(
                 (entry) => _CollectionEntryCard(
                   entry: entry,
-                  onTap: () => _editEntry(entry),
+                  onTap: () => _showEntryDetails(entry),
+                  onEdit: () => _editEntry(entry),
                   onDelete: () => _deleteEntry(entry),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionHeader extends StatelessWidget {
+  const _CollectionHeader({required this.totalCards});
+
+  final int totalCards;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            appLocalizations.translate('collection.title'),
+            style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            appLocalizations.translate('collection.totalCardsShort').replaceAll('{count}', totalCards.toString()),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CollectionSearchCard extends StatelessWidget {
+  const _CollectionSearchCard({
+    required this.controller,
+    required this.searching,
+    required this.hasInput,
+    required this.onSearch,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final bool searching;
+  final bool hasInput;
+  final VoidCallback onSearch;
+  final VoidCallback onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    onSubmitted: (_) => onSearch(),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      labelText: appLocalizations.translate('collection.searchLabel'),
+                      hintText: appLocalizations.translate('collection.searchHint'),
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: hasInput
+                          ? IconButton(
+                              tooltip: appLocalizations.translate('collection.clearSearch'),
+                              icon: const Icon(Icons.clear),
+                              onPressed: onClear,
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FilledButton.icon(
+                  onPressed: searching ? null : onSearch,
+                  icon: const Icon(Icons.manage_search),
+                  label: Text(appLocalizations.translate('collection.searchAction')),
+                ),
+              ],
+            ),
+            if (searching) ...[
+              const SizedBox(height: 10),
+              const LinearProgressIndicator(),
+            ],
           ],
         ),
       ),
@@ -327,11 +419,13 @@ class _CollectionEntryCard extends StatelessWidget {
   const _CollectionEntryCard({
     required this.entry,
     required this.onTap,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final CollectionEntry entry;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   @override
@@ -344,40 +438,22 @@ class _CollectionEntryCard extends StatelessWidget {
     ];
 
     return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: SizedBox(
-                  width: 58,
-                  height: 82,
-                  child: entry.imageUrl == null
-                      ? ColoredBox(
-                          color: theme.colorScheme.surfaceContainerHighest,
-                          child: const Icon(Icons.style_outlined),
-                        )
-                      : Image.network(
-                          entry.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => ColoredBox(
-                            color: theme.colorScheme.surfaceContainerHighest,
-                            child: const Icon(Icons.style_outlined),
-                          ),
-                        ),
-                ),
-              ),
+              _CollectionCardImage(imageUrl: entry.imageUrl, width: 62, height: 88),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(entry.cardName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                    Text(entry.cardName, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
                     const SizedBox(height: 4),
                     Text(_subtitle(entry), style: theme.textTheme.bodySmall),
                     const SizedBox(height: 8),
@@ -385,24 +461,22 @@ class _CollectionEntryCard extends StatelessWidget {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        Chip(label: Text('×${entry.quantity}')),
-                        Chip(label: Text(entry.condition.userFacingName)),
-                        Chip(label: Text(entry.finish.userFacingName)),
-                        ...flags.map((flag) => Chip(label: Text(flag))),
+                        _SmallPill(label: '×${entry.quantity}', icon: Icons.inventory_2_outlined),
+                        _SmallPill(label: entry.condition.userFacingName),
+                        _SmallPill(label: entry.finish.userFacingName),
+                        ...flags.map((flag) => _SmallPill(label: flag)),
                       ],
                     ),
-                    if (entry.note != null && entry.note!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(entry.note!, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    ],
                   ],
                 ),
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
+                  if (value == 'edit') onEdit();
                   if (value == 'delete') onDelete();
                 },
                 itemBuilder: (context) => [
+                  PopupMenuItem(value: 'edit', child: Text(appLocalizations.translate('collection.editEntry'))),
                   PopupMenuItem(value: 'delete', child: Text(appLocalizations.translate('collection.deleteEntry'))),
                 ],
               ),
@@ -417,6 +491,173 @@ class _CollectionEntryCard extends StatelessWidget {
     final set = entry.setCode.isEmpty ? '?' : entry.setCode.toUpperCase();
     final number = entry.collectorNumber.isEmpty ? '?' : entry.collectorNumber;
     return '$set · #$number · ${entry.language.toUpperCase()}';
+  }
+}
+
+class CollectionEntryDetailSheet extends StatelessWidget {
+  const CollectionEntryDetailSheet({super.key, required this.entry});
+
+  final CollectionEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final flags = <String>[
+      if (entry.isSigned) appLocalizations.translate('collection.signed'),
+      if (entry.isAltered) appLocalizations.translate('collection.altered'),
+      if (entry.isProxy) appLocalizations.translate('collection.proxy'),
+    ];
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.viewInsetsOf(context).bottom + 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(child: _CollectionCardImage(imageUrl: entry.imageUrl, width: 180, height: 252)),
+            const SizedBox(height: 18),
+            SelectableText(
+              entry.cardName,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _SmallPill(label: '×${entry.quantity}', icon: Icons.inventory_2_outlined),
+                _SmallPill(label: entry.condition.userFacingName),
+                _SmallPill(label: entry.finish.userFacingName),
+                ...flags.map((flag) => _SmallPill(label: flag)),
+              ],
+            ),
+            const SizedBox(height: 18),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    _DetailRow(label: appLocalizations.translate('collection.setCode'), value: entry.setCode.toUpperCase()),
+                    _DetailRow(label: appLocalizations.translate('collection.collectorNumber'), value: entry.collectorNumber),
+                    _DetailRow(label: appLocalizations.translate('collection.language'), value: entry.language.toUpperCase()),
+                    _DetailRow(label: 'Scryfall ID', value: entry.scryfallId),
+                  ],
+                ),
+              ),
+            ),
+            if (entry.note != null && entry.note!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(appLocalizations.translate('collection.note'), style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 8),
+                      SelectableText(entry.note!),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  const _DetailRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+          ),
+          Expanded(child: SelectableText(value.isEmpty ? '—' : value)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallPill extends StatelessWidget {
+  const _SmallPill({required this.label, this.icon});
+
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14),
+            const SizedBox(width: 4),
+          ],
+          Text(label, style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
+class _CollectionCardImage extends StatelessWidget {
+  const _CollectionCardImage({required this.imageUrl, required this.width, required this.height});
+
+  final String? imageUrl;
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: imageUrl == null
+            ? ColoredBox(
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: const Icon(Icons.style_outlined),
+              )
+            : Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => ColoredBox(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  child: const Icon(Icons.style_outlined),
+                ),
+              ),
+      ),
+    );
   }
 }
 
