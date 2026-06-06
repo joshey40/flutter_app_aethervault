@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/collection_entry.dart';
 import '../../services/collection_storage.dart';
 import '../../services/localization_service.dart';
+import '../../services/scryfall/bulk_data_type.dart';
 import '../../services/scryfall/scryfall_card_print.dart';
+import '../../services/scryfall/scryfall_indexed_search_data_source.dart';
+import '../../services/scryfall/scryfall_search_repository.dart';
 
 class CollectionPage extends StatefulWidget {
   const CollectionPage({super.key});
@@ -14,28 +19,99 @@ class CollectionPage extends StatefulWidget {
 
 class _CollectionPageState extends State<CollectionPage> {
   final CollectionStorage _storage = CollectionStorage();
+  final ScryfallIndexedSearchDataSource _scryfallSearchDataSource = ScryfallIndexedSearchDataSource();
   final TextEditingController _searchController = TextEditingController();
+
+  Timer? _searchDebounce;
   bool _loading = true;
+  bool _searchingCollection = false;
+  bool _usingTextFallback = false;
+  int _searchGeneration = 0;
   String? _error;
+  String? _searchError;
   List<CollectionEntry> _entries = const <CollectionEntry>[];
+  List<CollectionEntry> _filteredEntries = const <CollectionEntry>[];
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() {}));
+    _searchController.addListener(_scheduleCollectionSearch);
     _loadEntries();
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  List<CollectionEntry> get _filteredEntries {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) return _entries;
+  void _scheduleCollectionSearch() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 300), _applyCollectionSearch);
+    setState(() {});
+  }
 
+  Future<void> _applyCollectionSearch() async {
+    final query = _searchController.text.trim();
+    final generation = ++_searchGeneration;
+
+    if (query.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _filteredEntries = _entries;
+        _searchingCollection = false;
+        _usingTextFallback = false;
+        _searchError = null;
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _searchingCollection = true;
+      _usingTextFallback = false;
+      _searchError = null;
+    });
+
+    try {
+      final matchingIds = await _searchScryfallIds(query);
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _filteredEntries = _entries.where((entry) => matchingIds.contains(entry.scryfallId)).toList(growable: false);
+        _searchingCollection = false;
+      });
+    } catch (error) {
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _filteredEntries = _textFilteredEntries(query);
+        _searchingCollection = false;
+        _usingTextFallback = true;
+        _searchError = error.toString();
+      });
+    }
+  }
+
+  Future<Set<String>> _searchScryfallIds(String query) async {
+    try {
+      final cards = await _scryfallSearchDataSource.searchCards(
+        rawQuery: query,
+        type: ScryfallBulkDataType.allCards,
+        sortMode: ScryfallSearchSortMode.nameAsc,
+      );
+      return cards.map((card) => card.id).toSet();
+    } catch (_) {
+      final cards = await _scryfallSearchDataSource.searchCards(
+        rawQuery: query,
+        type: ScryfallBulkDataType.defaultCards,
+        sortMode: ScryfallSearchSortMode.nameAsc,
+      );
+      return cards.map((card) => card.id).toSet();
+    }
+  }
+
+  List<CollectionEntry> _textFilteredEntries(String query) {
+    final normalizedQuery = query.toLowerCase();
     return _entries.where((entry) {
       final haystack = [
         entry.cardName,
@@ -49,7 +125,7 @@ class _CollectionPageState extends State<CollectionPage> {
         if (entry.isProxy) appLocalizations.translate('collection.proxy'),
         entry.note ?? '',
       ].join(' ').toLowerCase();
-      return haystack.contains(query);
+      return haystack.contains(normalizedQuery);
     }).toList(growable: false);
   }
 
@@ -64,8 +140,10 @@ class _CollectionPageState extends State<CollectionPage> {
       if (!mounted) return;
       setState(() {
         _entries = entries;
+        _filteredEntries = entries;
         _loading = false;
       });
+      await _applyCollectionSearch();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -141,6 +219,23 @@ class _CollectionPageState extends State<CollectionPage> {
                     : null,
               ),
             ),
+            if (_searchingCollection) ...[
+              const SizedBox(height: 8),
+              const LinearProgressIndicator(),
+            ],
+            if (_usingTextFallback) ...[
+              const SizedBox(height: 8),
+              Text(
+                appLocalizations.translate('collection.searchFallback'),
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.secondary),
+              ),
+            ] else if (_searchError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _searchError!,
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error),
+              ),
+            ],
             const SizedBox(height: 14),
             Wrap(
               spacing: 8,
