@@ -106,20 +106,6 @@ class SettingsPage extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(appLocalizations.translate('settings.buildSection'), style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Text(appLocalizations.translate('settings.buildBody')),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

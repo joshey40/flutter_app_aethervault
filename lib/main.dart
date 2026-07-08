@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-
 import 'models/vault_user.dart';
 import 'credentials/firebase_options.dart';
 import 'screens/auth/login_page.dart';
@@ -13,7 +12,6 @@ import 'screens/home/home_shell.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
-import 'services/scryfall/download_service.dart';
 import 'services/services_provider.dart';
 import 'theme/app_theme.dart';
 
@@ -71,11 +69,6 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   late Locale _locale;
   bool _showSignUp = false;
   StreamSubscription<VaultUser?>? _authStateSubscription;
-  // startup download state
-  bool _initializing = true;
-  double _initProgress = 0.0;
-  String _initStatus = '';
-  // parsed cards data service removed
 
   @override
   void initState() {
@@ -91,58 +84,6 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         _showSignUp = false;
       });
     });
-
-    // Start initialization as before (CardsDataService removed).
-    _initializing = true;
-    _runStartupInitialization();
-  }
-
-  Future<void> _runStartupInitialization() async {
-    // Download Scryfall data and prepare it for use.
-    if (!mounted) return;
-    setState(() {
-      _initStatus = 'Fetching Scryfall metadata...';
-      _initProgress = 0.0;
-    });
-
-    try {
-      final svc = DownloadService.instance;
-      setState(() {
-        _initStatus = 'Downloading All Cards (this may take a while)...';
-        _initProgress = 0.0;
-      });
-
-      final file = await svc.downloadAllCards(force: false, onProgress: (received, total) {
-        if (!mounted) return;
-        setState(() {
-          if (total != null && total > 0) {
-            _initProgress = received / total;
-            _initStatus = 'Downloading All Cards: ${(_initProgress * 100).toStringAsFixed(0)}%';
-          } else {
-            // Unknown total size: show received bytes in status
-            _initStatus = 'Downloading All Cards: $received bytes';
-          }
-        });
-      });
-
-      if (mounted) {
-        setState(() {
-          _initStatus = 'Scryfall data ready: ${file.path}';
-          _initProgress = 1.0;
-        });
-        // Download complete; parsing/service removed per project cleanup.
-      }
-    } catch (e) {
-      setState(() {
-        _initStatus = 'Scryfall initialization failed: $e';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _initializing = false;
-        });
-      }
-    }
   }
 
   @override
@@ -193,45 +134,6 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
 
   @override
   Widget build(BuildContext context) {
-    // While initializing Scryfall data, show a full-screen loading indicator
-    if (_initializing) {
-      return MaterialApp(
-        title: 'Aethervault',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: _themeMode,
-        locale: _locale,
-        home: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 8),
-                  Text(_initStatus.isEmpty ? 'Preparing data...' : _initStatus),
-                  const SizedBox(height: 12),
-                  // Always show a spinner to indicate activity, and also show
-                  // the linear progress bar when we have progress information.
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 12),
-                  if (_initProgress > 0 && _initProgress <= 1)
-                    Column(
-                      children: [
-                        LinearProgressIndicator(value: _initProgress),
-                        const SizedBox(height: 8),
-                        Text('${(_initProgress * 100).toStringAsFixed(0)}%'),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-
     return MaterialApp(
       title: 'Aethervault',
       debugShowCheckedModeBanner: false,
