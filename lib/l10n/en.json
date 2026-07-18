@@ -33,10 +33,12 @@
     "playerSettingsTitle": "Settings: Player {index}",
     "partner": "Partner",
     "playerLabel": "Player {index}",
-    "random": "Flip / Roll",
-    "random.coin": "Coin",
-    "random.player": "Player",
-    "random.rollAgain": "Roll again",
+    "random": {
+      "title": "Coin / Dice",
+      "coin": "Coin",
+      "player": "Player",
+      "rollAgain": "Roll again"
+    },
     "resetGame": "Reset Game",
     "resetConfirm": "Are you sure you want to reset all players to start life?",
     "gameReset": "Game reset",

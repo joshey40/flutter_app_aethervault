@@ -5,14 +5,13 @@ import 'dart:math' as math;
 import '../../../../services/localization_service.dart';
 
 Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
-  final loc = appLocalizations;
   final selection = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: Text(loc.translate('lifecounter.random') != 'lifecounter.random' ? loc.translate('lifecounter.random') : 'Flip / Roll'),
+      title: Text(appLocalizations.translate('lifecounter.random.title')),
       content: SizedBox(
         width: 360,
-        height: 300,
+        height: 380,
         child: Column(
           children: [
             Expanded(
@@ -21,14 +20,15 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
                 children: [
-                  _diceButton(ctx, 'coin', Icons.monetization_on, loc.translate('lifecounter.random.coin') != 'lifecounter.random.coin' ? loc.translate('lifecounter.random.coin') : 'Coin'),
+                  _diceButton(ctx, 'player', Icons.person, appLocalizations.translate('lifecounter.random.player')),
+                  _diceButton(ctx, 'coin', Icons.monetization_on, appLocalizations.translate('lifecounter.random.coin')),
                   _diceButton(ctx, 'd4', Icons.casino, 'd4'),
                   _diceButton(ctx, 'd6', Icons.casino, 'd6'),
                   _diceButton(ctx, 'd8', Icons.casino, 'd8'),
                   _diceButton(ctx, 'd10', Icons.casino, 'd10'),
                   _diceButton(ctx, 'd12', Icons.casino, 'd12'),
                   _diceButton(ctx, 'd20', Icons.casino, 'd20'),
-                  _diceButton(ctx, 'player', Icons.person, loc.translate('lifecounter.random.player') != 'lifecounter.random.player' ? loc.translate('lifecounter.random.player') : 'Player'),
+                  _diceButton(ctx, 'd100', Icons.casino, 'd100'),
                 ],
               ),
             ),
@@ -36,7 +36,7 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => Navigator.of(ctx).pop(null),
-                child: Text(loc.translate('cancel') != 'cancel' ? loc.translate('cancel') : 'Cancel'),
+                child: Text(appLocalizations.translate('cancel')),
               ),
             )
           ],
@@ -49,8 +49,8 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
 
   if (selection == 'coin') {
     String result = math.Random().nextBool()
-        ? (loc.translate('coin.heads') != 'coin.heads' ? loc.translate('coin.heads') : 'Heads')
-        : (loc.translate('coin.tails') != 'coin.tails' ? loc.translate('coin.tails') : 'Tails');
+        ? appLocalizations.translate('coin.heads')
+        : appLocalizations.translate('coin.tails');
     bool flash = false;
     await showDialog<void>(
       context: context,
@@ -62,8 +62,8 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
               onPressed: () {
                 setState(() {
                   result = math.Random().nextBool()
-                      ? (loc.translate('coin.heads') != 'coin.heads' ? loc.translate('coin.heads') : 'Heads')
-                      : (loc.translate('coin.tails') != 'coin.heads' ? loc.translate('coin.tails') : 'Tails');
+                      ? appLocalizations.translate('coin.heads')
+                      : appLocalizations.translate('coin.tails');
                   flash = true;
                 });
                 Future.delayed(const Duration(milliseconds: 320), () {
@@ -74,9 +74,9 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
                   } catch (_) {}
                 });
               },
-                child: Text(loc.translate('lifecounter.random.rollAgain') != 'lifecounter.random.rollAgain' ? loc.translate('lifecounter.random.rollAgain') : 'Roll again'),
+                child: Text(appLocalizations.translate('lifecounter.random.rollAgain')),
             ),
-            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(loc.translate('ok') != 'ok' ? loc.translate('ok') : 'OK')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(appLocalizations.translate('ok'))),
           ],
         );
       }),
@@ -109,9 +109,9 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
                   } catch (_) {}
                 });
               },
-              child: Text(loc.translate('lifecounter.random.rollAgain') != 'lifecounter.random.rollAgain' ? loc.translate('lifecounter.random.rollAgain') : 'Roll again'),
+              child: Text(appLocalizations.translate('lifecounter.random.rollAgain')),
             ),
-            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(loc.translate('ok') != 'ok' ? loc.translate('ok') : 'OK')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(appLocalizations.translate('ok'))),
           ],
         );
       }),
@@ -149,9 +149,9 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
                 } catch (_) {}
               });
             },
-            child: Text(loc.translate('lifecounter.random.rollAgain') != 'lifecounter.random.rollAgain' ? loc.translate('lifecounter.random.rollAgain') : 'Roll again'),
+            child: Text(appLocalizations.translate('lifecounter.random.rollAgain')),
           ),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(loc.translate('ok') != 'ok' ? loc.translate('ok') : 'OK')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(appLocalizations.translate('ok'))),
         ],
       );
     }),
@@ -216,11 +216,13 @@ class _PolygonIcon extends StatelessWidget {
       case 'd8':
         return 6;
       case 'd10':
-        return 4; // diamond (rotated square)
+        return 4;
       case 'd12':
-        return 10; // as requested 'Zehneck'
+        return 10;
       case 'd20':
-        return 6; // hexagon per request
+        return 6;
+      case 'd100':
+        return 10;
       default:
         return 0;
     }

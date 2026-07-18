@@ -33,10 +33,12 @@
     "playerSettingsTitle": "Einstellungen: Spieler {index}",
     "partner": "Partner",
     "playerLabel": "Spieler {index}",
-    "random": "Münze / Würfeln",
-    "random.coin": "Münze",
-    "random.player": "Spieler",
-    "random.rollAgain": "Nochmal würfeln",
+    "random": {
+      "title": "Münze / Würfel",
+      "coin": "Münze",
+      "player": "Spieler",
+      "rollAgain": "Nochmal würfeln"
+    },
     "resetGame": "Spiel zurücksetzen",
     "resetConfirm": "Bist du sicher, dass du alle Spieler auf das Startleben zurücksetzen möchtest?",
     "gameReset": "Spiel zurückgesetzt",

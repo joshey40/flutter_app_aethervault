@@ -8,6 +8,7 @@ class AppPreferencesStorage {
   static const String _scryfallBulkDataItemsKey = 'scryfall.bulk_data_items';
   static const String _scryfallBulkDataMetadataKeyPrefix = 'scryfall.bulk_data_metadata.';
 
+  /// Settings
   Future<ThemeMode> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
     switch (prefs.getString(_themeModeKey)) {
@@ -45,7 +46,7 @@ class AppPreferencesStorage {
     await prefs.setString(_localeKey, locale.languageCode);
   }
 
-  // Lifecounter persistence (JSON encoded game)
+  // Lifecounter
   Future<void> saveLifecounterGame(String json) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lifecounterKey, json);
@@ -61,6 +62,7 @@ class AppPreferencesStorage {
     await prefs.remove(_lifecounterKey);
   }
 
+  /// Scryfall Data
   Future<void> saveScryfallBulkDataItems(String json) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_scryfallBulkDataItemsKey, json);
