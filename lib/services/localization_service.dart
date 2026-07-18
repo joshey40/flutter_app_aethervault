@@ -14,12 +14,16 @@ class AppLocalizations {
         languageCode = 'en';
       }
 
-      final jsonString = await rootBundle.loadString('lib/l10n/$languageCode.json');
+      final jsonString = await _loadJson(languageCode);
       final jsonMap = json.decode(jsonString) as Map<String, dynamic>;
       _localizedStrings = jsonMap;
     } catch (_) {
       _localizedStrings = {};
     }
+  }
+
+  Future<String> _loadJson(String languageCode) async {
+    return rootBundle.loadString('lib/l10n/$languageCode.json');
   }
 
   String translate(String key) {

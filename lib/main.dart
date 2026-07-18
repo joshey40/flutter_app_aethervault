@@ -8,11 +8,13 @@ import 'models/vault_user.dart';
 import 'credentials/firebase_options.dart';
 import 'screens/auth/login_page.dart';
 import 'screens/auth/sign_up_page.dart';
+import 'screens/download/download_screen.dart';
 import 'screens/home/home_shell.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
 import 'services/services_provider.dart';
+import 'services/scryfall_download_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -29,8 +31,6 @@ Future<void> main() async {
   final initialLocale = await preferencesStorage.loadLocale();
   await initializeLocalizations(initialLocale.languageCode);
   final currentUser = await authService.loadCurrentUser();
-
-  // Scryfall data initialization handled inside the app (service removed).
 
   runApp(
     AetherVaultApp(
@@ -58,7 +58,6 @@ class AetherVaultApp extends StatefulWidget {
   final ThemeMode initialThemeMode;
   final Locale initialLocale;
   final VaultUser? currentUser;
-  // CardsDataService removed
 
   @override
   State<AetherVaultApp> createState() => _AetherVaultAppState();
@@ -68,6 +67,8 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   late ThemeMode _themeMode;
   late Locale _locale;
   bool _showSignUp = false;
+  bool _isCheckingDownloads = true;
+  bool _needsDownload = true;
   StreamSubscription<VaultUser?>? _authStateSubscription;
 
   @override
@@ -84,6 +85,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         _showSignUp = false;
       });
     });
+    _checkDownloadNeed();
   }
 
   @override
@@ -132,6 +134,27 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     });
   }
 
+  Future<void> _checkDownloadNeed() async {
+    if (!mounted) return;
+    final service = ScryfallDownloadService();
+    try {
+      final needsDownload = await service.needsBulkDataDownload();
+      if (!mounted) return;
+      setState(() {
+        _needsDownload = needsDownload;
+        _isCheckingDownloads = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _needsDownload = true;
+        _isCheckingDownloads = false;
+      });
+    } finally {
+      service.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -159,6 +182,21 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
                     onSignUpTap: _showSignUpPage,
                     onSignInSuccess: _handleAuthenticated,
                   );
+          }
+
+          if (_isCheckingDownloads) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+
+          if (_needsDownload) {
+            return DownloadScreen(
+              user: currentUser,
+              themeMode: _themeMode,
+              onThemeModeChanged: _setThemeMode,
+              locale: _locale,
+              onLocaleChanged: _setLocale,
+              onSignOut: _handleSignOut,
+            );
           }
 
           return HomeShell(

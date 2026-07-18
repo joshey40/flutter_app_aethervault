@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/vault_user.dart';
 import '../../services/localization_service.dart';
-import '../settings/settings_page.dart';
+import 'settings/settings_page.dart';
 import 'collection_page.dart';
 import 'decks_page.dart';
 import 'overview_page.dart';
@@ -37,12 +37,13 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      OverviewPage(user: widget.user),
-      const DecksPage(),
-      const SearchPage(),
-      const LifecounterEntryScreen(),
-      const CollectionPage(),
+      OverviewPage(key: ValueKey('overview-${widget.locale.languageCode}'), user: widget.user),
+      SearchPage(key: ValueKey('search-${widget.locale.languageCode}')),
+      CollectionPage(key: ValueKey('collection-${widget.locale.languageCode}')),
+      DecksPage(key: ValueKey('decks-${widget.locale.languageCode}')),
+      LifecounterEntryScreen(key: ValueKey('lifecounter-${widget.locale.languageCode}')),
       SettingsPage(
+        key: ValueKey('settings-${widget.locale.languageCode}'),
         user: widget.user,
         themeMode: widget.themeMode,
         onThemeModeChanged: widget.onThemeModeChanged,
@@ -68,24 +69,24 @@ class _HomeShellState extends State<HomeShell> {
             label: appLocalizations.translate('nav.overview'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.space_dashboard_outlined),
-            activeIcon: const Icon(Icons.space_dashboard),
-            label: appLocalizations.translate('nav.decks'),
-          ),
-          BottomNavigationBarItem(
             icon: const Icon(Icons.search_outlined),
             activeIcon: const Icon(Icons.search),
             label: appLocalizations.translate('nav.search'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.favorite_border),
-            activeIcon: const Icon(Icons.favorite),
-            label: appLocalizations.translate('nav.play'),
-          ),
-          BottomNavigationBarItem(
             icon: const Icon(Icons.style_outlined),
             activeIcon: const Icon(Icons.style),
             label: appLocalizations.translate('nav.collection'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.space_dashboard_outlined),
+            activeIcon: const Icon(Icons.space_dashboard),
+            label: appLocalizations.translate('nav.decks'),
+          ),
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.favorite_border),
+            activeIcon: const Icon(Icons.favorite),
+            label: appLocalizations.translate('nav.play'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.settings_outlined),

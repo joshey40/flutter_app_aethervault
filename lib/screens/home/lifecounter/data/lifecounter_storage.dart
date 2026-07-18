@@ -18,9 +18,7 @@ class LifecounterStorage {
       game.validate();
       await prefs.saveLifecounterGame(game.encode());
     } catch (e, st) {
-      // Use debugPrint via foundation to avoid flutter imports in pure dart contexts.
-      debugPrint('Failed to save lifecounter game: $e\n$st');
-      throw LifecounterStorageException('Failed to save game: $e');
+      throw LifecounterStorageException('Failed to save game: $e\n$st');
     }
   }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../models/vault_user.dart';
-import '../../services/localization_service.dart';
+import '../../../models/vault_user.dart';
+import '../../../services/localization_service.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -29,8 +29,6 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           Text(appLocalizations.translate('settings.title'), style: theme.textTheme.headlineMedium),
-          const SizedBox(height: 8),
-          Text(appLocalizations.translate('settings.subtitle')),
           const SizedBox(height: 20),
           Card(
             child: Padding(
@@ -71,7 +69,6 @@ class SettingsPage extends StatelessWidget {
                     value: themeMode == ThemeMode.dark,
                     onChanged: (value) => onThemeModeChanged(value ? ThemeMode.dark : ThemeMode.light),
                     title: Text(appLocalizations.translate('settings.darkMode')),
-                    subtitle: Text(appLocalizations.translate('settings.darkModeHint')),
                   ),
                   const Divider(),
                   ListTile(

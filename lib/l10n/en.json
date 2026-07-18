@@ -39,21 +39,29 @@
     "random.rollAgain": "Roll again",
     "resetGame": "Reset Game",
     "resetConfirm": "Are you sure you want to reset all players to start life?",
-    "gameReset": "Game reset"
+    "gameReset": "Game reset",
+    "presetStandard": "Standard",
+    "presetCommander": "Commander"
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Manage your app preferences and Firebase account.",
     "accountSection": "Account",
     "preferencesSection": "Preferences",
     "signOut": "Sign out",
     "darkMode": "Dark mode",
-    "darkModeHint": "Switch the app between light and dark vault themes.",
     "language": "Language",
     "english": "English",
     "german": "German",
     "englishShort": "EN",
     "germanShort": "DE"
+  },
+  "download": {
+    "loading": "Bulk data is being loaded",
+    "complete": "Download complete",
+    "failed": "The download failed.",
+    "current": "Current download: ",
+    "waiting": "Please wait while the data is being downloaded.",
+    "retry": "Try again"
   },
   "ok": "OK",
   "cancel": "Cancel",
