@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../models/vault_user.dart';
 import '../../../services/localization_service.dart';
 
+import '../../download/download_screen.dart';
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
@@ -98,6 +100,40 @@ class SettingsPage extends StatelessWidget {
                         onLocaleChanged(Locale(value));
                       },
                     ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(appLocalizations.translate('settings.downloadSection'), style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.download_rounded),
+                    title: Text(appLocalizations.translate('settings.downloadData')),
+                    subtitle: Text(appLocalizations.translate('settings.downloadDataDescription')),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => DownloadScreen(
+                            user: user,
+                            themeMode: themeMode,
+                            onThemeModeChanged: onThemeModeChanged,
+                            locale: locale,
+                            onLocaleChanged: onLocaleChanged,
+                            onSignOut: onSignOut,
+                            forcedDownload: true,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

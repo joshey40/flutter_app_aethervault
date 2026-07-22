@@ -68,7 +68,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   late Locale _locale;
   bool _showSignUp = false;
   bool _isCheckingDownloads = true;
-  bool _needsDownload = true;
+  Map<String,dynamic> _needsDownload = { for (var type in ScryfallDownloadService.bulkDataTypes) type: false };
   StreamSubscription<VaultUser?>? _authStateSubscription;
 
   @override
@@ -147,7 +147,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _needsDownload = true;
+        _needsDownload = { for (var type in ScryfallDownloadService.bulkDataTypes) type: true };
         _isCheckingDownloads = false;
       });
     } finally {
@@ -188,7 +188,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
             return const Scaffold(body: Center(child: CircularProgressIndicator()));
           }
 
-          if (_needsDownload) {
+          if (_needsDownload.containsValue(true)) {
             return DownloadScreen(
               user: currentUser,
               themeMode: _themeMode,
@@ -196,6 +196,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
               locale: _locale,
               onLocaleChanged: _setLocale,
               onSignOut: _handleSignOut,
+              forcedDownload: false,
             );
           }
 

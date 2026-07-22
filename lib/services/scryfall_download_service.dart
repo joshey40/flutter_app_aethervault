@@ -42,28 +42,25 @@ class ScryfallDownloadService {
 
   Stream<DownloadProgress> get progressStream => _progressController.stream;
 
-  Future<bool> needsBulkDataDownload() async {
+  Future<Map<String, bool>> needsBulkDataDownload() async {
     try {
       await fetchBulkDataItems();
     } catch (_) {
-      return true;
+      return { for (var type in bulkDataTypes) type: true };
     }
 
-    for (final type in bulkDataTypes) {
-      final bulkDataItem = await getDataTypeItem(type);
-      final shouldDownload = await shouldDownloadBulkData(
-        bulkDataType: type,
-        bulkDataItem: bulkDataItem,
-      );
-      if (shouldDownload) {
-        return true;
-      }
-    }
-
-    return false;
+    var needsDownload = {
+      for (var type in bulkDataTypes)
+        type: await shouldDownloadBulkData(
+          bulkDataType: type,
+          bulkDataItem: await getDataTypeItem(type),
+        ),
+    };
+    
+    return needsDownload;
   }
 
-  Future<void> downloadAllBulkData() async {
+  Future<void> downloadAllBulkData(bool forced) async {
     await fetchBulkDataItems();
 
     _progressController.add(
@@ -74,7 +71,22 @@ class ScryfallDownloadService {
     await cacheDirectory.create(recursive: true);
     await pruneStaleCacheFiles(cacheDirectory, bulkDataTypes.toSet());
 
+    final typesToDownload = needsBulkDataDownload();
+
     for (var i = 0; i < bulkDataTypes.length; i++) {
+      if (!await typesToDownload.then((map) => map[bulkDataTypes[i]] ?? false) && !forced) {
+        _progressController.add(
+          DownloadProgress(
+            current: i + 1,
+            total: bulkDataTypes.length,
+            currentType: bulkDataTypes[i],
+            bytesDownloaded: 0,
+            bytesTotal: 0,
+            isRunning: true,
+          ),
+        );
+        continue;
+      }
       final type = bulkDataTypes[i];
       final bulkDataItem = await getDataTypeItem(type);
       final totalBytes = bulkDataItem['size'] is int
@@ -174,7 +186,9 @@ class ScryfallDownloadService {
     if (cachedUpdatedAt == null || cachedUpdatedAt.isEmpty) {
       return true;
     }
-    return cachedUpdatedAt != remoteUpdatedAt;
+    final cached = DateTime.parse(cachedUpdatedAt);
+    final remote = DateTime.parse(remoteUpdatedAt);
+    return remote.difference(cached) >= const Duration(days: 28);
   }
 
   Future<void> fetchAndStoreDataType(

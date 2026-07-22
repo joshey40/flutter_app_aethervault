@@ -5,7 +5,7 @@ import '../../services/scryfall_download_service.dart';
 import '../home/home_shell.dart';
 
 class DownloadScreen extends StatefulWidget {
-  const DownloadScreen({super.key, required this.user, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.onSignOut});
+  const DownloadScreen({super.key, required this.user, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.onSignOut, required this.forcedDownload});
 
   final dynamic user;
   final ThemeMode themeMode;
@@ -13,6 +13,7 @@ class DownloadScreen extends StatefulWidget {
   final Locale locale;
   final Future<void> Function(Locale locale) onLocaleChanged;
   final Future<void> Function() onSignOut;
+  final bool forcedDownload;
 
   @override
   State<DownloadScreen> createState() => _DownloadScreenState();
@@ -54,7 +55,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
     });
 
     try {
-      await _service.downloadAllBulkData();
+      await _service.downloadAllBulkData(widget.forcedDownload);
       if (!mounted) return;
       setState(() {
         _isFinished = true;
