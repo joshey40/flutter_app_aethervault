@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../models/vault_user.dart';
-
 class OverviewPage extends StatelessWidget {
-  const OverviewPage({super.key, required this.user});
-
-  final VaultUser user;
+  const OverviewPage({super.key});
 
   @override
   Widget build(BuildContext context) {
