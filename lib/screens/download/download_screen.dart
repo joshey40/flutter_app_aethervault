@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/localization_service.dart';
-import '../../services/scryfall_download_service.dart';
+import '../../services/card_database/scryfall_download.dart';
 import '../home/home_shell.dart';
 
 class DownloadScreen extends StatefulWidget {

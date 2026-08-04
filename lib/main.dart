@@ -14,7 +14,7 @@ import 'services/app_preferences_storage.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/localization_service.dart';
 import 'services/services_provider.dart';
-import 'services/scryfall_download_service.dart';
+import 'services/card_database/scryfall_download.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
