@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../models/vault_user.dart';
 import '../../../services/localization_service.dart';
 
 import '../../download/download_screen.dart';
@@ -8,20 +7,16 @@ import '../../download/download_screen.dart';
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
     super.key,
-    required this.user,
     required this.themeMode,
     required this.onThemeModeChanged,
     required this.locale,
     required this.onLocaleChanged,
-    required this.onSignOut,
   });
 
-  final VaultUser user;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final Locale locale;
   final Future<void> Function(Locale locale) onLocaleChanged;
-  final Future<void> Function() onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -32,32 +27,6 @@ class SettingsPage extends StatelessWidget {
         children: [
           Text(appLocalizations.translate('settings.title'), style: theme.textTheme.headlineMedium),
           const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(appLocalizations.translate('settings.accountSection'), style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 12),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.person_outline),
-                    title: Text(user.displayName),
-                    subtitle: Text(user.email),
-                  ),
-                  const Divider(),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.logout),
-                    title: Text(appLocalizations.translate('settings.signOut')),
-                    onTap: () async => onSignOut(),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(18),
@@ -123,12 +92,10 @@ class SettingsPage extends StatelessWidget {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => DownloadScreen(
-                            user: user,
                             themeMode: themeMode,
                             onThemeModeChanged: onThemeModeChanged,
                             locale: locale,
                             onLocaleChanged: onLocaleChanged,
-                            onSignOut: onSignOut,
                             forcedDownload: true,
                           ),
                         ),

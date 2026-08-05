@@ -10,14 +10,12 @@ dependencies:
   flutter:
     sdk: flutter
   crypto: ^3.0.3
-  firebase_core: ^4.7.0
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.0
   http: ^1.1.0
   path_provider: ^2.1.6
   shared_preferences: ^2.5.3
-  firebase_auth: ^6.3.0
-  archive: ^3.3.5
-  multi_split_view: 3.6.1
+  archive: ^4.0.9
+  multi_split_view: ^3.6.2
   drift: ^2.34.3
   drift_flutter: ^0.3.1
 

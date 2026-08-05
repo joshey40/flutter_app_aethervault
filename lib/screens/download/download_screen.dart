@@ -5,14 +5,12 @@ import '../../services/card_database/scryfall_download.dart';
 import '../home/home_shell.dart';
 
 class DownloadScreen extends StatefulWidget {
-  const DownloadScreen({super.key, required this.user, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.onSignOut, required this.forcedDownload});
+  const DownloadScreen({super.key, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.forcedDownload});
 
-  final dynamic user;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final Locale locale;
   final Future<void> Function(Locale locale) onLocaleChanged;
-  final Future<void> Function() onSignOut;
   final bool forcedDownload;
 
   @override
@@ -75,12 +73,10 @@ class _DownloadScreenState extends State<DownloadScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) => HomeShell(
-          user: widget.user,
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
           locale: widget.locale,
           onLocaleChanged: widget.onLocaleChanged,
-          onSignOut: widget.onSignOut,
         ),
       ),
     );
