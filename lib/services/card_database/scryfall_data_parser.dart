@@ -34,7 +34,7 @@ class ScryfallDataParser {
     }
 
     final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
-    final bulkDataFile = File(bulkDataFilePath);
+    final bulkDataFile = await _uncompressGzipFile(bulkDataFilePath);
     if (!await bulkDataFile.exists()) {
       throw StateError('Bulk data file not found: $bulkDataFilePath');
     }
@@ -395,5 +395,25 @@ class ScryfallDataParser {
       return null;
     }
     return jsonEncode(value);
+  }
+
+  Future<File> _uncompressGzipFile(String compressedFilePath) async {
+    final compressedFile = File(compressedFilePath);
+    if (!await compressedFile.exists()) {
+      throw StateError('Compressed file not found: $compressedFilePath');
+    }
+
+    final uncompressedFilePath = compressedFilePath.replaceFirst('.gz', '');
+    final uncompressedFile = File(uncompressedFilePath);
+
+    final inputStream = compressedFile.openRead();
+    final outputStream = uncompressedFile.openWrite();
+
+    await inputStream.transform(gzip.decoder).pipe(outputStream);
+
+    await outputStream.flush();
+    await outputStream.close();
+
+    return uncompressedFile;
   }
 }

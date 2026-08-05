@@ -89,9 +89,9 @@ class ScryfallDownloadService {
       }
       final type = bulkDataTypes[i];
       final bulkDataItem = await getDataTypeItem(type);
-      final totalBytes = bulkDataItem['size'] is int
-          ? bulkDataItem['size'] as int
-          : int.tryParse(bulkDataItem['size']?.toString() ?? '0') ?? 0;
+      final totalBytes = bulkDataItem['compressed_size'] is int
+          ? bulkDataItem['compressed_size'] as int
+          : int.tryParse(bulkDataItem['compressed_size']?.toString() ?? '0') ?? 0;
 
       _progressController.add(
         DownloadProgress(
@@ -198,7 +198,7 @@ class ScryfallDownloadService {
     int totalFiles,
   ) async {
     final bulkDataItem = await getDataTypeItem(bulkDataType);
-    final downloadUri = bulkDataItem['download_uri'];
+    final downloadUri = bulkDataItem['jsonl_download_uri'];
     if (downloadUri is! String || downloadUri.isEmpty) {
       throw Exception('No download URI found for bulk data type "$bulkDataType"');
     }
@@ -314,7 +314,7 @@ class ScryfallDownloadService {
   }
 
   Future<String> getBulkDataFilePath(String bulkDataType) async {
-    return '${(await getBulkDataDirectory()).path}/$bulkDataType.json';
+    return '${(await getBulkDataDirectory()).path}/$bulkDataType.jsonl.gz';
   }
 
   Future<void> pruneStaleCacheFiles(Directory cacheDirectory, Set<String> activeTypes) async {
@@ -326,14 +326,14 @@ class ScryfallDownloadService {
     for (final entity in entities) {
       final name = entity.path.split(Platform.pathSeparator).last;
       final isTempFile = name.endsWith('.tmp');
-      final isDataFile = name.endsWith('.json');
+      final isDataFile = name.endsWith('.jsonl.gz');
 
       if (isTempFile) {
         await entity.delete();
         continue;
       }
 
-      final typeName = name.replaceFirst('.json', '');
+      final typeName = name.replaceFirst('.jsonl.gz', '');
 
       if (isDataFile && !activeTypes.contains(typeName)) {
         await entity.delete();
