@@ -45,6 +45,10 @@ class ScryfallDataParser {
     final faces = <ScryfallCardFacesCompanion>[];
 
     for (final record in records) {
+      if (_isDigitalCard(record)) {
+        continue;
+      }
+
       cards.add(_mapCard(record));
       faces.addAll(_mapFaces(record));
     }
@@ -129,30 +133,33 @@ class ScryfallDataParser {
     return ScryfallCardsCompanion.insert(
       scryfallId: _stringValue(card, 'id'),
       oracleId: Value(_stringValue(card, 'oracle_id')),
-      mtgoId: Value(_stringValue(card, 'mtgo_id')),
-      mtgoFoilId: Value(_stringValue(card, 'mtgo_foil_id')),
-      arenaId: Value(_stringValue(card, 'arena_id')),
       tcgplayerId: Value(_stringValue(card, 'tcgplayer_id')),
       cardmarketId: Value(_stringValue(card, 'cardmarket_id')),
       multiverseIdsJson: Value(_encodeJsonOrNull(multiverseIds)),
-      setId: _stringValue(card, 'set_id'),
+      
       layout: _stringValue(card, 'layout'),
+      
       name: _stringValue(card, 'name'),
       printedName: Value(_stringValue(card, 'printed_name')),
+      
+      setId: _stringValue(card, 'set_id'),
       setCode: _stringValue(card, 'set'),
       setName: _stringValue(card, 'set_name'),
       setType: _stringValue(card, 'set_type'),
       setUri: _stringValue(card, 'set_uri'),
       setSearchUri: _stringValue(card, 'set_search_uri'),
       scryfallSetUri: _stringValue(card, 'scryfall_set_uri'),
+      
       collectorNumber: _stringValue(card, 'collector_number'),
       lang: _stringValue(card, 'lang'),
       rarity: _stringValue(card, 'rarity'),
       releasedAt: _stringValue(card, 'released_at'),
+      
       scryfallUri: _stringValue(card, 'scryfall_uri'),
       uri: _stringValue(card, 'uri'),
       rulingsUri: _stringValue(card, 'rulings_uri'),
       printsSearchUri: _stringValue(card, 'prints_search_uri'),
+      
       typeLine: _stringValue(card, 'type_line'),
       printedTypeLine: Value(_stringValue(card, 'printed_type_line')),
       manaCost: Value(_stringValue(card, 'mana_cost')),
@@ -160,12 +167,14 @@ class ScryfallDataParser {
       oracleText: Value(_stringValue(card, 'oracle_text')),
       printedText: Value(_stringValue(card, 'printed_text')),
       flavorText: Value(_stringValue(card, 'flavor_text')),
+      
       colorsJson: Value(_encodeJsonOrNull(colors)),
       colorMask: _colorMask(colors),
       colorIdentityJson: Value(_encodeJsonOrNull(colorIdentity)),
       colorIdentityMask: _colorMask(colorIdentity),
       producedManaJson: Value(_encodeJsonOrNull(producedMana)),
       producedManaMask: _colorMask(producedMana),
+      
       keywordsJson: Value(_encodeJsonOrNull(keywords)),
       hasCardFaces: Value(hasCardFaces),
       hasColorIndicator: Value(hasColorIndicator),
@@ -173,6 +182,7 @@ class ScryfallDataParser {
       frame: Value(_stringValue(card, 'frame')),
       frameEffectsJson: Value(_encodeJsonOrNull(frameEffects)),
       securityStamp: Value(_stringValue(card, 'security_stamp')),
+      
       highresImage: Value(_boolValue(card, 'highres_image')),
       imageStatus: Value(_stringValue(card, 'image_status')),
       imageUpdatedAt: Value(_stringValue(card, 'image_updated_at')),
@@ -186,6 +196,7 @@ class ScryfallDataParser {
       artistIdsJson: Value(_encodeJsonOrNull(artistIds)),
       illustrationId: Value(_stringValue(card, 'illustration_id')),
       watermark: Value(_stringValue(card, 'watermark')),
+      
       fullArt: Value(_boolValue(card, 'full_art')),
       textless: Value(_boolValue(card, 'textless')),
       booster: Value(_boolValue(card, 'booster')),
@@ -195,15 +206,13 @@ class ScryfallDataParser {
       variation: Value(_boolValue(card, 'variation')),
       reserved: Value(_boolValue(card, 'reserved')),
       gameChanger: Value(_boolValue(card, 'game_changer')),
-      digital: Value(_boolValue(card, 'digital')),
       oversized: Value(_boolValue(card, 'oversized')),
       nonfoil: Value(_boolValue(card, 'nonfoil')),
       foil: Value(_boolValue(card, 'foil')),
       etched: Value(_containsString(card, 'finishes', 'etched')),
       glossy: Value(_containsString(card, 'finishes', 'glossy')),
       paper: Value(_containsString(card, 'games', 'paper')),
-      mtgo: Value(_containsString(card, 'games', 'mtgo')),
-      arena: Value(_containsString(card, 'games', 'arena')),
+      
       legalStandard: Value(_stringField(legalities, 'standard')),
       legalFuture: Value(_stringField(legalities, 'future')),
       legalHistoric: Value(_stringField(legalities, 'historic')),
@@ -227,25 +236,26 @@ class ScryfallDataParser {
       legalPremodern: Value(_stringField(legalities, 'premodern')),
       legalPredh: Value(_stringField(legalities, 'predh')),
       legalTlr: Value(_stringField(legalities, 'tlr')),
+      
       pricesUsd: Value(_stringField(prices, 'usd')),
       pricesUsdFoil: Value(_stringField(prices, 'usd_foil')),
       pricesUsdEtched: Value(_stringField(prices, 'usd_etched')),
       pricesEur: Value(_stringField(prices, 'eur')),
       pricesEurFoil: Value(_stringField(prices, 'eur_foil')),
       pricesTix: Value(_stringField(prices, 'tix')),
+      
       relatedGathererUri: Value(_stringField(relatedUris, 'gatherer')),
-      relatedTcgplayerInfiniteArticlesUri: Value(
-        _stringField(relatedUris, 'tcgplayer_infinite_articles'),
-      ),
-      relatedTcgplayerInfiniteDecksUri: Value(
-        _stringField(relatedUris, 'tcgplayer_infinite_decks'),
-      ),
+      relatedTcgplayerInfiniteArticlesUri: Value(_stringField(relatedUris, 'tcgplayer_infinite_articles')),
+      relatedTcgplayerInfiniteDecksUri: Value(_stringField(relatedUris, 'tcgplayer_infinite_decks')),
       relatedEdhrecUri: Value(_stringField(relatedUris, 'edhrec')),
+      
       purchaseTcgplayerUri: Value(_stringField(purchaseUris, 'tcgplayer')),
       purchaseCardmarketUri: Value(_stringField(purchaseUris, 'cardmarket')),
       purchaseCardhoarderUri: Value(_stringField(purchaseUris, 'cardhoarder')),
+      
       cardBackId: Value(_stringValue(card, 'card_back_id')),
       allPartsJson: Value(_encodeJsonOrNull(allParts)),
+      
       rawJson: jsonEncode(card),
     );
   }
@@ -279,6 +289,7 @@ class ScryfallDataParser {
     return ScryfallCardFacesCompanion.insert(
       cardId: cardId,
       faceIndex: faceIndex,
+      
       name: _stringValue(face, 'name'),
       printedName: Value(_stringValue(face, 'printed_name')),
       manaCost: Value(_stringValue(face, 'mana_cost')),
@@ -287,15 +298,18 @@ class ScryfallDataParser {
       oracleText: Value(_stringValue(face, 'oracle_text')),
       printedText: Value(_stringValue(face, 'printed_text')),
       flavorText: Value(_stringValue(face, 'flavor_text')),
+      
       colorsJson: Value(_encodeJsonOrNull(colors)),
       colorMask: _colorMask(colors),
       colorIndicatorJson: Value(_encodeJsonOrNull(colorIndicator)),
       colorIndicatorMask: _colorMask(colorIndicator),
+      
       power: Value(_stringValue(face, 'power')),
       toughness: Value(_stringValue(face, 'toughness')),
       loyalty: Value(_stringValue(face, 'loyalty')),
       defense: Value(_stringValue(face, 'defense')),
       cmc: Value(_doubleValue(face, 'cmc')),
+      
       artist: Value(_stringValue(face, 'artist')),
       artistId: Value(_stringValue(face, 'artist_id')),
       illustrationId: Value(_stringValue(face, 'illustration_id')),
@@ -308,6 +322,7 @@ class ScryfallDataParser {
       imageArtCrop: Value(_stringField(imageUris, 'art_crop')),
       imageBorderCrop: Value(_stringField(imageUris, 'border_crop')),
       watermark: Value(_stringValue(face, 'watermark')),
+      
       rawJson: jsonEncode(face),
     );
   }
@@ -359,6 +374,10 @@ class ScryfallDataParser {
 
   bool _boolValue(Map<String, dynamic> source, String key) {
     return source[key] == true;
+  }
+
+  bool _isDigitalCard(Map<String, dynamic> card) {
+    return _boolValue(card, 'digital');
   }
 
   bool _containsString(Map<String, dynamic> source, String key, String expected) {

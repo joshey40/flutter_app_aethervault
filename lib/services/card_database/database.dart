@@ -8,9 +8,6 @@ part 'database.g.dart';
 class ScryfallCards extends Table {
   TextColumn get scryfallId => text()();
   TextColumn get oracleId => text().nullable()();
-  TextColumn get mtgoId => text().nullable()();
-  TextColumn get mtgoFoilId => text().nullable()();
-  TextColumn get arenaId => text().nullable()();
   TextColumn get tcgplayerId => text().nullable()();
   TextColumn get cardmarketId => text().nullable()();
   TextColumn get multiverseIdsJson => text().nullable()();
@@ -84,15 +81,12 @@ class ScryfallCards extends Table {
   BoolColumn get variation => boolean().withDefault(const Constant(false))();
   BoolColumn get reserved => boolean().withDefault(const Constant(false))();
   BoolColumn get gameChanger => boolean().withDefault(const Constant(false))();
-  BoolColumn get digital => boolean().withDefault(const Constant(false))();
   BoolColumn get oversized => boolean().withDefault(const Constant(false))();
   BoolColumn get nonfoil => boolean().withDefault(const Constant(false))();
   BoolColumn get foil => boolean().withDefault(const Constant(false))();
   BoolColumn get etched => boolean().withDefault(const Constant(false))();
   BoolColumn get glossy => boolean().withDefault(const Constant(false))();
   BoolColumn get paper => boolean().withDefault(const Constant(false))();
-  BoolColumn get mtgo => boolean().withDefault(const Constant(false))();
-  BoolColumn get arena => boolean().withDefault(const Constant(false))();
 
   TextColumn get legalStandard => text().nullable()();
   TextColumn get legalFuture => text().nullable()();
