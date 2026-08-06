@@ -6,6 +6,7 @@ import 'package:drift/drift.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'database.dart';
 import 'scryfall_download.dart';
@@ -75,13 +76,16 @@ class ScryfallDataParser {
     );
   }
 
+  final journalMode = await _database.customSelect('PRAGMA journal_mode;').getSingle();
+  debugPrint('journal_mode=${journalMode.data}');
+
   final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
   final bulkDataFile = File(bulkDataFilePath);
   if (!await bulkDataFile.exists()) {
     throw StateError('Bulk data file not found: $bulkDataFilePath');
   }
 
-  const chunkSize = 5000;
+  const chunkSize = 17500;
   var parsedCount = 0;
 
   _progressController.add(
@@ -95,10 +99,13 @@ class ScryfallDataParser {
     Future<_ParseChunkResult>? pendingParse;
 
     Future<void> awaitAndFlushPending() async {
-      if (pendingParse == null) return;
+    if (pendingParse == null) return;
+      final sw = Stopwatch()..start();
       final result = await pendingParse!;
-      pendingParse = null;
+      final parseWaitMs = sw.elapsedMilliseconds;
+      sw.reset();
       await _flushBatch(result.cards, result.faces);
+      debugPrint('parseWait=${parseWaitMs}ms flush=${sw.elapsedMilliseconds}ms count=${result.parsedCount}');
       parsedCount += result.parsedCount;
       _progressController.add(
         ParserProgress(
@@ -157,7 +164,7 @@ class ScryfallDataParser {
     return stream.transform(utf8.decoder).transform(const LineSplitter());
   }
 
-  static ScryfallCardsCompanion _mapCard(Map<String, dynamic> card, String? rawJsonStr) {
+  static ScryfallCardsCompanion _mapCard(Map<String, dynamic> card) {
     final imageUris = _objectField(card, 'image_uris');
     final legalities = _objectField(card, 'legalities');
     final prices = _objectField(card, 'prices');
@@ -302,8 +309,6 @@ class ScryfallDataParser {
       
       cardBackId: Value(_stringField(card, 'card_back_id')),
       allPartsJson: Value(_encodeJsonOrNull(allParts)),
-      
-      rawJson: rawJsonStr ?? jsonEncode(card)
     );
   }
 
@@ -369,8 +374,6 @@ class ScryfallDataParser {
       imageArtCrop: Value(_stringField(imageUris, 'art_crop')),
       imageBorderCrop: Value(_stringField(imageUris, 'border_crop')),
       watermark: Value(_stringField(face, 'watermark')),
-      
-      rawJson: jsonEncode(face),
     );
   }
 
@@ -382,26 +385,12 @@ class ScryfallDataParser {
       return;
     }
 
-    final cardsToInsert = List<ScryfallCardsCompanion>.from(cards);
-    final facesToInsert = List<ScryfallCardFacesCompanion>.from(faces);
-    cards.clear();
-    faces.clear();
-
     await _database.batch((batch) {
-      for (final card in cardsToInsert) {
-        batch.insert(
-          _database.scryfallCards,
-          card,
-          mode: InsertMode.insertOrReplace,
-        );
+      for (final card in cards) {
+        batch.insert(_database.scryfallCards, card, mode: InsertMode.insert);
       }
-
-      for (final face in facesToInsert) {
-        batch.insert(
-          _database.scryfallCardFaces,
-          face,
-          mode: InsertMode.insertOrReplace,
-        );
+      for (final face in faces) {
+        batch.insert(_database.scryfallCardFaces, face, mode: InsertMode.insert);
       }
     });
   }
@@ -430,7 +419,7 @@ class ScryfallDataParser {
     }
 
     parsedCount++;
-    cards.add(_mapCard(record, trimmedLine));
+    cards.add(_mapCard(record));
     faces.addAll(_mapFaces(record));
   }
 

@@ -31,37 +31,6 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _mtgoIdMeta = const VerificationMeta('mtgoId');
-  @override
-  late final GeneratedColumn<String> mtgoId = GeneratedColumn<String>(
-    'mtgo_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _mtgoFoilIdMeta = const VerificationMeta(
-    'mtgoFoilId',
-  );
-  @override
-  late final GeneratedColumn<String> mtgoFoilId = GeneratedColumn<String>(
-    'mtgo_foil_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _arenaIdMeta = const VerificationMeta(
-    'arenaId',
-  );
-  @override
-  late final GeneratedColumn<String> arenaId = GeneratedColumn<String>(
-    'arena_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
   static const VerificationMeta _tcgplayerIdMeta = const VerificationMeta(
     'tcgplayerId',
   );
@@ -96,15 +65,6 @@ class $ScryfallCardsTable extends ScryfallCards
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
-  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
-  @override
-  late final GeneratedColumn<String> setId = GeneratedColumn<String>(
-    'set_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   static const VerificationMeta _layoutMeta = const VerificationMeta('layout');
   @override
   late final GeneratedColumn<String> layout = GeneratedColumn<String>(
@@ -133,6 +93,15 @@ class $ScryfallCardsTable extends ScryfallCards
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
+  );
+  static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
+  @override
+  late final GeneratedColumn<String> setId = GeneratedColumn<String>(
+    'set_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _setCodeMeta = const VerificationMeta(
     'setCode',
@@ -786,21 +755,6 @@ class $ScryfallCardsTable extends ScryfallCards
     ),
     defaultValue: const Constant(false),
   );
-  static const VerificationMeta _digitalMeta = const VerificationMeta(
-    'digital',
-  );
-  @override
-  late final GeneratedColumn<bool> digital = GeneratedColumn<bool>(
-    'digital',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("digital" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
   static const VerificationMeta _oversizedMeta = const VerificationMeta(
     'oversized',
   );
@@ -880,32 +834,6 @@ class $ScryfallCardsTable extends ScryfallCards
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
       'CHECK ("paper" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _mtgoMeta = const VerificationMeta('mtgo');
-  @override
-  late final GeneratedColumn<bool> mtgo = GeneratedColumn<bool>(
-    'mtgo',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("mtgo" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
-  );
-  static const VerificationMeta _arenaMeta = const VerificationMeta('arena');
-  @override
-  late final GeneratedColumn<bool> arena = GeneratedColumn<bool>(
-    'arena',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("arena" IN (0, 1))',
     ),
     defaultValue: const Constant(false),
   );
@@ -1327,31 +1255,17 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _rawJsonMeta = const VerificationMeta(
-    'rawJson',
-  );
-  @override
-  late final GeneratedColumn<String> rawJson = GeneratedColumn<String>(
-    'raw_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     scryfallId,
     oracleId,
-    mtgoId,
-    mtgoFoilId,
-    arenaId,
     tcgplayerId,
     cardmarketId,
     multiverseIdsJson,
-    setId,
     layout,
     name,
     printedName,
+    setId,
     setCode,
     setName,
     setType,
@@ -1408,15 +1322,12 @@ class $ScryfallCardsTable extends ScryfallCards
     variation,
     reserved,
     gameChanger,
-    digital,
     oversized,
     nonfoil,
     foil,
     etched,
     glossy,
     paper,
-    mtgo,
-    arena,
     legalStandard,
     legalFuture,
     legalHistoric,
@@ -1455,7 +1366,6 @@ class $ScryfallCardsTable extends ScryfallCards
     purchaseCardhoarderUri,
     cardBackId,
     allPartsJson,
-    rawJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1481,27 +1391,6 @@ class $ScryfallCardsTable extends ScryfallCards
       context.handle(
         _oracleIdMeta,
         oracleId.isAcceptableOrUnknown(data['oracle_id']!, _oracleIdMeta),
-      );
-    }
-    if (data.containsKey('mtgo_id')) {
-      context.handle(
-        _mtgoIdMeta,
-        mtgoId.isAcceptableOrUnknown(data['mtgo_id']!, _mtgoIdMeta),
-      );
-    }
-    if (data.containsKey('mtgo_foil_id')) {
-      context.handle(
-        _mtgoFoilIdMeta,
-        mtgoFoilId.isAcceptableOrUnknown(
-          data['mtgo_foil_id']!,
-          _mtgoFoilIdMeta,
-        ),
-      );
-    }
-    if (data.containsKey('arena_id')) {
-      context.handle(
-        _arenaIdMeta,
-        arenaId.isAcceptableOrUnknown(data['arena_id']!, _arenaIdMeta),
       );
     }
     if (data.containsKey('tcgplayer_id')) {
@@ -1531,14 +1420,6 @@ class $ScryfallCardsTable extends ScryfallCards
         ),
       );
     }
-    if (data.containsKey('set_id')) {
-      context.handle(
-        _setIdMeta,
-        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_setIdMeta);
-    }
     if (data.containsKey('layout')) {
       context.handle(
         _layoutMeta,
@@ -1563,6 +1444,14 @@ class $ScryfallCardsTable extends ScryfallCards
           _printedNameMeta,
         ),
       );
+    }
+    if (data.containsKey('set_id')) {
+      context.handle(
+        _setIdMeta,
+        setId.isAcceptableOrUnknown(data['set_id']!, _setIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setIdMeta);
     }
     if (data.containsKey('set_code')) {
       context.handle(
@@ -2013,12 +1902,6 @@ class $ScryfallCardsTable extends ScryfallCards
         ),
       );
     }
-    if (data.containsKey('digital')) {
-      context.handle(
-        _digitalMeta,
-        digital.isAcceptableOrUnknown(data['digital']!, _digitalMeta),
-      );
-    }
     if (data.containsKey('oversized')) {
       context.handle(
         _oversizedMeta,
@@ -2053,18 +1936,6 @@ class $ScryfallCardsTable extends ScryfallCards
       context.handle(
         _paperMeta,
         paper.isAcceptableOrUnknown(data['paper']!, _paperMeta),
-      );
-    }
-    if (data.containsKey('mtgo')) {
-      context.handle(
-        _mtgoMeta,
-        mtgo.isAcceptableOrUnknown(data['mtgo']!, _mtgoMeta),
-      );
-    }
-    if (data.containsKey('arena')) {
-      context.handle(
-        _arenaMeta,
-        arena.isAcceptableOrUnknown(data['arena']!, _arenaMeta),
       );
     }
     if (data.containsKey('legal_standard')) {
@@ -2385,14 +2256,6 @@ class $ScryfallCardsTable extends ScryfallCards
         ),
       );
     }
-    if (data.containsKey('raw_json')) {
-      context.handle(
-        _rawJsonMeta,
-        rawJson.isAcceptableOrUnknown(data['raw_json']!, _rawJsonMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_rawJsonMeta);
-    }
     return context;
   }
 
@@ -2410,18 +2273,6 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}oracle_id'],
       ),
-      mtgoId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}mtgo_id'],
-      ),
-      mtgoFoilId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}mtgo_foil_id'],
-      ),
-      arenaId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}arena_id'],
-      ),
       tcgplayerId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}tcgplayer_id'],
@@ -2434,10 +2285,6 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}multiverse_ids_json'],
       ),
-      setId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}set_id'],
-      )!,
       layout: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}layout'],
@@ -2450,6 +2297,10 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}printed_name'],
       ),
+      setId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_id'],
+      )!,
       setCode: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}set_code'],
@@ -2674,10 +2525,6 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.bool,
         data['${effectivePrefix}game_changer'],
       )!,
-      digital: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}digital'],
-      )!,
       oversized: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}oversized'],
@@ -2701,14 +2548,6 @@ class $ScryfallCardsTable extends ScryfallCards
       paper: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}paper'],
-      )!,
-      mtgo: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}mtgo'],
-      )!,
-      arena: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}arena'],
       )!,
       legalStandard: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2862,10 +2701,6 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}all_parts_json'],
       ),
-      rawJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}raw_json'],
-      )!,
     );
   }
 
@@ -2878,16 +2713,13 @@ class $ScryfallCardsTable extends ScryfallCards
 class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final String scryfallId;
   final String? oracleId;
-  final String? mtgoId;
-  final String? mtgoFoilId;
-  final String? arenaId;
   final String? tcgplayerId;
   final String? cardmarketId;
   final String? multiverseIdsJson;
-  final String setId;
   final String layout;
   final String name;
   final String? printedName;
+  final String setId;
   final String setCode;
   final String setName;
   final String setType;
@@ -2944,15 +2776,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final bool variation;
   final bool reserved;
   final bool gameChanger;
-  final bool digital;
   final bool oversized;
   final bool nonfoil;
   final bool foil;
   final bool etched;
   final bool glossy;
   final bool paper;
-  final bool mtgo;
-  final bool arena;
   final String? legalStandard;
   final String? legalFuture;
   final String? legalHistoric;
@@ -2991,20 +2820,16 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final String? purchaseCardhoarderUri;
   final String? cardBackId;
   final String? allPartsJson;
-  final String rawJson;
   const ScryfallCard({
     required this.scryfallId,
     this.oracleId,
-    this.mtgoId,
-    this.mtgoFoilId,
-    this.arenaId,
     this.tcgplayerId,
     this.cardmarketId,
     this.multiverseIdsJson,
-    required this.setId,
     required this.layout,
     required this.name,
     this.printedName,
+    required this.setId,
     required this.setCode,
     required this.setName,
     required this.setType,
@@ -3061,15 +2886,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     required this.variation,
     required this.reserved,
     required this.gameChanger,
-    required this.digital,
     required this.oversized,
     required this.nonfoil,
     required this.foil,
     required this.etched,
     required this.glossy,
     required this.paper,
-    required this.mtgo,
-    required this.arena,
     this.legalStandard,
     this.legalFuture,
     this.legalHistoric,
@@ -3108,7 +2930,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     this.purchaseCardhoarderUri,
     this.cardBackId,
     this.allPartsJson,
-    required this.rawJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3116,15 +2937,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     map['scryfall_id'] = Variable<String>(scryfallId);
     if (!nullToAbsent || oracleId != null) {
       map['oracle_id'] = Variable<String>(oracleId);
-    }
-    if (!nullToAbsent || mtgoId != null) {
-      map['mtgo_id'] = Variable<String>(mtgoId);
-    }
-    if (!nullToAbsent || mtgoFoilId != null) {
-      map['mtgo_foil_id'] = Variable<String>(mtgoFoilId);
-    }
-    if (!nullToAbsent || arenaId != null) {
-      map['arena_id'] = Variable<String>(arenaId);
     }
     if (!nullToAbsent || tcgplayerId != null) {
       map['tcgplayer_id'] = Variable<String>(tcgplayerId);
@@ -3135,12 +2947,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     if (!nullToAbsent || multiverseIdsJson != null) {
       map['multiverse_ids_json'] = Variable<String>(multiverseIdsJson);
     }
-    map['set_id'] = Variable<String>(setId);
     map['layout'] = Variable<String>(layout);
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || printedName != null) {
       map['printed_name'] = Variable<String>(printedName);
     }
+    map['set_id'] = Variable<String>(setId);
     map['set_code'] = Variable<String>(setCode);
     map['set_name'] = Variable<String>(setName);
     map['set_type'] = Variable<String>(setType);
@@ -3247,15 +3059,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     map['variation'] = Variable<bool>(variation);
     map['reserved'] = Variable<bool>(reserved);
     map['game_changer'] = Variable<bool>(gameChanger);
-    map['digital'] = Variable<bool>(digital);
     map['oversized'] = Variable<bool>(oversized);
     map['nonfoil'] = Variable<bool>(nonfoil);
     map['foil'] = Variable<bool>(foil);
     map['etched'] = Variable<bool>(etched);
     map['glossy'] = Variable<bool>(glossy);
     map['paper'] = Variable<bool>(paper);
-    map['mtgo'] = Variable<bool>(mtgo);
-    map['arena'] = Variable<bool>(arena);
     if (!nullToAbsent || legalStandard != null) {
       map['legal_standard'] = Variable<String>(legalStandard);
     }
@@ -3376,7 +3185,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     if (!nullToAbsent || allPartsJson != null) {
       map['all_parts_json'] = Variable<String>(allPartsJson);
     }
-    map['raw_json'] = Variable<String>(rawJson);
     return map;
   }
 
@@ -3386,15 +3194,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       oracleId: oracleId == null && nullToAbsent
           ? const Value.absent()
           : Value(oracleId),
-      mtgoId: mtgoId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(mtgoId),
-      mtgoFoilId: mtgoFoilId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(mtgoFoilId),
-      arenaId: arenaId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(arenaId),
       tcgplayerId: tcgplayerId == null && nullToAbsent
           ? const Value.absent()
           : Value(tcgplayerId),
@@ -3404,12 +3203,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       multiverseIdsJson: multiverseIdsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(multiverseIdsJson),
-      setId: Value(setId),
       layout: Value(layout),
       name: Value(name),
       printedName: printedName == null && nullToAbsent
           ? const Value.absent()
           : Value(printedName),
+      setId: Value(setId),
       setCode: Value(setCode),
       setName: Value(setName),
       setType: Value(setType),
@@ -3516,15 +3315,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       variation: Value(variation),
       reserved: Value(reserved),
       gameChanger: Value(gameChanger),
-      digital: Value(digital),
       oversized: Value(oversized),
       nonfoil: Value(nonfoil),
       foil: Value(foil),
       etched: Value(etched),
       glossy: Value(glossy),
       paper: Value(paper),
-      mtgo: Value(mtgo),
-      arena: Value(arena),
       legalStandard: legalStandard == null && nullToAbsent
           ? const Value.absent()
           : Value(legalStandard),
@@ -3641,7 +3437,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       allPartsJson: allPartsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(allPartsJson),
-      rawJson: Value(rawJson),
     );
   }
 
@@ -3653,18 +3448,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     return ScryfallCard(
       scryfallId: serializer.fromJson<String>(json['scryfallId']),
       oracleId: serializer.fromJson<String?>(json['oracleId']),
-      mtgoId: serializer.fromJson<String?>(json['mtgoId']),
-      mtgoFoilId: serializer.fromJson<String?>(json['mtgoFoilId']),
-      arenaId: serializer.fromJson<String?>(json['arenaId']),
       tcgplayerId: serializer.fromJson<String?>(json['tcgplayerId']),
       cardmarketId: serializer.fromJson<String?>(json['cardmarketId']),
       multiverseIdsJson: serializer.fromJson<String?>(
         json['multiverseIdsJson'],
       ),
-      setId: serializer.fromJson<String>(json['setId']),
       layout: serializer.fromJson<String>(json['layout']),
       name: serializer.fromJson<String>(json['name']),
       printedName: serializer.fromJson<String?>(json['printedName']),
+      setId: serializer.fromJson<String>(json['setId']),
       setCode: serializer.fromJson<String>(json['setCode']),
       setName: serializer.fromJson<String>(json['setName']),
       setType: serializer.fromJson<String>(json['setType']),
@@ -3723,15 +3515,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       variation: serializer.fromJson<bool>(json['variation']),
       reserved: serializer.fromJson<bool>(json['reserved']),
       gameChanger: serializer.fromJson<bool>(json['gameChanger']),
-      digital: serializer.fromJson<bool>(json['digital']),
       oversized: serializer.fromJson<bool>(json['oversized']),
       nonfoil: serializer.fromJson<bool>(json['nonfoil']),
       foil: serializer.fromJson<bool>(json['foil']),
       etched: serializer.fromJson<bool>(json['etched']),
       glossy: serializer.fromJson<bool>(json['glossy']),
       paper: serializer.fromJson<bool>(json['paper']),
-      mtgo: serializer.fromJson<bool>(json['mtgo']),
-      arena: serializer.fromJson<bool>(json['arena']),
       legalStandard: serializer.fromJson<String?>(json['legalStandard']),
       legalFuture: serializer.fromJson<String?>(json['legalFuture']),
       legalHistoric: serializer.fromJson<String?>(json['legalHistoric']),
@@ -3788,7 +3577,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       ),
       cardBackId: serializer.fromJson<String?>(json['cardBackId']),
       allPartsJson: serializer.fromJson<String?>(json['allPartsJson']),
-      rawJson: serializer.fromJson<String>(json['rawJson']),
     );
   }
   @override
@@ -3797,16 +3585,13 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     return <String, dynamic>{
       'scryfallId': serializer.toJson<String>(scryfallId),
       'oracleId': serializer.toJson<String?>(oracleId),
-      'mtgoId': serializer.toJson<String?>(mtgoId),
-      'mtgoFoilId': serializer.toJson<String?>(mtgoFoilId),
-      'arenaId': serializer.toJson<String?>(arenaId),
       'tcgplayerId': serializer.toJson<String?>(tcgplayerId),
       'cardmarketId': serializer.toJson<String?>(cardmarketId),
       'multiverseIdsJson': serializer.toJson<String?>(multiverseIdsJson),
-      'setId': serializer.toJson<String>(setId),
       'layout': serializer.toJson<String>(layout),
       'name': serializer.toJson<String>(name),
       'printedName': serializer.toJson<String?>(printedName),
+      'setId': serializer.toJson<String>(setId),
       'setCode': serializer.toJson<String>(setCode),
       'setName': serializer.toJson<String>(setName),
       'setType': serializer.toJson<String>(setType),
@@ -3863,15 +3648,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       'variation': serializer.toJson<bool>(variation),
       'reserved': serializer.toJson<bool>(reserved),
       'gameChanger': serializer.toJson<bool>(gameChanger),
-      'digital': serializer.toJson<bool>(digital),
       'oversized': serializer.toJson<bool>(oversized),
       'nonfoil': serializer.toJson<bool>(nonfoil),
       'foil': serializer.toJson<bool>(foil),
       'etched': serializer.toJson<bool>(etched),
       'glossy': serializer.toJson<bool>(glossy),
       'paper': serializer.toJson<bool>(paper),
-      'mtgo': serializer.toJson<bool>(mtgo),
-      'arena': serializer.toJson<bool>(arena),
       'legalStandard': serializer.toJson<String?>(legalStandard),
       'legalFuture': serializer.toJson<String?>(legalFuture),
       'legalHistoric': serializer.toJson<String?>(legalHistoric),
@@ -3920,23 +3702,19 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       ),
       'cardBackId': serializer.toJson<String?>(cardBackId),
       'allPartsJson': serializer.toJson<String?>(allPartsJson),
-      'rawJson': serializer.toJson<String>(rawJson),
     };
   }
 
   ScryfallCard copyWith({
     String? scryfallId,
     Value<String?> oracleId = const Value.absent(),
-    Value<String?> mtgoId = const Value.absent(),
-    Value<String?> mtgoFoilId = const Value.absent(),
-    Value<String?> arenaId = const Value.absent(),
     Value<String?> tcgplayerId = const Value.absent(),
     Value<String?> cardmarketId = const Value.absent(),
     Value<String?> multiverseIdsJson = const Value.absent(),
-    String? setId,
     String? layout,
     String? name,
     Value<String?> printedName = const Value.absent(),
+    String? setId,
     String? setCode,
     String? setName,
     String? setType,
@@ -3993,15 +3771,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     bool? variation,
     bool? reserved,
     bool? gameChanger,
-    bool? digital,
     bool? oversized,
     bool? nonfoil,
     bool? foil,
     bool? etched,
     bool? glossy,
     bool? paper,
-    bool? mtgo,
-    bool? arena,
     Value<String?> legalStandard = const Value.absent(),
     Value<String?> legalFuture = const Value.absent(),
     Value<String?> legalHistoric = const Value.absent(),
@@ -4040,22 +3815,18 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     Value<String?> purchaseCardhoarderUri = const Value.absent(),
     Value<String?> cardBackId = const Value.absent(),
     Value<String?> allPartsJson = const Value.absent(),
-    String? rawJson,
   }) => ScryfallCard(
     scryfallId: scryfallId ?? this.scryfallId,
     oracleId: oracleId.present ? oracleId.value : this.oracleId,
-    mtgoId: mtgoId.present ? mtgoId.value : this.mtgoId,
-    mtgoFoilId: mtgoFoilId.present ? mtgoFoilId.value : this.mtgoFoilId,
-    arenaId: arenaId.present ? arenaId.value : this.arenaId,
     tcgplayerId: tcgplayerId.present ? tcgplayerId.value : this.tcgplayerId,
     cardmarketId: cardmarketId.present ? cardmarketId.value : this.cardmarketId,
     multiverseIdsJson: multiverseIdsJson.present
         ? multiverseIdsJson.value
         : this.multiverseIdsJson,
-    setId: setId ?? this.setId,
     layout: layout ?? this.layout,
     name: name ?? this.name,
     printedName: printedName.present ? printedName.value : this.printedName,
+    setId: setId ?? this.setId,
     setCode: setCode ?? this.setCode,
     setName: setName ?? this.setName,
     setType: setType ?? this.setType,
@@ -4130,15 +3901,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     variation: variation ?? this.variation,
     reserved: reserved ?? this.reserved,
     gameChanger: gameChanger ?? this.gameChanger,
-    digital: digital ?? this.digital,
     oversized: oversized ?? this.oversized,
     nonfoil: nonfoil ?? this.nonfoil,
     foil: foil ?? this.foil,
     etched: etched ?? this.etched,
     glossy: glossy ?? this.glossy,
     paper: paper ?? this.paper,
-    mtgo: mtgo ?? this.mtgo,
-    arena: arena ?? this.arena,
     legalStandard: legalStandard.present
         ? legalStandard.value
         : this.legalStandard,
@@ -4220,7 +3988,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
         : this.purchaseCardhoarderUri,
     cardBackId: cardBackId.present ? cardBackId.value : this.cardBackId,
     allPartsJson: allPartsJson.present ? allPartsJson.value : this.allPartsJson,
-    rawJson: rawJson ?? this.rawJson,
   );
   ScryfallCard copyWithCompanion(ScryfallCardsCompanion data) {
     return ScryfallCard(
@@ -4228,11 +3995,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ? data.scryfallId.value
           : this.scryfallId,
       oracleId: data.oracleId.present ? data.oracleId.value : this.oracleId,
-      mtgoId: data.mtgoId.present ? data.mtgoId.value : this.mtgoId,
-      mtgoFoilId: data.mtgoFoilId.present
-          ? data.mtgoFoilId.value
-          : this.mtgoFoilId,
-      arenaId: data.arenaId.present ? data.arenaId.value : this.arenaId,
       tcgplayerId: data.tcgplayerId.present
           ? data.tcgplayerId.value
           : this.tcgplayerId,
@@ -4242,12 +4004,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       multiverseIdsJson: data.multiverseIdsJson.present
           ? data.multiverseIdsJson.value
           : this.multiverseIdsJson,
-      setId: data.setId.present ? data.setId.value : this.setId,
       layout: data.layout.present ? data.layout.value : this.layout,
       name: data.name.present ? data.name.value : this.name,
       printedName: data.printedName.present
           ? data.printedName.value
           : this.printedName,
+      setId: data.setId.present ? data.setId.value : this.setId,
       setCode: data.setCode.present ? data.setCode.value : this.setCode,
       setName: data.setName.present ? data.setName.value : this.setName,
       setType: data.setType.present ? data.setType.value : this.setType,
@@ -4372,15 +4134,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       gameChanger: data.gameChanger.present
           ? data.gameChanger.value
           : this.gameChanger,
-      digital: data.digital.present ? data.digital.value : this.digital,
       oversized: data.oversized.present ? data.oversized.value : this.oversized,
       nonfoil: data.nonfoil.present ? data.nonfoil.value : this.nonfoil,
       foil: data.foil.present ? data.foil.value : this.foil,
       etched: data.etched.present ? data.etched.value : this.etched,
       glossy: data.glossy.present ? data.glossy.value : this.glossy,
       paper: data.paper.present ? data.paper.value : this.paper,
-      mtgo: data.mtgo.present ? data.mtgo.value : this.mtgo,
-      arena: data.arena.present ? data.arena.value : this.arena,
       legalStandard: data.legalStandard.present
           ? data.legalStandard.value
           : this.legalStandard,
@@ -4487,7 +4246,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       allPartsJson: data.allPartsJson.present
           ? data.allPartsJson.value
           : this.allPartsJson,
-      rawJson: data.rawJson.present ? data.rawJson.value : this.rawJson,
     );
   }
 
@@ -4496,16 +4254,13 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     return (StringBuffer('ScryfallCard(')
           ..write('scryfallId: $scryfallId, ')
           ..write('oracleId: $oracleId, ')
-          ..write('mtgoId: $mtgoId, ')
-          ..write('mtgoFoilId: $mtgoFoilId, ')
-          ..write('arenaId: $arenaId, ')
           ..write('tcgplayerId: $tcgplayerId, ')
           ..write('cardmarketId: $cardmarketId, ')
           ..write('multiverseIdsJson: $multiverseIdsJson, ')
-          ..write('setId: $setId, ')
           ..write('layout: $layout, ')
           ..write('name: $name, ')
           ..write('printedName: $printedName, ')
+          ..write('setId: $setId, ')
           ..write('setCode: $setCode, ')
           ..write('setName: $setName, ')
           ..write('setType: $setType, ')
@@ -4562,15 +4317,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ..write('variation: $variation, ')
           ..write('reserved: $reserved, ')
           ..write('gameChanger: $gameChanger, ')
-          ..write('digital: $digital, ')
           ..write('oversized: $oversized, ')
           ..write('nonfoil: $nonfoil, ')
           ..write('foil: $foil, ')
           ..write('etched: $etched, ')
           ..write('glossy: $glossy, ')
           ..write('paper: $paper, ')
-          ..write('mtgo: $mtgo, ')
-          ..write('arena: $arena, ')
           ..write('legalStandard: $legalStandard, ')
           ..write('legalFuture: $legalFuture, ')
           ..write('legalHistoric: $legalHistoric, ')
@@ -4612,8 +4364,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ..write('purchaseCardmarketUri: $purchaseCardmarketUri, ')
           ..write('purchaseCardhoarderUri: $purchaseCardhoarderUri, ')
           ..write('cardBackId: $cardBackId, ')
-          ..write('allPartsJson: $allPartsJson, ')
-          ..write('rawJson: $rawJson')
+          ..write('allPartsJson: $allPartsJson')
           ..write(')'))
         .toString();
   }
@@ -4622,16 +4373,13 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   int get hashCode => Object.hashAll([
     scryfallId,
     oracleId,
-    mtgoId,
-    mtgoFoilId,
-    arenaId,
     tcgplayerId,
     cardmarketId,
     multiverseIdsJson,
-    setId,
     layout,
     name,
     printedName,
+    setId,
     setCode,
     setName,
     setType,
@@ -4688,15 +4436,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     variation,
     reserved,
     gameChanger,
-    digital,
     oversized,
     nonfoil,
     foil,
     etched,
     glossy,
     paper,
-    mtgo,
-    arena,
     legalStandard,
     legalFuture,
     legalHistoric,
@@ -4735,7 +4480,6 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     purchaseCardhoarderUri,
     cardBackId,
     allPartsJson,
-    rawJson,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -4743,16 +4487,13 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       (other is ScryfallCard &&
           other.scryfallId == this.scryfallId &&
           other.oracleId == this.oracleId &&
-          other.mtgoId == this.mtgoId &&
-          other.mtgoFoilId == this.mtgoFoilId &&
-          other.arenaId == this.arenaId &&
           other.tcgplayerId == this.tcgplayerId &&
           other.cardmarketId == this.cardmarketId &&
           other.multiverseIdsJson == this.multiverseIdsJson &&
-          other.setId == this.setId &&
           other.layout == this.layout &&
           other.name == this.name &&
           other.printedName == this.printedName &&
+          other.setId == this.setId &&
           other.setCode == this.setCode &&
           other.setName == this.setName &&
           other.setType == this.setType &&
@@ -4809,15 +4550,12 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           other.variation == this.variation &&
           other.reserved == this.reserved &&
           other.gameChanger == this.gameChanger &&
-          other.digital == this.digital &&
           other.oversized == this.oversized &&
           other.nonfoil == this.nonfoil &&
           other.foil == this.foil &&
           other.etched == this.etched &&
           other.glossy == this.glossy &&
           other.paper == this.paper &&
-          other.mtgo == this.mtgo &&
-          other.arena == this.arena &&
           other.legalStandard == this.legalStandard &&
           other.legalFuture == this.legalFuture &&
           other.legalHistoric == this.legalHistoric &&
@@ -4857,23 +4595,19 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           other.purchaseCardmarketUri == this.purchaseCardmarketUri &&
           other.purchaseCardhoarderUri == this.purchaseCardhoarderUri &&
           other.cardBackId == this.cardBackId &&
-          other.allPartsJson == this.allPartsJson &&
-          other.rawJson == this.rawJson);
+          other.allPartsJson == this.allPartsJson);
 }
 
 class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<String> scryfallId;
   final Value<String?> oracleId;
-  final Value<String?> mtgoId;
-  final Value<String?> mtgoFoilId;
-  final Value<String?> arenaId;
   final Value<String?> tcgplayerId;
   final Value<String?> cardmarketId;
   final Value<String?> multiverseIdsJson;
-  final Value<String> setId;
   final Value<String> layout;
   final Value<String> name;
   final Value<String?> printedName;
+  final Value<String> setId;
   final Value<String> setCode;
   final Value<String> setName;
   final Value<String> setType;
@@ -4930,15 +4664,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<bool> variation;
   final Value<bool> reserved;
   final Value<bool> gameChanger;
-  final Value<bool> digital;
   final Value<bool> oversized;
   final Value<bool> nonfoil;
   final Value<bool> foil;
   final Value<bool> etched;
   final Value<bool> glossy;
   final Value<bool> paper;
-  final Value<bool> mtgo;
-  final Value<bool> arena;
   final Value<String?> legalStandard;
   final Value<String?> legalFuture;
   final Value<String?> legalHistoric;
@@ -4977,21 +4708,17 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<String?> purchaseCardhoarderUri;
   final Value<String?> cardBackId;
   final Value<String?> allPartsJson;
-  final Value<String> rawJson;
   final Value<int> rowid;
   const ScryfallCardsCompanion({
     this.scryfallId = const Value.absent(),
     this.oracleId = const Value.absent(),
-    this.mtgoId = const Value.absent(),
-    this.mtgoFoilId = const Value.absent(),
-    this.arenaId = const Value.absent(),
     this.tcgplayerId = const Value.absent(),
     this.cardmarketId = const Value.absent(),
     this.multiverseIdsJson = const Value.absent(),
-    this.setId = const Value.absent(),
     this.layout = const Value.absent(),
     this.name = const Value.absent(),
     this.printedName = const Value.absent(),
+    this.setId = const Value.absent(),
     this.setCode = const Value.absent(),
     this.setName = const Value.absent(),
     this.setType = const Value.absent(),
@@ -5048,15 +4775,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.variation = const Value.absent(),
     this.reserved = const Value.absent(),
     this.gameChanger = const Value.absent(),
-    this.digital = const Value.absent(),
     this.oversized = const Value.absent(),
     this.nonfoil = const Value.absent(),
     this.foil = const Value.absent(),
     this.etched = const Value.absent(),
     this.glossy = const Value.absent(),
     this.paper = const Value.absent(),
-    this.mtgo = const Value.absent(),
-    this.arena = const Value.absent(),
     this.legalStandard = const Value.absent(),
     this.legalFuture = const Value.absent(),
     this.legalHistoric = const Value.absent(),
@@ -5095,22 +4819,18 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.purchaseCardhoarderUri = const Value.absent(),
     this.cardBackId = const Value.absent(),
     this.allPartsJson = const Value.absent(),
-    this.rawJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ScryfallCardsCompanion.insert({
     required String scryfallId,
     this.oracleId = const Value.absent(),
-    this.mtgoId = const Value.absent(),
-    this.mtgoFoilId = const Value.absent(),
-    this.arenaId = const Value.absent(),
     this.tcgplayerId = const Value.absent(),
     this.cardmarketId = const Value.absent(),
     this.multiverseIdsJson = const Value.absent(),
-    required String setId,
     required String layout,
     required String name,
     this.printedName = const Value.absent(),
+    required String setId,
     required String setCode,
     required String setName,
     required String setType,
@@ -5167,15 +4887,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.variation = const Value.absent(),
     this.reserved = const Value.absent(),
     this.gameChanger = const Value.absent(),
-    this.digital = const Value.absent(),
     this.oversized = const Value.absent(),
     this.nonfoil = const Value.absent(),
     this.foil = const Value.absent(),
     this.etched = const Value.absent(),
     this.glossy = const Value.absent(),
     this.paper = const Value.absent(),
-    this.mtgo = const Value.absent(),
-    this.arena = const Value.absent(),
     this.legalStandard = const Value.absent(),
     this.legalFuture = const Value.absent(),
     this.legalHistoric = const Value.absent(),
@@ -5214,12 +4931,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.purchaseCardhoarderUri = const Value.absent(),
     this.cardBackId = const Value.absent(),
     this.allPartsJson = const Value.absent(),
-    required String rawJson,
     this.rowid = const Value.absent(),
   }) : scryfallId = Value(scryfallId),
-       setId = Value(setId),
        layout = Value(layout),
        name = Value(name),
+       setId = Value(setId),
        setCode = Value(setCode),
        setName = Value(setName),
        setType = Value(setType),
@@ -5235,21 +4951,17 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
        rulingsUri = Value(rulingsUri),
        printsSearchUri = Value(printsSearchUri),
        typeLine = Value(typeLine),
-       cmc = Value(cmc),
-       rawJson = Value(rawJson);
+       cmc = Value(cmc);
   static Insertable<ScryfallCard> custom({
     Expression<String>? scryfallId,
     Expression<String>? oracleId,
-    Expression<String>? mtgoId,
-    Expression<String>? mtgoFoilId,
-    Expression<String>? arenaId,
     Expression<String>? tcgplayerId,
     Expression<String>? cardmarketId,
     Expression<String>? multiverseIdsJson,
-    Expression<String>? setId,
     Expression<String>? layout,
     Expression<String>? name,
     Expression<String>? printedName,
+    Expression<String>? setId,
     Expression<String>? setCode,
     Expression<String>? setName,
     Expression<String>? setType,
@@ -5306,15 +5018,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Expression<bool>? variation,
     Expression<bool>? reserved,
     Expression<bool>? gameChanger,
-    Expression<bool>? digital,
     Expression<bool>? oversized,
     Expression<bool>? nonfoil,
     Expression<bool>? foil,
     Expression<bool>? etched,
     Expression<bool>? glossy,
     Expression<bool>? paper,
-    Expression<bool>? mtgo,
-    Expression<bool>? arena,
     Expression<String>? legalStandard,
     Expression<String>? legalFuture,
     Expression<String>? legalHistoric,
@@ -5353,22 +5062,18 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Expression<String>? purchaseCardhoarderUri,
     Expression<String>? cardBackId,
     Expression<String>? allPartsJson,
-    Expression<String>? rawJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (scryfallId != null) 'scryfall_id': scryfallId,
       if (oracleId != null) 'oracle_id': oracleId,
-      if (mtgoId != null) 'mtgo_id': mtgoId,
-      if (mtgoFoilId != null) 'mtgo_foil_id': mtgoFoilId,
-      if (arenaId != null) 'arena_id': arenaId,
       if (tcgplayerId != null) 'tcgplayer_id': tcgplayerId,
       if (cardmarketId != null) 'cardmarket_id': cardmarketId,
       if (multiverseIdsJson != null) 'multiverse_ids_json': multiverseIdsJson,
-      if (setId != null) 'set_id': setId,
       if (layout != null) 'layout': layout,
       if (name != null) 'name': name,
       if (printedName != null) 'printed_name': printedName,
+      if (setId != null) 'set_id': setId,
       if (setCode != null) 'set_code': setCode,
       if (setName != null) 'set_name': setName,
       if (setType != null) 'set_type': setType,
@@ -5425,15 +5130,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       if (variation != null) 'variation': variation,
       if (reserved != null) 'reserved': reserved,
       if (gameChanger != null) 'game_changer': gameChanger,
-      if (digital != null) 'digital': digital,
       if (oversized != null) 'oversized': oversized,
       if (nonfoil != null) 'nonfoil': nonfoil,
       if (foil != null) 'foil': foil,
       if (etched != null) 'etched': etched,
       if (glossy != null) 'glossy': glossy,
       if (paper != null) 'paper': paper,
-      if (mtgo != null) 'mtgo': mtgo,
-      if (arena != null) 'arena': arena,
       if (legalStandard != null) 'legal_standard': legalStandard,
       if (legalFuture != null) 'legal_future': legalFuture,
       if (legalHistoric != null) 'legal_historic': legalHistoric,
@@ -5483,7 +5185,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
         'purchase_cardhoarder_uri': purchaseCardhoarderUri,
       if (cardBackId != null) 'card_back_id': cardBackId,
       if (allPartsJson != null) 'all_parts_json': allPartsJson,
-      if (rawJson != null) 'raw_json': rawJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -5491,16 +5192,13 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   ScryfallCardsCompanion copyWith({
     Value<String>? scryfallId,
     Value<String?>? oracleId,
-    Value<String?>? mtgoId,
-    Value<String?>? mtgoFoilId,
-    Value<String?>? arenaId,
     Value<String?>? tcgplayerId,
     Value<String?>? cardmarketId,
     Value<String?>? multiverseIdsJson,
-    Value<String>? setId,
     Value<String>? layout,
     Value<String>? name,
     Value<String?>? printedName,
+    Value<String>? setId,
     Value<String>? setCode,
     Value<String>? setName,
     Value<String>? setType,
@@ -5557,15 +5255,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Value<bool>? variation,
     Value<bool>? reserved,
     Value<bool>? gameChanger,
-    Value<bool>? digital,
     Value<bool>? oversized,
     Value<bool>? nonfoil,
     Value<bool>? foil,
     Value<bool>? etched,
     Value<bool>? glossy,
     Value<bool>? paper,
-    Value<bool>? mtgo,
-    Value<bool>? arena,
     Value<String?>? legalStandard,
     Value<String?>? legalFuture,
     Value<String?>? legalHistoric,
@@ -5604,22 +5299,18 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Value<String?>? purchaseCardhoarderUri,
     Value<String?>? cardBackId,
     Value<String?>? allPartsJson,
-    Value<String>? rawJson,
     Value<int>? rowid,
   }) {
     return ScryfallCardsCompanion(
       scryfallId: scryfallId ?? this.scryfallId,
       oracleId: oracleId ?? this.oracleId,
-      mtgoId: mtgoId ?? this.mtgoId,
-      mtgoFoilId: mtgoFoilId ?? this.mtgoFoilId,
-      arenaId: arenaId ?? this.arenaId,
       tcgplayerId: tcgplayerId ?? this.tcgplayerId,
       cardmarketId: cardmarketId ?? this.cardmarketId,
       multiverseIdsJson: multiverseIdsJson ?? this.multiverseIdsJson,
-      setId: setId ?? this.setId,
       layout: layout ?? this.layout,
       name: name ?? this.name,
       printedName: printedName ?? this.printedName,
+      setId: setId ?? this.setId,
       setCode: setCode ?? this.setCode,
       setName: setName ?? this.setName,
       setType: setType ?? this.setType,
@@ -5676,15 +5367,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       variation: variation ?? this.variation,
       reserved: reserved ?? this.reserved,
       gameChanger: gameChanger ?? this.gameChanger,
-      digital: digital ?? this.digital,
       oversized: oversized ?? this.oversized,
       nonfoil: nonfoil ?? this.nonfoil,
       foil: foil ?? this.foil,
       etched: etched ?? this.etched,
       glossy: glossy ?? this.glossy,
       paper: paper ?? this.paper,
-      mtgo: mtgo ?? this.mtgo,
-      arena: arena ?? this.arena,
       legalStandard: legalStandard ?? this.legalStandard,
       legalFuture: legalFuture ?? this.legalFuture,
       legalHistoric: legalHistoric ?? this.legalHistoric,
@@ -5730,7 +5418,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           purchaseCardhoarderUri ?? this.purchaseCardhoarderUri,
       cardBackId: cardBackId ?? this.cardBackId,
       allPartsJson: allPartsJson ?? this.allPartsJson,
-      rawJson: rawJson ?? this.rawJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5744,15 +5431,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (oracleId.present) {
       map['oracle_id'] = Variable<String>(oracleId.value);
     }
-    if (mtgoId.present) {
-      map['mtgo_id'] = Variable<String>(mtgoId.value);
-    }
-    if (mtgoFoilId.present) {
-      map['mtgo_foil_id'] = Variable<String>(mtgoFoilId.value);
-    }
-    if (arenaId.present) {
-      map['arena_id'] = Variable<String>(arenaId.value);
-    }
     if (tcgplayerId.present) {
       map['tcgplayer_id'] = Variable<String>(tcgplayerId.value);
     }
@@ -5762,9 +5440,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (multiverseIdsJson.present) {
       map['multiverse_ids_json'] = Variable<String>(multiverseIdsJson.value);
     }
-    if (setId.present) {
-      map['set_id'] = Variable<String>(setId.value);
-    }
     if (layout.present) {
       map['layout'] = Variable<String>(layout.value);
     }
@@ -5773,6 +5448,9 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     }
     if (printedName.present) {
       map['printed_name'] = Variable<String>(printedName.value);
+    }
+    if (setId.present) {
+      map['set_id'] = Variable<String>(setId.value);
     }
     if (setCode.present) {
       map['set_code'] = Variable<String>(setCode.value);
@@ -5942,9 +5620,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (gameChanger.present) {
       map['game_changer'] = Variable<bool>(gameChanger.value);
     }
-    if (digital.present) {
-      map['digital'] = Variable<bool>(digital.value);
-    }
     if (oversized.present) {
       map['oversized'] = Variable<bool>(oversized.value);
     }
@@ -5962,12 +5637,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     }
     if (paper.present) {
       map['paper'] = Variable<bool>(paper.value);
-    }
-    if (mtgo.present) {
-      map['mtgo'] = Variable<bool>(mtgo.value);
-    }
-    if (arena.present) {
-      map['arena'] = Variable<bool>(arena.value);
     }
     if (legalStandard.present) {
       map['legal_standard'] = Variable<String>(legalStandard.value);
@@ -6097,9 +5766,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (allPartsJson.present) {
       map['all_parts_json'] = Variable<String>(allPartsJson.value);
     }
-    if (rawJson.present) {
-      map['raw_json'] = Variable<String>(rawJson.value);
-    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -6111,16 +5777,13 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     return (StringBuffer('ScryfallCardsCompanion(')
           ..write('scryfallId: $scryfallId, ')
           ..write('oracleId: $oracleId, ')
-          ..write('mtgoId: $mtgoId, ')
-          ..write('mtgoFoilId: $mtgoFoilId, ')
-          ..write('arenaId: $arenaId, ')
           ..write('tcgplayerId: $tcgplayerId, ')
           ..write('cardmarketId: $cardmarketId, ')
           ..write('multiverseIdsJson: $multiverseIdsJson, ')
-          ..write('setId: $setId, ')
           ..write('layout: $layout, ')
           ..write('name: $name, ')
           ..write('printedName: $printedName, ')
+          ..write('setId: $setId, ')
           ..write('setCode: $setCode, ')
           ..write('setName: $setName, ')
           ..write('setType: $setType, ')
@@ -6177,15 +5840,12 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           ..write('variation: $variation, ')
           ..write('reserved: $reserved, ')
           ..write('gameChanger: $gameChanger, ')
-          ..write('digital: $digital, ')
           ..write('oversized: $oversized, ')
           ..write('nonfoil: $nonfoil, ')
           ..write('foil: $foil, ')
           ..write('etched: $etched, ')
           ..write('glossy: $glossy, ')
           ..write('paper: $paper, ')
-          ..write('mtgo: $mtgo, ')
-          ..write('arena: $arena, ')
           ..write('legalStandard: $legalStandard, ')
           ..write('legalFuture: $legalFuture, ')
           ..write('legalHistoric: $legalHistoric, ')
@@ -6228,7 +5888,6 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           ..write('purchaseCardhoarderUri: $purchaseCardhoarderUri, ')
           ..write('cardBackId: $cardBackId, ')
           ..write('allPartsJson: $allPartsJson, ')
-          ..write('rawJson: $rawJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6580,17 +6239,6 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _rawJsonMeta = const VerificationMeta(
-    'rawJson',
-  );
-  @override
-  late final GeneratedColumn<String> rawJson = GeneratedColumn<String>(
-    'raw_json',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     cardId,
@@ -6624,7 +6272,6 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
     imageArtCrop,
     imageBorderCrop,
     watermark,
-    rawJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6863,14 +6510,6 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
         watermark.isAcceptableOrUnknown(data['watermark']!, _watermarkMeta),
       );
     }
-    if (data.containsKey('raw_json')) {
-      context.handle(
-        _rawJsonMeta,
-        rawJson.isAcceptableOrUnknown(data['raw_json']!, _rawJsonMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_rawJsonMeta);
-    }
     return context;
   }
 
@@ -7004,10 +6643,6 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
         DriftSqlType.string,
         data['${effectivePrefix}watermark'],
       ),
-      rawJson: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}raw_json'],
-      )!,
     );
   }
 
@@ -7050,7 +6685,6 @@ class ScryfallCardFace extends DataClass
   final String? imageArtCrop;
   final String? imageBorderCrop;
   final String? watermark;
-  final String rawJson;
   const ScryfallCardFace({
     required this.cardId,
     required this.faceIndex,
@@ -7083,7 +6717,6 @@ class ScryfallCardFace extends DataClass
     this.imageArtCrop,
     this.imageBorderCrop,
     this.watermark,
-    required this.rawJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -7169,7 +6802,6 @@ class ScryfallCardFace extends DataClass
     if (!nullToAbsent || watermark != null) {
       map['watermark'] = Variable<String>(watermark);
     }
-    map['raw_json'] = Variable<String>(rawJson);
     return map;
   }
 
@@ -7254,7 +6886,6 @@ class ScryfallCardFace extends DataClass
       watermark: watermark == null && nullToAbsent
           ? const Value.absent()
           : Value(watermark),
-      rawJson: Value(rawJson),
     );
   }
 
@@ -7297,7 +6928,6 @@ class ScryfallCardFace extends DataClass
       imageArtCrop: serializer.fromJson<String?>(json['imageArtCrop']),
       imageBorderCrop: serializer.fromJson<String?>(json['imageBorderCrop']),
       watermark: serializer.fromJson<String?>(json['watermark']),
-      rawJson: serializer.fromJson<String>(json['rawJson']),
     );
   }
   @override
@@ -7335,7 +6965,6 @@ class ScryfallCardFace extends DataClass
       'imageArtCrop': serializer.toJson<String?>(imageArtCrop),
       'imageBorderCrop': serializer.toJson<String?>(imageBorderCrop),
       'watermark': serializer.toJson<String?>(watermark),
-      'rawJson': serializer.toJson<String>(rawJson),
     };
   }
 
@@ -7371,7 +7000,6 @@ class ScryfallCardFace extends DataClass
     Value<String?> imageArtCrop = const Value.absent(),
     Value<String?> imageBorderCrop = const Value.absent(),
     Value<String?> watermark = const Value.absent(),
-    String? rawJson,
   }) => ScryfallCardFace(
     cardId: cardId ?? this.cardId,
     faceIndex: faceIndex ?? this.faceIndex,
@@ -7412,7 +7040,6 @@ class ScryfallCardFace extends DataClass
         ? imageBorderCrop.value
         : this.imageBorderCrop,
     watermark: watermark.present ? watermark.value : this.watermark,
-    rawJson: rawJson ?? this.rawJson,
   );
   ScryfallCardFace copyWithCompanion(ScryfallCardFacesCompanion data) {
     return ScryfallCardFace(
@@ -7479,7 +7106,6 @@ class ScryfallCardFace extends DataClass
           ? data.imageBorderCrop.value
           : this.imageBorderCrop,
       watermark: data.watermark.present ? data.watermark.value : this.watermark,
-      rawJson: data.rawJson.present ? data.rawJson.value : this.rawJson,
     );
   }
 
@@ -7516,8 +7142,7 @@ class ScryfallCardFace extends DataClass
           ..write('imagePng: $imagePng, ')
           ..write('imageArtCrop: $imageArtCrop, ')
           ..write('imageBorderCrop: $imageBorderCrop, ')
-          ..write('watermark: $watermark, ')
-          ..write('rawJson: $rawJson')
+          ..write('watermark: $watermark')
           ..write(')'))
         .toString();
   }
@@ -7555,7 +7180,6 @@ class ScryfallCardFace extends DataClass
     imageArtCrop,
     imageBorderCrop,
     watermark,
-    rawJson,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -7591,8 +7215,7 @@ class ScryfallCardFace extends DataClass
           other.imagePng == this.imagePng &&
           other.imageArtCrop == this.imageArtCrop &&
           other.imageBorderCrop == this.imageBorderCrop &&
-          other.watermark == this.watermark &&
-          other.rawJson == this.rawJson);
+          other.watermark == this.watermark);
 }
 
 class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
@@ -7627,7 +7250,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
   final Value<String?> imageArtCrop;
   final Value<String?> imageBorderCrop;
   final Value<String?> watermark;
-  final Value<String> rawJson;
   final Value<int> rowid;
   const ScryfallCardFacesCompanion({
     this.cardId = const Value.absent(),
@@ -7661,7 +7283,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     this.imageArtCrop = const Value.absent(),
     this.imageBorderCrop = const Value.absent(),
     this.watermark = const Value.absent(),
-    this.rawJson = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ScryfallCardFacesCompanion.insert({
@@ -7696,12 +7317,10 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     this.imageArtCrop = const Value.absent(),
     this.imageBorderCrop = const Value.absent(),
     this.watermark = const Value.absent(),
-    required String rawJson,
     this.rowid = const Value.absent(),
   }) : cardId = Value(cardId),
        faceIndex = Value(faceIndex),
-       name = Value(name),
-       rawJson = Value(rawJson);
+       name = Value(name);
   static Insertable<ScryfallCardFace> custom({
     Expression<String>? cardId,
     Expression<int>? faceIndex,
@@ -7734,7 +7353,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     Expression<String>? imageArtCrop,
     Expression<String>? imageBorderCrop,
     Expression<String>? watermark,
-    Expression<String>? rawJson,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7771,7 +7389,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
       if (imageArtCrop != null) 'image_art_crop': imageArtCrop,
       if (imageBorderCrop != null) 'image_border_crop': imageBorderCrop,
       if (watermark != null) 'watermark': watermark,
-      if (rawJson != null) 'raw_json': rawJson,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7808,7 +7425,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     Value<String?>? imageArtCrop,
     Value<String?>? imageBorderCrop,
     Value<String?>? watermark,
-    Value<String>? rawJson,
     Value<int>? rowid,
   }) {
     return ScryfallCardFacesCompanion(
@@ -7843,7 +7459,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
       imageArtCrop: imageArtCrop ?? this.imageArtCrop,
       imageBorderCrop: imageBorderCrop ?? this.imageBorderCrop,
       watermark: watermark ?? this.watermark,
-      rawJson: rawJson ?? this.rawJson,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -7944,9 +7559,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     if (watermark.present) {
       map['watermark'] = Variable<String>(watermark.value);
     }
-    if (rawJson.present) {
-      map['raw_json'] = Variable<String>(rawJson.value);
-    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -7987,7 +7599,6 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
           ..write('imageArtCrop: $imageArtCrop, ')
           ..write('imageBorderCrop: $imageBorderCrop, ')
           ..write('watermark: $watermark, ')
-          ..write('rawJson: $rawJson, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8014,16 +7625,13 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
     ScryfallCardsCompanion Function({
       required String scryfallId,
       Value<String?> oracleId,
-      Value<String?> mtgoId,
-      Value<String?> mtgoFoilId,
-      Value<String?> arenaId,
       Value<String?> tcgplayerId,
       Value<String?> cardmarketId,
       Value<String?> multiverseIdsJson,
-      required String setId,
       required String layout,
       required String name,
       Value<String?> printedName,
+      required String setId,
       required String setCode,
       required String setName,
       required String setType,
@@ -8080,15 +7688,12 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
       Value<bool> variation,
       Value<bool> reserved,
       Value<bool> gameChanger,
-      Value<bool> digital,
       Value<bool> oversized,
       Value<bool> nonfoil,
       Value<bool> foil,
       Value<bool> etched,
       Value<bool> glossy,
       Value<bool> paper,
-      Value<bool> mtgo,
-      Value<bool> arena,
       Value<String?> legalStandard,
       Value<String?> legalFuture,
       Value<String?> legalHistoric,
@@ -8127,23 +7732,19 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
       Value<String?> purchaseCardhoarderUri,
       Value<String?> cardBackId,
       Value<String?> allPartsJson,
-      required String rawJson,
       Value<int> rowid,
     });
 typedef $$ScryfallCardsTableUpdateCompanionBuilder =
     ScryfallCardsCompanion Function({
       Value<String> scryfallId,
       Value<String?> oracleId,
-      Value<String?> mtgoId,
-      Value<String?> mtgoFoilId,
-      Value<String?> arenaId,
       Value<String?> tcgplayerId,
       Value<String?> cardmarketId,
       Value<String?> multiverseIdsJson,
-      Value<String> setId,
       Value<String> layout,
       Value<String> name,
       Value<String?> printedName,
+      Value<String> setId,
       Value<String> setCode,
       Value<String> setName,
       Value<String> setType,
@@ -8200,15 +7801,12 @@ typedef $$ScryfallCardsTableUpdateCompanionBuilder =
       Value<bool> variation,
       Value<bool> reserved,
       Value<bool> gameChanger,
-      Value<bool> digital,
       Value<bool> oversized,
       Value<bool> nonfoil,
       Value<bool> foil,
       Value<bool> etched,
       Value<bool> glossy,
       Value<bool> paper,
-      Value<bool> mtgo,
-      Value<bool> arena,
       Value<String?> legalStandard,
       Value<String?> legalFuture,
       Value<String?> legalHistoric,
@@ -8247,7 +7845,6 @@ typedef $$ScryfallCardsTableUpdateCompanionBuilder =
       Value<String?> purchaseCardhoarderUri,
       Value<String?> cardBackId,
       Value<String?> allPartsJson,
-      Value<String> rawJson,
       Value<int> rowid,
     });
 
@@ -8305,21 +7902,6 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get mtgoId => $composableBuilder(
-    column: $table.mtgoId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get mtgoFoilId => $composableBuilder(
-    column: $table.mtgoFoilId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get arenaId => $composableBuilder(
-    column: $table.arenaId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get tcgplayerId => $composableBuilder(
     column: $table.tcgplayerId,
     builder: (column) => ColumnFilters(column),
@@ -8335,11 +7917,6 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get setId => $composableBuilder(
-    column: $table.setId,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<String> get layout => $composableBuilder(
     column: $table.layout,
     builder: (column) => ColumnFilters(column),
@@ -8352,6 +7929,11 @@ class $$ScryfallCardsTableFilterComposer
 
   ColumnFilters<String> get printedName => $composableBuilder(
     column: $table.printedName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setId => $composableBuilder(
+    column: $table.setId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8635,11 +8217,6 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get digital => $composableBuilder(
-    column: $table.digital,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<bool> get oversized => $composableBuilder(
     column: $table.oversized,
     builder: (column) => ColumnFilters(column),
@@ -8667,16 +8244,6 @@ class $$ScryfallCardsTableFilterComposer
 
   ColumnFilters<bool> get paper => $composableBuilder(
     column: $table.paper,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get mtgo => $composableBuilder(
-    column: $table.mtgo,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get arena => $composableBuilder(
-    column: $table.arena,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8872,11 +8439,6 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get rawJson => $composableBuilder(
-    column: $table.rawJson,
-    builder: (column) => ColumnFilters(column),
-  );
-
   Expression<bool> scryfallCardFacesRefs(
     Expression<bool> Function($$ScryfallCardFacesTableFilterComposer f) f,
   ) {
@@ -8922,21 +8484,6 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get mtgoId => $composableBuilder(
-    column: $table.mtgoId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get mtgoFoilId => $composableBuilder(
-    column: $table.mtgoFoilId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get arenaId => $composableBuilder(
-    column: $table.arenaId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get tcgplayerId => $composableBuilder(
     column: $table.tcgplayerId,
     builder: (column) => ColumnOrderings(column),
@@ -8952,11 +8499,6 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get setId => $composableBuilder(
-    column: $table.setId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<String> get layout => $composableBuilder(
     column: $table.layout,
     builder: (column) => ColumnOrderings(column),
@@ -8969,6 +8511,11 @@ class $$ScryfallCardsTableOrderingComposer
 
   ColumnOrderings<String> get printedName => $composableBuilder(
     column: $table.printedName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setId => $composableBuilder(
+    column: $table.setId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9252,11 +8799,6 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get digital => $composableBuilder(
-    column: $table.digital,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get oversized => $composableBuilder(
     column: $table.oversized,
     builder: (column) => ColumnOrderings(column),
@@ -9284,16 +8826,6 @@ class $$ScryfallCardsTableOrderingComposer
 
   ColumnOrderings<bool> get paper => $composableBuilder(
     column: $table.paper,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get mtgo => $composableBuilder(
-    column: $table.mtgo,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get arena => $composableBuilder(
-    column: $table.arena,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9488,11 +9020,6 @@ class $$ScryfallCardsTableOrderingComposer
     column: $table.allPartsJson,
     builder: (column) => ColumnOrderings(column),
   );
-
-  ColumnOrderings<String> get rawJson => $composableBuilder(
-    column: $table.rawJson,
-    builder: (column) => ColumnOrderings(column),
-  );
 }
 
 class $$ScryfallCardsTableAnnotationComposer
@@ -9512,17 +9039,6 @@ class $$ScryfallCardsTableAnnotationComposer
   GeneratedColumn<String> get oracleId =>
       $composableBuilder(column: $table.oracleId, builder: (column) => column);
 
-  GeneratedColumn<String> get mtgoId =>
-      $composableBuilder(column: $table.mtgoId, builder: (column) => column);
-
-  GeneratedColumn<String> get mtgoFoilId => $composableBuilder(
-    column: $table.mtgoFoilId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get arenaId =>
-      $composableBuilder(column: $table.arenaId, builder: (column) => column);
-
   GeneratedColumn<String> get tcgplayerId => $composableBuilder(
     column: $table.tcgplayerId,
     builder: (column) => column,
@@ -9538,9 +9054,6 @@ class $$ScryfallCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get setId =>
-      $composableBuilder(column: $table.setId, builder: (column) => column);
-
   GeneratedColumn<String> get layout =>
       $composableBuilder(column: $table.layout, builder: (column) => column);
 
@@ -9551,6 +9064,9 @@ class $$ScryfallCardsTableAnnotationComposer
     column: $table.printedName,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get setId =>
+      $composableBuilder(column: $table.setId, builder: (column) => column);
 
   GeneratedColumn<String> get setCode =>
       $composableBuilder(column: $table.setCode, builder: (column) => column);
@@ -9788,9 +9304,6 @@ class $$ScryfallCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<bool> get digital =>
-      $composableBuilder(column: $table.digital, builder: (column) => column);
-
   GeneratedColumn<bool> get oversized =>
       $composableBuilder(column: $table.oversized, builder: (column) => column);
 
@@ -9808,12 +9321,6 @@ class $$ScryfallCardsTableAnnotationComposer
 
   GeneratedColumn<bool> get paper =>
       $composableBuilder(column: $table.paper, builder: (column) => column);
-
-  GeneratedColumn<bool> get mtgo =>
-      $composableBuilder(column: $table.mtgo, builder: (column) => column);
-
-  GeneratedColumn<bool> get arena =>
-      $composableBuilder(column: $table.arena, builder: (column) => column);
 
   GeneratedColumn<String> get legalStandard => $composableBuilder(
     column: $table.legalStandard,
@@ -9997,9 +9504,6 @@ class $$ScryfallCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get rawJson =>
-      $composableBuilder(column: $table.rawJson, builder: (column) => column);
-
   Expression<T> scryfallCardFacesRefs<T extends Object>(
     Expression<T> Function($$ScryfallCardFacesTableAnnotationComposer a) f,
   ) {
@@ -10057,16 +9561,13 @@ class $$ScryfallCardsTableTableManager
               ({
                 Value<String> scryfallId = const Value.absent(),
                 Value<String?> oracleId = const Value.absent(),
-                Value<String?> mtgoId = const Value.absent(),
-                Value<String?> mtgoFoilId = const Value.absent(),
-                Value<String?> arenaId = const Value.absent(),
                 Value<String?> tcgplayerId = const Value.absent(),
                 Value<String?> cardmarketId = const Value.absent(),
                 Value<String?> multiverseIdsJson = const Value.absent(),
-                Value<String> setId = const Value.absent(),
                 Value<String> layout = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> printedName = const Value.absent(),
+                Value<String> setId = const Value.absent(),
                 Value<String> setCode = const Value.absent(),
                 Value<String> setName = const Value.absent(),
                 Value<String> setType = const Value.absent(),
@@ -10123,15 +9624,12 @@ class $$ScryfallCardsTableTableManager
                 Value<bool> variation = const Value.absent(),
                 Value<bool> reserved = const Value.absent(),
                 Value<bool> gameChanger = const Value.absent(),
-                Value<bool> digital = const Value.absent(),
                 Value<bool> oversized = const Value.absent(),
                 Value<bool> nonfoil = const Value.absent(),
                 Value<bool> foil = const Value.absent(),
                 Value<bool> etched = const Value.absent(),
                 Value<bool> glossy = const Value.absent(),
                 Value<bool> paper = const Value.absent(),
-                Value<bool> mtgo = const Value.absent(),
-                Value<bool> arena = const Value.absent(),
                 Value<String?> legalStandard = const Value.absent(),
                 Value<String?> legalFuture = const Value.absent(),
                 Value<String?> legalHistoric = const Value.absent(),
@@ -10172,21 +9670,17 @@ class $$ScryfallCardsTableTableManager
                 Value<String?> purchaseCardhoarderUri = const Value.absent(),
                 Value<String?> cardBackId = const Value.absent(),
                 Value<String?> allPartsJson = const Value.absent(),
-                Value<String> rawJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScryfallCardsCompanion(
                 scryfallId: scryfallId,
                 oracleId: oracleId,
-                mtgoId: mtgoId,
-                mtgoFoilId: mtgoFoilId,
-                arenaId: arenaId,
                 tcgplayerId: tcgplayerId,
                 cardmarketId: cardmarketId,
                 multiverseIdsJson: multiverseIdsJson,
-                setId: setId,
                 layout: layout,
                 name: name,
                 printedName: printedName,
+                setId: setId,
                 setCode: setCode,
                 setName: setName,
                 setType: setType,
@@ -10243,15 +9737,12 @@ class $$ScryfallCardsTableTableManager
                 variation: variation,
                 reserved: reserved,
                 gameChanger: gameChanger,
-                digital: digital,
                 oversized: oversized,
                 nonfoil: nonfoil,
                 foil: foil,
                 etched: etched,
                 glossy: glossy,
                 paper: paper,
-                mtgo: mtgo,
-                arena: arena,
                 legalStandard: legalStandard,
                 legalFuture: legalFuture,
                 legalHistoric: legalHistoric,
@@ -10292,23 +9783,19 @@ class $$ScryfallCardsTableTableManager
                 purchaseCardhoarderUri: purchaseCardhoarderUri,
                 cardBackId: cardBackId,
                 allPartsJson: allPartsJson,
-                rawJson: rawJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
               ({
                 required String scryfallId,
                 Value<String?> oracleId = const Value.absent(),
-                Value<String?> mtgoId = const Value.absent(),
-                Value<String?> mtgoFoilId = const Value.absent(),
-                Value<String?> arenaId = const Value.absent(),
                 Value<String?> tcgplayerId = const Value.absent(),
                 Value<String?> cardmarketId = const Value.absent(),
                 Value<String?> multiverseIdsJson = const Value.absent(),
-                required String setId,
                 required String layout,
                 required String name,
                 Value<String?> printedName = const Value.absent(),
+                required String setId,
                 required String setCode,
                 required String setName,
                 required String setType,
@@ -10365,15 +9852,12 @@ class $$ScryfallCardsTableTableManager
                 Value<bool> variation = const Value.absent(),
                 Value<bool> reserved = const Value.absent(),
                 Value<bool> gameChanger = const Value.absent(),
-                Value<bool> digital = const Value.absent(),
                 Value<bool> oversized = const Value.absent(),
                 Value<bool> nonfoil = const Value.absent(),
                 Value<bool> foil = const Value.absent(),
                 Value<bool> etched = const Value.absent(),
                 Value<bool> glossy = const Value.absent(),
                 Value<bool> paper = const Value.absent(),
-                Value<bool> mtgo = const Value.absent(),
-                Value<bool> arena = const Value.absent(),
                 Value<String?> legalStandard = const Value.absent(),
                 Value<String?> legalFuture = const Value.absent(),
                 Value<String?> legalHistoric = const Value.absent(),
@@ -10414,21 +9898,17 @@ class $$ScryfallCardsTableTableManager
                 Value<String?> purchaseCardhoarderUri = const Value.absent(),
                 Value<String?> cardBackId = const Value.absent(),
                 Value<String?> allPartsJson = const Value.absent(),
-                required String rawJson,
                 Value<int> rowid = const Value.absent(),
               }) => ScryfallCardsCompanion.insert(
                 scryfallId: scryfallId,
                 oracleId: oracleId,
-                mtgoId: mtgoId,
-                mtgoFoilId: mtgoFoilId,
-                arenaId: arenaId,
                 tcgplayerId: tcgplayerId,
                 cardmarketId: cardmarketId,
                 multiverseIdsJson: multiverseIdsJson,
-                setId: setId,
                 layout: layout,
                 name: name,
                 printedName: printedName,
+                setId: setId,
                 setCode: setCode,
                 setName: setName,
                 setType: setType,
@@ -10485,15 +9965,12 @@ class $$ScryfallCardsTableTableManager
                 variation: variation,
                 reserved: reserved,
                 gameChanger: gameChanger,
-                digital: digital,
                 oversized: oversized,
                 nonfoil: nonfoil,
                 foil: foil,
                 etched: etched,
                 glossy: glossy,
                 paper: paper,
-                mtgo: mtgo,
-                arena: arena,
                 legalStandard: legalStandard,
                 legalFuture: legalFuture,
                 legalHistoric: legalHistoric,
@@ -10534,7 +10011,6 @@ class $$ScryfallCardsTableTableManager
                 purchaseCardhoarderUri: purchaseCardhoarderUri,
                 cardBackId: cardBackId,
                 allPartsJson: allPartsJson,
-                rawJson: rawJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -10630,7 +10106,6 @@ typedef $$ScryfallCardFacesTableCreateCompanionBuilder =
       Value<String?> imageArtCrop,
       Value<String?> imageBorderCrop,
       Value<String?> watermark,
-      required String rawJson,
       Value<int> rowid,
     });
 typedef $$ScryfallCardFacesTableUpdateCompanionBuilder =
@@ -10666,7 +10141,6 @@ typedef $$ScryfallCardFacesTableUpdateCompanionBuilder =
       Value<String?> imageArtCrop,
       Value<String?> imageBorderCrop,
       Value<String?> watermark,
-      Value<String> rawJson,
       Value<int> rowid,
     });
 
@@ -10860,11 +10334,6 @@ class $$ScryfallCardFacesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get rawJson => $composableBuilder(
-    column: $table.rawJson,
-    builder: (column) => ColumnFilters(column),
-  );
-
   $$ScryfallCardsTableFilterComposer get cardId {
     final $$ScryfallCardsTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -11048,11 +10517,6 @@ class $$ScryfallCardFacesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get rawJson => $composableBuilder(
-    column: $table.rawJson,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   $$ScryfallCardsTableOrderingComposer get cardId {
     final $$ScryfallCardsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -11208,9 +10672,6 @@ class $$ScryfallCardFacesTableAnnotationComposer
   GeneratedColumn<String> get watermark =>
       $composableBuilder(column: $table.watermark, builder: (column) => column);
 
-  GeneratedColumn<String> get rawJson =>
-      $composableBuilder(column: $table.rawJson, builder: (column) => column);
-
   $$ScryfallCardsTableAnnotationComposer get cardId {
     final $$ScryfallCardsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -11299,7 +10760,6 @@ class $$ScryfallCardFacesTableTableManager
                 Value<String?> imageArtCrop = const Value.absent(),
                 Value<String?> imageBorderCrop = const Value.absent(),
                 Value<String?> watermark = const Value.absent(),
-                Value<String> rawJson = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ScryfallCardFacesCompanion(
                 cardId: cardId,
@@ -11333,7 +10793,6 @@ class $$ScryfallCardFacesTableTableManager
                 imageArtCrop: imageArtCrop,
                 imageBorderCrop: imageBorderCrop,
                 watermark: watermark,
-                rawJson: rawJson,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -11369,7 +10828,6 @@ class $$ScryfallCardFacesTableTableManager
                 Value<String?> imageArtCrop = const Value.absent(),
                 Value<String?> imageBorderCrop = const Value.absent(),
                 Value<String?> watermark = const Value.absent(),
-                required String rawJson,
                 Value<int> rowid = const Value.absent(),
               }) => ScryfallCardFacesCompanion.insert(
                 cardId: cardId,
@@ -11403,7 +10861,6 @@ class $$ScryfallCardFacesTableTableManager
                 imageArtCrop: imageArtCrop,
                 imageBorderCrop: imageBorderCrop,
                 watermark: watermark,
-                rawJson: rawJson,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
-// The database.g.dart file is generated with the build_runner: dart run build_runner watch
+// The database.g.dart file is generated with the build_runner: dart run build_runner build oder dart run build_runner watch
 part 'database.g.dart';
 
 class ScryfallCards extends Table {
@@ -130,8 +130,6 @@ class ScryfallCards extends Table {
 
   TextColumn get cardBackId => text().nullable()();
   TextColumn get allPartsJson => text().nullable()();
-  
-  TextColumn get rawJson => text()();
 
   @override
   Set<Column> get primaryKey => {scryfallId};
@@ -174,15 +172,19 @@ class ScryfallCardFaces extends Table {
   TextColumn get imageBorderCrop => text().nullable()();
   TextColumn get watermark => text().nullable()();
 
-  TextColumn get rawJson => text()();
-
   @override
   Set<Column> get primaryKey => {cardId, faceIndex};
 }
 
 @DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces])
 class AppDatabase extends _$AppDatabase {
-  AppDatabase([QueryExecutor? executor]) : super(executor ?? _openConnection());
+  AppDatabase._internal([QueryExecutor? executor]) : super(executor ?? _openConnection());
+
+  static AppDatabase? _instance;
+
+  factory AppDatabase() {
+    return _instance ??= AppDatabase._internal();
+  }
 
   @override
   int get schemaVersion => 1;
@@ -201,8 +203,8 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('PRAGMA journal_mode = WAL;');
           await customStatement('PRAGMA synchronous = NORMAL;');
           await customStatement('PRAGMA temp_store = MEMORY;');
-          await customStatement('PRAGMA cache_size = -20000;'); // 20 MB cache
-          await customStatement('PRAGMA foreign_keys = ON;');
+          await customStatement('PRAGMA cache_size = -50000;'); // 50 MB
+          await customStatement('PRAGMA mmap_size = 268435456;'); // 256 MB
         },
       );
 
@@ -211,7 +213,7 @@ class AppDatabase extends _$AppDatabase {
       name: 'app_database',
       native: const DriftNativeOptions(
         databaseDirectory: getApplicationDocumentsDirectory,
-      )
+      ),
     );
   }
 }
