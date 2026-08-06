@@ -19,9 +19,7 @@ class ScryfallDataParser {
 
   static const Set<String> _cardBulkTypes = {
     'all_cards',
-    'default_cards',
     'oracle_cards',
-    'unique_artwork',
   };
 
   Future<int> parseBulkData(String bulkDataType) async {

@@ -30,8 +30,6 @@ class ScryfallDownloadService {
 
   static const List<String> bulkDataTypes = [
     'oracle_cards',
-    'unique_artwork',
-    'default_cards',
     'all_cards',
     'rulings',
     'art_tags',

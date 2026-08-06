@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/download/download_screen.dart';
+import 'screens/download_parser/download_and_parser_screen.dart';
 import 'screens/home/home_shell.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/localization_service.dart';
@@ -49,7 +49,6 @@ class AetherVaultApp extends StatefulWidget {
 class _AetherVaultAppState extends State<AetherVaultApp> {
   late ThemeMode _themeMode;
   late Locale _locale;
-  bool _isCheckingDownloads = true;
   Map<String,dynamic> _needsDownload = { for (var type in ScryfallDownloadService.bulkDataTypes) type: false };
 
   @override
@@ -83,13 +82,11 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       if (!mounted) return;
       setState(() {
         _needsDownload = needsDownload;
-        _isCheckingDownloads = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         _needsDownload = { for (var type in ScryfallDownloadService.bulkDataTypes) type: true };
-        _isCheckingDownloads = false;
       });
     } finally {
       service.dispose();
@@ -106,7 +103,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         darkTheme: AppTheme.darkTheme,
         themeMode: _themeMode,
         locale: _locale,
-        home: DownloadScreen(
+        home: DownloadParserScreen(
           themeMode: _themeMode,
           onThemeModeChanged: _setThemeMode,
           locale: _locale,

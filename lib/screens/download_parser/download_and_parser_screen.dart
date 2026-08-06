@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../services/localization_service.dart';
 import '../../services/card_database/scryfall_download.dart';
+import '../../services/card_database/scryfall_data_parser.dart';
 import '../home/home_shell.dart';
 
-class DownloadScreen extends StatefulWidget {
-  const DownloadScreen({super.key, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.forcedDownload});
+class DownloadParserScreen extends StatefulWidget {
+  const DownloadParserScreen({super.key, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.forcedDownload});
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
@@ -14,11 +15,11 @@ class DownloadScreen extends StatefulWidget {
   final bool forcedDownload;
 
   @override
-  State<DownloadScreen> createState() => _DownloadScreenState();
+  State<DownloadParserScreen> createState() => _DownloadParserScreenState();
 }
 
-class _DownloadScreenState extends State<DownloadScreen> {
-  final _service = ScryfallDownloadService();
+class _DownloadParserScreenState extends State<DownloadParserScreen> {
+  final _downloadService = ScryfallDownloadService();
   bool _isRunning = false;
   bool _isFinished = false;
   String? _error;
@@ -27,7 +28,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
   @override
   void initState() {
     super.initState();
-    _service.progressStream.listen((progress) {
+    _downloadService.progressStream.listen((progress) {
       if (!mounted) return;
       setState(() {
         _progress = progress;
@@ -39,7 +40,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
 
   @override
   void dispose() {
-    _service.dispose();
+    _downloadService.dispose();
     super.dispose();
   }
 
@@ -53,7 +54,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
     });
 
     try {
-      await _service.downloadAllBulkData(widget.forcedDownload);
+      await _downloadService.downloadAllBulkData(widget.forcedDownload);
       if (!mounted) return;
       setState(() {
         _isFinished = true;
