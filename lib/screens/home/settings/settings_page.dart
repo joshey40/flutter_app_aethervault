@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/localization_service.dart';
 
-import '../../download_parser/download_and_parser_screen.dart';
+import '../../download_parser/download_screen.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -91,7 +91,7 @@ class SettingsPage extends StatelessWidget {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => DownloadParserScreen(
+                          builder: (_) => DownloadScreen(
                             themeMode: themeMode,
                             onThemeModeChanged: onThemeModeChanged,
                             locale: locale,

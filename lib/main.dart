@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'screens/download_parser/download_and_parser_screen.dart';
+import 'screens/download_parser/download_screen.dart';
 import 'screens/home/home_shell.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/localization_service.dart';
@@ -103,7 +103,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
         darkTheme: AppTheme.darkTheme,
         themeMode: _themeMode,
         locale: _locale,
-        home: DownloadParserScreen(
+        home: DownloadScreen(
           themeMode: _themeMode,
           onThemeModeChanged: _setThemeMode,
           locale: _locale,

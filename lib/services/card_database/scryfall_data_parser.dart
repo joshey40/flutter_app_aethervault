@@ -3,9 +3,26 @@ import 'package:drift/drift.dart';
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 
 import 'database.dart';
 import 'scryfall_download.dart';
+
+class ParserProgress {
+  final int current;
+  final int total;
+  final String? currentType;
+  final int? cardsParsed;
+  final bool isRunning;
+
+  ParserProgress({
+    required this.current,
+    required this.total,
+    this.currentType,
+    this.cardsParsed,
+    required this.isRunning,
+  });
+}
 
 class ScryfallDataParser {
   ScryfallDataParser({
@@ -22,7 +39,19 @@ class ScryfallDataParser {
     'oracle_cards',
   };
 
-  Future<int> parseBulkData(String bulkDataType) async {
+  final _progressController = StreamController<ParserProgress>.broadcast();
+
+  Stream<ParserProgress> get progressStream => _progressController.stream;
+
+  Future<void> parseAllCardData() async {
+    // By default, parse only "all_cards", which contains all card data.
+    // For testing only parse german and english cards (add Setting later)
+    _progressController.add(ParserProgress(current: 0, total: 1, isRunning: true));
+    await parseBulkData('all_cards', ['en','de']);
+    _progressController.add(ParserProgress(current: 1, total: 1, isRunning: false));
+  }
+
+  Future<void> parseBulkData(String bulkDataType, List<String> langs) async {
     if (!_cardBulkTypes.contains(bulkDataType)) {
       throw ArgumentError.value(
         bulkDataType,
@@ -32,80 +61,88 @@ class ScryfallDataParser {
     }
 
     final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
-    final bulkDataFile = await _uncompressGzipFile(bulkDataFilePath);
+    final bulkDataFile = File(bulkDataFilePath);
     if (!await bulkDataFile.exists()) {
       throw StateError('Bulk data file not found: $bulkDataFilePath');
     }
 
-    final bulkDataJson = await bulkDataFile.readAsString();
-    final records = _decodeRecords(bulkDataJson);
     final cards = <ScryfallCardsCompanion>[];
     final faces = <ScryfallCardFacesCompanion>[];
+    var parsedCount = 0;
 
-    for (final record in records) {
-      if (_isDigitalCard(record)) {
-        continue;
-      }
-
-      cards.add(_mapCard(record));
-      faces.addAll(_mapFaces(record));
-    }
+    _progressController.add(
+      ParserProgress(
+        cardsParsed: 0,
+        currentType: bulkDataType,
+        isRunning: true,
+        current: 1,
+        total: 1,
+      ),
+    );
 
     await _database.transaction(() async {
       await _database.delete(_database.scryfallCardFaces).go();
       await _database.delete(_database.scryfallCards).go();
 
-      await _database.batch((batch) {
-        for (final card in cards) {
-          batch.insert(
-            _database.scryfallCards,
-            card,
-            mode: InsertMode.insertOrReplace,
-          );
+      final stream = _readBulkDataLines(bulkDataFile);
+      await for (final line in stream) {
+        final trimmedLine = line.trim();
+        if (trimmedLine.isEmpty) {
+          continue;
         }
 
-        for (final face in faces) {
-          batch.insert(
-            _database.scryfallCardFaces,
-            face,
-            mode: InsertMode.insertOrReplace,
+        final decoded = json.decode(trimmedLine);
+        if (decoded is! Map) {
+          throw FormatException('Expected one JSON object per line');
+        }
+
+        final record = decoded.cast<String, dynamic>();
+        if (_boolValue(record, 'digital')) {
+          continue;
+        }
+        if (langs.isNotEmpty && !langs.contains(record['lang'])) {
+          continue;
+        }
+
+        parsedCount++;
+        cards.add(_mapCard(record));
+        faces.addAll(_mapFaces(record));
+
+        if (cards.length >= 100) {
+          await _flushBatch(cards, faces);
+          _progressController.add(
+            ParserProgress(
+              cardsParsed: parsedCount,
+              currentType: bulkDataType,
+              isRunning: true,
+              current: 1,
+              total: 1,
+            ),
           );
         }
-      });
-    });
-
-    return cards.length;
-  }
-
-  List<Map<String, dynamic>> _decodeRecords(String content) {
-    final trimmed = content.trimLeft();
-    if (trimmed.isEmpty) {
-      return const <Map<String, dynamic>>[];
-    }
-
-    if (trimmed.startsWith('[')) {
-      final decoded = json.decode(content);
-      if (decoded is! List) {
-        throw FormatException('Expected a JSON array of Scryfall cards');
       }
 
-      return decoded
-          .whereType<Map>()
-          .map((record) => record.cast<String, dynamic>())
-          .toList(growable: false);
+      await _flushBatch(cards, faces);
+    });
+
+    _progressController.add(
+      ParserProgress(
+        cardsParsed: parsedCount,
+        currentType: bulkDataType,
+        isRunning: false,
+        current: 1,
+        total: 1,
+      ),
+    );
+  }
+
+  Stream<String> _readBulkDataLines(File file) {
+    final stream = file.openRead();
+    if (file.path.endsWith('.gz')) {
+      return stream.transform(gzip.decoder).transform(utf8.decoder).transform(const LineSplitter());
     }
 
-    return content
-        .split(RegExp(r'\r?\n'))
-        .where((line) => line.trim().isNotEmpty)
-        .map((line) {
-          final decoded = json.decode(line);
-          if (decoded is! Map) {
-            throw FormatException('Expected one JSON object per line');
-          }
-          return decoded.cast<String, dynamic>();
-        })
-        .toList(growable: false);
+    return stream.transform(utf8.decoder).transform(const LineSplitter());
   }
 
   ScryfallCardsCompanion _mapCard(Map<String, dynamic> card) {
@@ -130,15 +167,15 @@ class ScryfallDataParser {
 
     return ScryfallCardsCompanion.insert(
       scryfallId: _stringValue(card, 'id'),
-      oracleId: Value(_stringValue(card, 'oracle_id')),
-      tcgplayerId: Value(_stringValue(card, 'tcgplayer_id')),
-      cardmarketId: Value(_stringValue(card, 'cardmarket_id')),
+      oracleId: Value(_stringField(card, 'oracle_id')),
+      tcgplayerId: Value(_stringField(card, 'tcgplayer_id')),
+      cardmarketId: Value(_stringField(card, 'cardmarket_id')),
       multiverseIdsJson: Value(_encodeJsonOrNull(multiverseIds)),
       
       layout: _stringValue(card, 'layout'),
       
       name: _stringValue(card, 'name'),
-      printedName: Value(_stringValue(card, 'printed_name')),
+      printedName: Value<String?>(_stringField(card, 'printed_name')),
       
       setId: _stringValue(card, 'set_id'),
       setCode: _stringValue(card, 'set'),
@@ -158,13 +195,13 @@ class ScryfallDataParser {
       rulingsUri: _stringValue(card, 'rulings_uri'),
       printsSearchUri: _stringValue(card, 'prints_search_uri'),
       
-      typeLine: _stringValue(card, 'type_line'),
-      printedTypeLine: Value(_stringValue(card, 'printed_type_line')),
-      manaCost: Value(_stringValue(card, 'mana_cost')),
+      typeLine: _stringField(card, 'type_line') ?? '',
+      printedTypeLine: Value<String?>(_stringField(card, 'printed_type_line')),
+      manaCost: Value(_stringField(card, 'mana_cost')),
       cmc: _doubleValue(card, 'cmc'),
-      oracleText: Value(_stringValue(card, 'oracle_text')),
-      printedText: Value(_stringValue(card, 'printed_text')),
-      flavorText: Value(_stringValue(card, 'flavor_text')),
+      oracleText: Value(_stringField(card, 'oracle_text')),
+      printedText: Value<String?>(_stringField(card, 'printed_text')),
+      flavorText: Value(_stringField(card, 'flavor_text')),
       
       colorsJson: Value(_encodeJsonOrNull(colors)),
       colorMask: _colorMask(colors),
@@ -179,7 +216,7 @@ class ScryfallDataParser {
       borderColor: Value(_stringValue(card, 'border_color')),
       frame: Value(_stringValue(card, 'frame')),
       frameEffectsJson: Value(_encodeJsonOrNull(frameEffects)),
-      securityStamp: Value(_stringValue(card, 'security_stamp')),
+      securityStamp: Value(_stringField(card, 'security_stamp')),
       
       highresImage: Value(_boolValue(card, 'highres_image')),
       imageStatus: Value(_stringValue(card, 'image_status')),
@@ -192,8 +229,8 @@ class ScryfallDataParser {
       imageBorderCrop: Value(_stringField(imageUris, 'border_crop')),
       artist: Value(_stringValue(card, 'artist')),
       artistIdsJson: Value(_encodeJsonOrNull(artistIds)),
-      illustrationId: Value(_stringValue(card, 'illustration_id')),
-      watermark: Value(_stringValue(card, 'watermark')),
+      illustrationId: Value(_stringField(card, 'illustration_id')),
+      watermark: Value(_stringField(card, 'watermark')),
       
       fullArt: Value(_boolValue(card, 'full_art')),
       textless: Value(_boolValue(card, 'textless')),
@@ -251,7 +288,7 @@ class ScryfallDataParser {
       purchaseCardmarketUri: Value(_stringField(purchaseUris, 'cardmarket')),
       purchaseCardhoarderUri: Value(_stringField(purchaseUris, 'cardhoarder')),
       
-      cardBackId: Value(_stringValue(card, 'card_back_id')),
+      cardBackId: Value(_stringField(card, 'card_back_id')),
       allPartsJson: Value(_encodeJsonOrNull(allParts)),
       
       rawJson: jsonEncode(card),
@@ -289,37 +326,37 @@ class ScryfallDataParser {
       faceIndex: faceIndex,
       
       name: _stringValue(face, 'name'),
-      printedName: Value(_stringValue(face, 'printed_name')),
-      manaCost: Value(_stringValue(face, 'mana_cost')),
-      typeLine: Value(_stringValue(face, 'type_line')),
-      printedTypeLine: Value(_stringValue(face, 'printed_type_line')),
+      printedName: Value<String?>(_stringField(face, 'printed_name')),
+      manaCost: Value(_stringField(face, 'mana_cost')),
+      typeLine: Value(_stringField(face, 'type_line')),
+      printedTypeLine: Value<String?>(_stringField(face, 'printed_type_line')),
       oracleText: Value(_stringValue(face, 'oracle_text')),
-      printedText: Value(_stringValue(face, 'printed_text')),
-      flavorText: Value(_stringValue(face, 'flavor_text')),
+      printedText: Value<String?>(_stringField(face, 'printed_text')),
+      flavorText: Value(_stringField(face, 'flavor_text')),
       
       colorsJson: Value(_encodeJsonOrNull(colors)),
       colorMask: _colorMask(colors),
       colorIndicatorJson: Value(_encodeJsonOrNull(colorIndicator)),
       colorIndicatorMask: _colorMask(colorIndicator),
       
-      power: Value(_stringValue(face, 'power')),
-      toughness: Value(_stringValue(face, 'toughness')),
-      loyalty: Value(_stringValue(face, 'loyalty')),
-      defense: Value(_stringValue(face, 'defense')),
+      power: Value(_stringField(face, 'power')),
+      toughness: Value(_stringField(face, 'toughness')),
+      loyalty: Value(_stringField(face, 'loyalty')),
+      defense: Value(_stringField(face, 'defense')),
       cmc: Value(_doubleValue(face, 'cmc')),
       
-      artist: Value(_stringValue(face, 'artist')),
-      artistId: Value(_stringValue(face, 'artist_id')),
-      illustrationId: Value(_stringValue(face, 'illustration_id')),
+      artist: Value(_stringField(face, 'artist')),
+      artistId: Value(_stringField(face, 'artist_id')),
+      illustrationId: Value(_stringField(face, 'illustration_id')),
       highresImage: Value(_boolValue(face, 'highres_image')),
-      imageStatus: Value(_stringValue(face, 'image_status')),
+      imageStatus: Value(_stringField(face, 'image_status')),
       imageSmall: Value(_stringField(imageUris, 'small')),
       imageNormal: Value(_stringField(imageUris, 'normal')),
       imageLarge: Value(_stringField(imageUris, 'large')),
       imagePng: Value(_stringField(imageUris, 'png')),
       imageArtCrop: Value(_stringField(imageUris, 'art_crop')),
       imageBorderCrop: Value(_stringField(imageUris, 'border_crop')),
-      watermark: Value(_stringValue(face, 'watermark')),
+      watermark: Value(_stringField(face, 'watermark')),
       
       rawJson: jsonEncode(face),
     );
@@ -374,13 +411,41 @@ class ScryfallDataParser {
     return source[key] == true;
   }
 
-  bool _isDigitalCard(Map<String, dynamic> card) {
-    return _boolValue(card, 'digital');
-  }
-
   bool _containsString(Map<String, dynamic> source, String key, String expected) {
     final values = _stringListField(source, key);
     return values.contains(expected);
+  }
+
+  Future<void> _flushBatch(
+    List<ScryfallCardsCompanion> cards,
+    List<ScryfallCardFacesCompanion> faces,
+  ) async {
+    if (cards.isEmpty && faces.isEmpty) {
+      return;
+    }
+
+    final cardsToInsert = List<ScryfallCardsCompanion>.from(cards);
+    final facesToInsert = List<ScryfallCardFacesCompanion>.from(faces);
+    cards.clear();
+    faces.clear();
+
+    await _database.batch((batch) {
+      for (final card in cardsToInsert) {
+        batch.insert(
+          _database.scryfallCards,
+          card,
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+
+      for (final face in facesToInsert) {
+        batch.insert(
+          _database.scryfallCardFaces,
+          face,
+          mode: InsertMode.insertOrReplace,
+        );
+      }
+    });
   }
 
   Value<int> _colorMask(List<String> colors) {
@@ -414,23 +479,7 @@ class ScryfallDataParser {
     return jsonEncode(value);
   }
 
-  Future<File> _uncompressGzipFile(String compressedFilePath) async {
-    final compressedFile = File(compressedFilePath);
-    if (!await compressedFile.exists()) {
-      throw StateError('Compressed file not found: $compressedFilePath');
-    }
-
-    final uncompressedFilePath = compressedFilePath.replaceFirst('.gz', '');
-    final uncompressedFile = File(uncompressedFilePath);
-
-    final inputStream = compressedFile.openRead();
-    final outputStream = uncompressedFile.openWrite();
-
-    await inputStream.transform(gzip.decoder).pipe(outputStream);
-
-    await outputStream.flush();
-    await outputStream.close();
-
-    return uncompressedFile;
+  void dispose() {
+    _progressController.close();
   }
 }

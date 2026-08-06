@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../services/localization_service.dart';
 import '../../services/card_database/scryfall_download.dart';
-import '../../services/card_database/scryfall_data_parser.dart';
-import '../home/home_shell.dart';
+import 'parser_screen.dart';
 
-class DownloadParserScreen extends StatefulWidget {
-  const DownloadParserScreen({super.key, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.forcedDownload});
+class DownloadScreen extends StatefulWidget {
+  const DownloadScreen({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.locale,
+    required this.onLocaleChanged,
+    required this.forcedDownload
+  });
 
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
@@ -15,10 +21,10 @@ class DownloadParserScreen extends StatefulWidget {
   final bool forcedDownload;
 
   @override
-  State<DownloadParserScreen> createState() => _DownloadParserScreenState();
+  State<DownloadScreen> createState() => _DownloadScreenState();
 }
 
-class _DownloadParserScreenState extends State<DownloadParserScreen> {
+class _DownloadScreenState extends State<DownloadScreen> {
   final _downloadService = ScryfallDownloadService();
   bool _isRunning = false;
   bool _isFinished = false;
@@ -60,7 +66,7 @@ class _DownloadParserScreenState extends State<DownloadParserScreen> {
         _isFinished = true;
         _isRunning = false;
       });
-      _openHome();
+      _openParser();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -70,10 +76,10 @@ class _DownloadParserScreenState extends State<DownloadParserScreen> {
     }
   }
 
-  void _openHome() {
+  void _openParser() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => HomeShell(
+        builder: (_) => ParserScreen(
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
           locale: widget.locale,
