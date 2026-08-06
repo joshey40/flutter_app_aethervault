@@ -197,6 +197,13 @@ class AppDatabase extends _$AppDatabase {
           await m.deleteTable('scryfall_cards');
           await m.createAll();
         },
+        beforeOpen: (details) async {
+          await customStatement('PRAGMA journal_mode = WAL;');
+          await customStatement('PRAGMA synchronous = NORMAL;');
+          await customStatement('PRAGMA temp_store = MEMORY;');
+          await customStatement('PRAGMA cache_size = -20000;'); // 20 MB cache
+          await customStatement('PRAGMA foreign_keys = ON;');
+        },
       );
 
   static QueryExecutor _openConnection() {

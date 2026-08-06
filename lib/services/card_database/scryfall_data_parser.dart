@@ -1,4 +1,6 @@
 
+import 'dart:isolate';
+
 import 'package:drift/drift.dart';
 
 import 'dart:convert';
@@ -22,6 +24,19 @@ class ParserProgress {
     this.cardsParsed,
     required this.isRunning,
   });
+}
+
+class _ParseChunkArgs {
+  final List<String> lines;
+  final List<String> langs;
+  _ParseChunkArgs(this.lines, this.langs);
+}
+
+class _ParseChunkResult {
+  final List<ScryfallCardsCompanion> cards;
+  final List<ScryfallCardFacesCompanion> faces;
+  final int parsedCount;
+  _ParseChunkResult(this.cards, this.faces, this.parsedCount);
 }
 
 class ScryfallDataParser {
@@ -52,90 +67,87 @@ class ScryfallDataParser {
   }
 
   Future<void> parseBulkData(String bulkDataType, List<String> langs) async {
-    if (!_cardBulkTypes.contains(bulkDataType)) {
-      throw ArgumentError.value(
-        bulkDataType,
-        'bulkDataType',
-        'Only card bulk data types can be parsed into the card database',
-      );
-    }
-
-    final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
-    final bulkDataFile = File(bulkDataFilePath);
-    if (!await bulkDataFile.exists()) {
-      throw StateError('Bulk data file not found: $bulkDataFilePath');
-    }
-
-    final cards = <ScryfallCardsCompanion>[];
-    final faces = <ScryfallCardFacesCompanion>[];
-    var parsedCount = 0;
-
-    _progressController.add(
-      ParserProgress(
-        cardsParsed: 0,
-        currentType: bulkDataType,
-        isRunning: true,
-        current: 1,
-        total: 1,
-      ),
-    );
-
-    await _database.transaction(() async {
-      await _database.delete(_database.scryfallCardFaces).go();
-      await _database.delete(_database.scryfallCards).go();
-
-      final stream = _readBulkDataLines(bulkDataFile);
-      await for (final line in stream) {
-        final trimmedLine = line.trim();
-        if (trimmedLine.isEmpty) {
-          continue;
-        }
-
-        final decoded = json.decode(trimmedLine);
-        if (decoded is! Map) {
-          throw FormatException('Expected one JSON object per line');
-        }
-
-        final record = decoded.cast<String, dynamic>();
-        if (_boolValue(record, 'digital')) {
-          continue;
-        }
-        if (langs.isNotEmpty && !langs.contains(record['lang'])) {
-          continue;
-        }
-
-        parsedCount++;
-        cards.add(_mapCard(record));
-        faces.addAll(_mapFaces(record));
-
-        if (cards.length >= 100) {
-          await _flushBatch(cards, faces);
-          _progressController.add(
-            ParserProgress(
-              cardsParsed: parsedCount,
-              currentType: bulkDataType,
-              isRunning: true,
-              current: 1,
-              total: 1,
-            ),
-          );
-        }
-      }
-
-      await _flushBatch(cards, faces);
-    });
-
-    _progressController.add(
-      ParserProgress(
-        cardsParsed: parsedCount,
-        currentType: bulkDataType,
-        isRunning: false,
-        current: 1,
-        total: 1,
-      ),
+  if (!_cardBulkTypes.contains(bulkDataType)) {
+    throw ArgumentError.value(
+      bulkDataType,
+      'bulkDataType',
+      'Only card bulk data types can be parsed into the card database',
     );
   }
 
+  final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
+  final bulkDataFile = File(bulkDataFilePath);
+  if (!await bulkDataFile.exists()) {
+    throw StateError('Bulk data file not found: $bulkDataFilePath');
+  }
+
+  const chunkSize = 5000;
+  var parsedCount = 0;
+
+  _progressController.add(
+    ParserProgress(cardsParsed: 0, currentType: bulkDataType, isRunning: true, current: 1, total: 1),
+  );
+
+  await _database.transaction(() async {
+    await _database.delete(_database.scryfallCardFaces).go();
+    await _database.delete(_database.scryfallCards).go();
+
+    Future<_ParseChunkResult>? pendingParse;
+
+    Future<void> awaitAndFlushPending() async {
+      if (pendingParse == null) return;
+      final result = await pendingParse!;
+      pendingParse = null;
+      await _flushBatch(result.cards, result.faces);
+      parsedCount += result.parsedCount;
+      _progressController.add(
+        ParserProgress(
+          cardsParsed: parsedCount,
+          currentType: bulkDataType,
+          isRunning: true,
+          current: 1,
+          total: 1,
+        ),
+      );
+    }
+
+    var buffer = <String>[];
+    final stream = _readBulkDataLines(bulkDataFile);
+
+    await for (final line in stream) {
+      final trimmedLine = line.trim();
+      if (trimmedLine.isEmpty) {
+        continue;
+      }
+      buffer.add(trimmedLine);
+
+      if (buffer.length >= chunkSize) {
+        final chunkToParse = buffer;
+        buffer = <String>[];
+
+        final newParseFuture = _spawnParseChunk(chunkToParse, langs);
+
+        await awaitAndFlushPending();
+
+        pendingParse = newParseFuture;
+      }
+    }
+
+    if (buffer.isNotEmpty) {
+      final chunkToParse = buffer;
+      final newParseFuture = _spawnParseChunk(chunkToParse, langs);
+      await awaitAndFlushPending();
+      pendingParse = newParseFuture;
+    }
+
+    await awaitAndFlushPending();
+  });
+
+  _progressController.add(
+    ParserProgress(cardsParsed: parsedCount, currentType: bulkDataType, isRunning: false, current: 1, total: 1),
+  );
+}
+  
   Stream<String> _readBulkDataLines(File file) {
     final stream = file.openRead();
     if (file.path.endsWith('.gz')) {
@@ -145,7 +157,7 @@ class ScryfallDataParser {
     return stream.transform(utf8.decoder).transform(const LineSplitter());
   }
 
-  ScryfallCardsCompanion _mapCard(Map<String, dynamic> card) {
+  static ScryfallCardsCompanion _mapCard(Map<String, dynamic> card, String? rawJsonStr) {
     final imageUris = _objectField(card, 'image_uris');
     final legalities = _objectField(card, 'legalities');
     final prices = _objectField(card, 'prices');
@@ -291,11 +303,11 @@ class ScryfallDataParser {
       cardBackId: Value(_stringField(card, 'card_back_id')),
       allPartsJson: Value(_encodeJsonOrNull(allParts)),
       
-      rawJson: jsonEncode(card),
+      rawJson: rawJsonStr ?? jsonEncode(card)
     );
   }
 
-  List<ScryfallCardFacesCompanion> _mapFaces(Map<String, dynamic> card) {
+  static List<ScryfallCardFacesCompanion> _mapFaces(Map<String, dynamic> card) {
     final cardFaces = _listField(card, 'card_faces');
     if (cardFaces.isEmpty) {
       return const <ScryfallCardFacesCompanion>[];
@@ -312,7 +324,7 @@ class ScryfallDataParser {
     ];
   }
 
-  ScryfallCardFacesCompanion _mapFace({
+  static ScryfallCardFacesCompanion _mapFace({
     required String cardId,
     required int faceIndex,
     required Map<String, dynamic> face,
@@ -362,60 +374,6 @@ class ScryfallDataParser {
     );
   }
 
-  Map<String, dynamic>? _objectField(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    return value is Map ? value.cast<String, dynamic>() : null;
-  }
-
-  List<dynamic> _listField(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    return value is List ? value : const <dynamic>[];
-  }
-
-  List<String> _stringListField(Map<String, dynamic> source, String key) {
-    return _listField(source, key).map((value) => value.toString()).toList(growable: false);
-  }
-
-  List<String> _dynamicListField(Map<String, dynamic> source, String key) {
-    return _stringListField(source, key);
-  }
-
-  String _stringValue(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    if (value == null) {
-      throw FormatException('Missing required Scryfall field: $key');
-    }
-    return value.toString();
-  }
-
-  String? _stringField(Map<String, dynamic>? source, String key) {
-    final value = source?[key];
-    if (value == null) {
-      return null;
-    }
-    return value.toString();
-  }
-
-  double _doubleValue(Map<String, dynamic> source, String key) {
-    final value = source[key];
-    if (value is num) {
-      return value.toDouble();
-    }
-    if (value is String) {
-      return double.tryParse(value) ?? 0.0;
-    }
-    return 0.0;
-  }
-
-  bool _boolValue(Map<String, dynamic> source, String key) {
-    return source[key] == true;
-  }
-
-  bool _containsString(Map<String, dynamic> source, String key, String expected) {
-    final values = _stringListField(source, key);
-    return values.contains(expected);
-  }
-
   Future<void> _flushBatch(
     List<ScryfallCardsCompanion> cards,
     List<ScryfallCardFacesCompanion> faces,
@@ -448,7 +406,92 @@ class ScryfallDataParser {
     });
   }
 
-  Value<int> _colorMask(List<String> colors) {
+  static Future<_ParseChunkResult> _spawnParseChunk(List<String> lines, List<String> langs) {
+    return Isolate.run(() => _parseChunk(_ParseChunkArgs(lines, langs)));
+  }
+  
+  static _ParseChunkResult _parseChunk(_ParseChunkArgs args) {
+  final cards = <ScryfallCardsCompanion>[];
+  final faces = <ScryfallCardFacesCompanion>[];
+  var parsedCount = 0;
+
+  for (final trimmedLine in args.lines) {
+    final decoded = json.decode(trimmedLine);
+    if (decoded is! Map) {
+      throw FormatException('Expected one JSON object per line');
+    }
+
+    final record = decoded.cast<String, dynamic>();
+    if (_boolValue(record, 'digital')) {
+      continue;
+    }
+    if (args.langs.isNotEmpty && !args.langs.contains(record['lang'])) {
+      continue;
+    }
+
+    parsedCount++;
+    cards.add(_mapCard(record, trimmedLine));
+    faces.addAll(_mapFaces(record));
+  }
+
+  return _ParseChunkResult(cards, faces, parsedCount);
+}
+
+  static Map<String, dynamic>? _objectField(Map<String, dynamic> source, String key) {
+    final value = source[key];
+    return value is Map ? value.cast<String, dynamic>() : null;
+  }
+
+  static List<dynamic> _listField(Map<String, dynamic> source, String key) {
+    final value = source[key];
+    return value is List ? value : const <dynamic>[];
+  }
+
+  static List<String> _stringListField(Map<String, dynamic> source, String key) {
+    return _listField(source, key).map((value) => value.toString()).toList(growable: false);
+  }
+
+  static List<String> _dynamicListField(Map<String, dynamic> source, String key) {
+    return _stringListField(source, key);
+  }
+
+  static String _stringValue(Map<String, dynamic> source, String key) {
+    final value = source[key];
+    if (value == null) {
+      throw FormatException('Missing required Scryfall field: $key');
+    }
+    return value.toString();
+  }
+
+  static String? _stringField(Map<String, dynamic>? source, String key) {
+    final value = source?[key];
+    if (value == null) {
+      return null;
+    }
+    return value.toString();
+  }
+
+  static double _doubleValue(Map<String, dynamic> source, String key) {
+    final value = source[key];
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  static bool _boolValue(Map<String, dynamic> source, String key) {
+    return source[key] == true;
+  }
+
+  static bool _containsString(Map<String, dynamic> source, String key, String expected) {
+    final values = _stringListField(source, key);
+    return values.contains(expected);
+  }
+
+  static Value<int> _colorMask(List<String> colors) {
     var mask = 0;
     for (final color in colors) {
       switch (color) {
@@ -472,7 +515,7 @@ class ScryfallDataParser {
     return Value(mask);
   }
 
-  String? _encodeJsonOrNull(Object? value) {
+  static String? _encodeJsonOrNull(Object? value) {
     if (value == null) {
       return null;
     }
