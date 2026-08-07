@@ -101,7 +101,7 @@ class ScryfallDataParser {
     Future<void> awaitAndFlushPending() async {
     if (pendingParse == null) return;
       final sw = Stopwatch()..start();
-      final result = await pendingParse!;
+      final result = await pendingParse;
       final parseWaitMs = sw.elapsedMilliseconds;
       sw.reset();
       await _flushBatch(result.cards, result.faces);

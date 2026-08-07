@@ -216,4 +216,22 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
   }
+
+  Future<List<ScryfallCard>> getAllCards() async {
+    return select(scryfallCards).get();
+  }
+
+  Future<List<ScryfallCard>> getCardsByIds(List<String> ids) async {
+    return (select(scryfallCards)..where((tbl) => tbl.scryfallId.isIn(ids))).get();
+  }
+
+  Future<ScryfallCardFace?> getCardFaceByIdAndIndex(String cardId, int faceIndex) async {
+    return (select(scryfallCardFaces)
+          ..where((tbl) => tbl.cardId.equals(cardId) & tbl.faceIndex.equals(faceIndex)))
+        .getSingleOrNull();
+  }
+
+  Future<List<ScryfallCard>> getCardsByScryfallSyntax(String syntax) async {
+    return (select(scryfallCards)..where((tbl) => tbl.name.like(syntax))).get();
+  }
 }
