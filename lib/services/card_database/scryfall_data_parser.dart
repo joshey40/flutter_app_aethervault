@@ -100,12 +100,8 @@ class ScryfallDataParser {
 
     Future<void> awaitAndFlushPending() async {
     if (pendingParse == null) return;
-      final sw = Stopwatch()..start();
       final result = await pendingParse;
-      final parseWaitMs = sw.elapsedMilliseconds;
-      sw.reset();
       await _flushBatch(result.cards, result.faces);
-      debugPrint('parseWait=${parseWaitMs}ms flush=${sw.elapsedMilliseconds}ms count=${result.parsedCount}');
       parsedCount += result.parsedCount;
       _progressController.add(
         ParserProgress(
@@ -414,6 +410,12 @@ class ScryfallDataParser {
     if (_boolValue(record, 'digital')) {
       continue;
     }
+    if (_stringField(record, 'layout') == 'art_series') {
+      continue;
+    }
+    if (_stringField(record, 'set') == 'unk') {
+      continue;
+    }
     if (args.langs.isNotEmpty && !args.langs.contains(record['lang'])) {
       continue;
     }
@@ -483,20 +485,20 @@ class ScryfallDataParser {
   static Value<int> _colorMask(List<String> colors) {
     var mask = 0;
     for (final color in colors) {
-      switch (color) {
-        case 'W':
+      switch (color.toLowerCase()) {
+        case 'w':
           mask |= 1;
           break;
-        case 'U':
+        case 'u':
           mask |= 2;
           break;
-        case 'B':
+        case 'b':
           mask |= 4;
           break;
-        case 'R':
+        case 'r':
           mask |= 8;
           break;
-        case 'G':
+        case 'g':
           mask |= 16;
           break;
       }

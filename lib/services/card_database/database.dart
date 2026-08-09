@@ -2,7 +2,9 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
-// The database.g.dart file is generated with the build_runner: dart run build_runner build oder dart run build_runner watch
+import 'scryfall_query.dart';
+
+// The database.g.dart file is generated with the build_runner: dart run build_runner build or dart run build_runner watch
 part 'database.g.dart';
 
 class ScryfallCards extends Table {
@@ -225,13 +227,34 @@ class AppDatabase extends _$AppDatabase {
     return (select(scryfallCards)..where((tbl) => tbl.scryfallId.isIn(ids))).get();
   }
 
-  Future<ScryfallCardFace?> getCardFaceByIdAndIndex(String cardId, int faceIndex) async {
+  Future<List<ScryfallCardFace>> getCardFacesByCardId(String cardId) async {
     return (select(scryfallCardFaces)
-          ..where((tbl) => tbl.cardId.equals(cardId) & tbl.faceIndex.equals(faceIndex)))
-        .getSingleOrNull();
+          ..where((tbl) => tbl.cardId.equals(cardId))
+          ..orderBy([(t) => OrderingTerm(expression: t.faceIndex)]))
+        .get();
   }
 
-  Future<List<ScryfallCard>> getCardsByScryfallSyntax(String syntax) async {
-    return (select(scryfallCards)..where((tbl) => tbl.name.like(syntax))).get();
+  Future<List<ScryfallCard>> getCardsByScryfallSyntax(String syntax, String searchScope, String orderBy, String orderDir) async {
+    final tokens = tokenizeScryfallSyntax(syntax);
+    final hasLangFilter = containsLangFilter(tokens);
+    final hasTokenFilter = containsTokenFilter(tokens);
+
+    final query = select(scryfallCards)
+      ..where((t) {
+        Expression<bool> expr = const Constant(true);
+        if (tokens.isNotEmpty) {
+          expr = tokens.map((tok) => compileQueryToken(t, tok)).reduce((a, b) => a & b);
+        }
+        if (!hasTokenFilter) {
+          expr = expr & t.layout.isNotIn(['token', 'double_faced_token']);
+        }
+        return hasLangFilter ? expr : (expr & t.lang.equals('en'));
+      });
+
+    query.orderBy([(t) => OrderingTerm(expression: t.releasedAt, mode: OrderingMode.desc)]);
+    final rows = await query.get();
+    scopeCards(rows, searchScope);
+    sortCards(rows, orderBy, orderDir);
+    return rows;
   }
 }
