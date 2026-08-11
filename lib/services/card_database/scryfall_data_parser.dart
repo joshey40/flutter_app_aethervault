@@ -12,25 +12,19 @@ import 'database.dart';
 import 'scryfall_download.dart';
 
 class ParserProgress {
-  final int current;
-  final int total;
+  final int? current;
+  final int? total;
   final String? currentType;
   final int? cardsParsed;
   final bool isRunning;
 
   ParserProgress({
-    required this.current,
-    required this.total,
+    this.current,
+    this.total,
     this.currentType,
     this.cardsParsed,
     required this.isRunning,
   });
-}
-
-class _ParseChunkArgs {
-  final List<String> lines;
-  final List<String> langs;
-  _ParseChunkArgs(this.lines, this.langs);
 }
 
 class _ParseChunkResult {
@@ -62,10 +56,16 @@ class ScryfallDataParser {
   Future<void> parseAllCardData() async {
     // By default, parse only "all_cards", which contains all card data.
     // For testing only parse german and english cards (add Setting later)
-    _progressController.add(ParserProgress(current: 0, total: 1, isRunning: true));
+    _progressController.add(ParserProgress(current: 0, total: 3, isRunning: true));
     await parseBulkData('all_cards', ['en','de']);
-    _progressController.add(ParserProgress(current: 1, total: 1, isRunning: false));
+    _progressController.add(ParserProgress(current: 1, total: 3, isRunning: true));
+    await parseTagsBulkData('art_tags');
+    _progressController.add(ParserProgress(current: 2, total: 3, isRunning: true));
+    await parseTagsBulkData('oracle_tags');
+    _progressController.add(ParserProgress(current: 3, total: 3, isRunning: false));
   }
+
+  // Parsing for card bulk data
 
   Future<void> parseBulkData(String bulkDataType, List<String> langs) async {
   if (!_cardBulkTypes.contains(bulkDataType)) {
@@ -76,9 +76,6 @@ class ScryfallDataParser {
     );
   }
 
-  final journalMode = await _database.customSelect('PRAGMA journal_mode;').getSingle();
-  debugPrint('journal_mode=${journalMode.data}');
-
   final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
   final bulkDataFile = File(bulkDataFilePath);
   if (!await bulkDataFile.exists()) {
@@ -88,9 +85,7 @@ class ScryfallDataParser {
   const chunkSize = 17500;
   var parsedCount = 0;
 
-  _progressController.add(
-    ParserProgress(cardsParsed: 0, currentType: bulkDataType, isRunning: true, current: 1, total: 1),
-  );
+  _progressController.add(ParserProgress(cardsParsed: 0, currentType: bulkDataType, isRunning: true));
 
   await _database.transaction(() async {
     await _database.delete(_database.scryfallCardFaces).go();
@@ -101,21 +96,29 @@ class ScryfallDataParser {
     Future<void> awaitAndFlushPending() async {
     if (pendingParse == null) return;
       final result = await pendingParse;
-      await _flushBatch(result.cards, result.faces);
+      if (result.cards.isEmpty && result.faces.isEmpty) {
+        return;
+      }
+
+      await _database.batch((batch) {
+        for (final card in result.cards) {
+          batch.insert(_database.scryfallCards, card, mode: InsertMode.insert);
+        }
+        for (final face in result.faces) {
+          batch.insert(_database.scryfallCardFaces, face, mode: InsertMode.insert);
+        }
+      });
       parsedCount += result.parsedCount;
-      _progressController.add(
-        ParserProgress(
-          cardsParsed: parsedCount,
-          currentType: bulkDataType,
-          isRunning: true,
-          current: 1,
-          total: 1,
-        ),
-      );
+      _progressController.add(ParserProgress(cardsParsed: parsedCount, currentType: bulkDataType, isRunning: true));
     }
 
     var buffer = <String>[];
-    final stream = _readBulkDataLines(bulkDataFile);
+
+    final streamRead = bulkDataFile.openRead();
+    var stream = streamRead.transform(utf8.decoder).transform(const LineSplitter());
+    if (bulkDataFile.path.endsWith('.gz')) {
+      stream = streamRead.transform(gzip.decoder).transform(utf8.decoder).transform(const LineSplitter());
+    }
 
     await for (final line in stream) {
       final trimmedLine = line.trim();
@@ -128,7 +131,7 @@ class ScryfallDataParser {
         final chunkToParse = buffer;
         buffer = <String>[];
 
-        final newParseFuture = _spawnParseChunk(chunkToParse, langs);
+        final newParseFuture = _runParseChunk(chunkToParse, langs);
 
         await awaitAndFlushPending();
 
@@ -138,7 +141,7 @@ class ScryfallDataParser {
 
     if (buffer.isNotEmpty) {
       final chunkToParse = buffer;
-      final newParseFuture = _spawnParseChunk(chunkToParse, langs);
+      final newParseFuture = _runParseChunk(chunkToParse, langs);
       await awaitAndFlushPending();
       pendingParse = newParseFuture;
     }
@@ -146,18 +149,38 @@ class ScryfallDataParser {
     await awaitAndFlushPending();
   });
 
-  _progressController.add(
-    ParserProgress(cardsParsed: parsedCount, currentType: bulkDataType, isRunning: false, current: 1, total: 1),
-  );
+  _progressController.add(ParserProgress(cardsParsed: parsedCount, currentType: bulkDataType, isRunning: false));
 }
-  
-  Stream<String> _readBulkDataLines(File file) {
-    final stream = file.openRead();
-    if (file.path.endsWith('.gz')) {
-      return stream.transform(gzip.decoder).transform(utf8.decoder).transform(const LineSplitter());
+
+  static Future<_ParseChunkResult> _runParseChunk(List<String> lines, List<String> langs) {
+    return Isolate.run(() => _parseChunk(lines, langs));
+  }
+
+  static _ParseChunkResult _parseChunk(List<String> lines, List<String> langs) {
+    final cards = <ScryfallCardsCompanion>[];
+    final faces = <ScryfallCardFacesCompanion>[];
+    var parsedCount = 0;
+
+    for (final trimmedLine in lines) {
+      final decoded = json.decode(trimmedLine);
+      if (decoded is! Map) {
+        throw FormatException('Expected one JSON object per line');
+      }
+
+      final record = decoded.cast<String, dynamic>();
+      if (_boolValue(record, 'digital')) {
+        continue;
+      }
+      if (langs.isNotEmpty && !langs.contains(record['lang'])) {
+        continue;
+      }
+
+      parsedCount++;
+      cards.add(_mapCard(record));
+      faces.addAll(_mapFaces(record));
     }
 
-    return stream.transform(utf8.decoder).transform(const LineSplitter());
+    return _ParseChunkResult(cards, faces, parsedCount);
   }
 
   static ScryfallCardsCompanion _mapCard(Map<String, dynamic> card) {
@@ -191,6 +214,7 @@ class ScryfallDataParser {
       
       name: _stringValue(card, 'name'),
       printedName: Value<String?>(_stringField(card, 'printed_name')),
+      flavorName: Value<String?>(_stringField(card, 'flavor_name')),
       
       setId: _stringValue(card, 'set_id'),
       setCode: _stringValue(card, 'set'),
@@ -203,6 +227,7 @@ class ScryfallDataParser {
       collectorNumber: _stringValue(card, 'collector_number'),
       lang: _stringValue(card, 'lang'),
       rarity: _stringValue(card, 'rarity'),
+      rarityValue: Value(_rarityValue(_stringValue(card, 'rarity'))),
       releasedAt: _stringValue(card, 'released_at'),
       
       scryfallUri: _stringValue(card, 'scryfall_uri'),
@@ -213,7 +238,6 @@ class ScryfallDataParser {
       typeLine: _stringField(card, 'type_line') ?? '',
       printedTypeLine: Value<String?>(_stringField(card, 'printed_type_line')),
       manaCost: Value(_stringField(card, 'mana_cost')),
-      cmc: _doubleValue(card, 'cmc'),
       oracleText: Value(_stringField(card, 'oracle_text')),
       printedText: Value<String?>(_stringField(card, 'printed_text')),
       flavorText: Value(_stringField(card, 'flavor_text')),
@@ -224,6 +248,12 @@ class ScryfallDataParser {
       colorIdentityMask: _colorMask(colorIdentity),
       producedManaJson: Value(_encodeJsonOrNull(producedMana)),
       producedManaMask: _colorMask(producedMana),
+
+      power: Value(_stringField(card, 'power')),
+      toughness: Value(_stringField(card, 'toughness')),
+      loyalty: Value(_stringField(card, 'loyalty')),
+      defense: Value(_stringField(card, 'defense')),
+      cmc: _doubleValue(card, 'cmc'),
       
       keywordsJson: Value(_encodeJsonOrNull(keywords)),
       hasCardFaces: Value(hasCardFaces),
@@ -340,6 +370,8 @@ class ScryfallDataParser {
       
       name: _stringValue(face, 'name'),
       printedName: Value<String?>(_stringField(face, 'printed_name')),
+      flavorName: Value<String?>(_stringField(face, 'flavor_name')),
+
       manaCost: Value(_stringField(face, 'mana_cost')),
       typeLine: Value(_stringField(face, 'type_line')),
       printedTypeLine: Value<String?>(_stringField(face, 'printed_type_line')),
@@ -356,7 +388,7 @@ class ScryfallDataParser {
       toughness: Value(_stringField(face, 'toughness')),
       loyalty: Value(_stringField(face, 'loyalty')),
       defense: Value(_stringField(face, 'defense')),
-      cmc: Value(_doubleValue(face, 'cmc')),
+      cmc: _doubleValue(face, 'cmc'),
       
       artist: Value(_stringField(face, 'artist')),
       artistId: Value(_stringField(face, 'artist_id')),
@@ -373,60 +405,65 @@ class ScryfallDataParser {
     );
   }
 
-  Future<void> _flushBatch(
-    List<ScryfallCardsCompanion> cards,
-    List<ScryfallCardFacesCompanion> faces,
-  ) async {
-    if (cards.isEmpty && faces.isEmpty) {
-      return;
+  // Parsing for art_tags and oracle_tags
+
+  Future<void> parseTagsBulkData(String bulkDataType) async {
+    final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
+    final bulkDataFile = File(bulkDataFilePath);
+    if (!await bulkDataFile.exists()) {
+      throw StateError('Bulk data file not found: $bulkDataFilePath');
     }
 
-    await _database.batch((batch) {
-      for (final card in cards) {
-        batch.insert(_database.scryfallCards, card, mode: InsertMode.insert);
+    final streamRead = bulkDataFile.openRead();
+    var stream = streamRead.transform(utf8.decoder).transform(const LineSplitter());
+    if (bulkDataFile.path.endsWith('.gz')) {
+      stream = streamRead.transform(gzip.decoder).transform(utf8.decoder).transform(const LineSplitter());
+    }
+
+    _progressController.add(ParserProgress(cardsParsed: 0, currentType: bulkDataType, isRunning: true));
+
+    final tags = <ScryfallTagsCompanion>[];
+    await for (final line in stream) {
+      final trimmedLine = line.trim();
+      if (trimmedLine.isEmpty) {
+        continue;
       }
-      for (final face in faces) {
-        batch.insert(_database.scryfallCardFaces, face, mode: InsertMode.insert);
+      final decoded = json.decode(trimmedLine);
+      if (decoded is! Map) {
+        throw FormatException('Expected one JSON object per line');
       }
+      final record = decoded.cast<String, dynamic>();
+      tags.add(_mapTag(record));
+    }
+
+    await _database.transaction(() async {
+      await _database.delete(_database.scryfallTags).go();
+      await _database.batch((batch) {
+        for (final tag in tags) {
+          batch.insert(_database.scryfallTags, tag, mode: InsertMode.insert);
+        }
+      });
     });
+
+    _progressController.add(ParserProgress(cardsParsed: tags.length, currentType: bulkDataType, isRunning: true));
   }
 
-  static Future<_ParseChunkResult> _spawnParseChunk(List<String> lines, List<String> langs) {
-    return Isolate.run(() => _parseChunk(_ParseChunkArgs(lines, langs)));
-  }
-  
-  static _ParseChunkResult _parseChunk(_ParseChunkArgs args) {
-  final cards = <ScryfallCardsCompanion>[];
-  final faces = <ScryfallCardFacesCompanion>[];
-  var parsedCount = 0;
-
-  for (final trimmedLine in args.lines) {
-    final decoded = json.decode(trimmedLine);
-    if (decoded is! Map) {
-      throw FormatException('Expected one JSON object per line');
-    }
-
-    final record = decoded.cast<String, dynamic>();
-    if (_boolValue(record, 'digital')) {
-      continue;
-    }
-    if (_stringField(record, 'layout') == 'art_series') {
-      continue;
-    }
-    if (_stringField(record, 'set') == 'unk') {
-      continue;
-    }
-    if (args.langs.isNotEmpty && !args.langs.contains(record['lang'])) {
-      continue;
-    }
-
-    parsedCount++;
-    cards.add(_mapCard(record));
-    faces.addAll(_mapFaces(record));
+  static ScryfallTagsCompanion _mapTag(Map<String, dynamic> tag) {
+    return ScryfallTagsCompanion.insert(
+      scryfallId: _stringValue(tag, 'id'),
+      label: _stringValue(tag, 'label'),
+      slug: _stringValue(tag, 'slug'),
+      description: _stringField(tag, 'description') ?? '',
+      type: _stringValue(tag, 'type'),
+      
+      parentIdsJson: _stringListField(tag, 'parent_ids'),
+      childIdsJson: _stringListField(tag, 'child_ids'),
+      aliasesJson: _stringListField(tag, 'aliases'),
+      taggedJson: _stringListField(tag, 'tagged')
+    );
   }
 
-  return _ParseChunkResult(cards, faces, parsedCount);
-}
+  // Helper functions
 
   static Map<String, dynamic>? _objectField(Map<String, dynamic> source, String key) {
     final value = source[key];
@@ -504,6 +541,21 @@ class ScryfallDataParser {
       }
     }
     return Value(mask);
+  }
+
+  static int _rarityValue(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'common':
+        return 1;
+      case 'uncommon':
+        return 2;
+      case 'rare':
+        return 3;
+      case 'mythic':
+        return 4;
+      default:
+        return 0;
+    }
   }
 
   static String? _encodeJsonOrNull(Object? value) {

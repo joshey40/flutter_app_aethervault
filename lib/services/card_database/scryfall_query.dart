@@ -109,9 +109,18 @@ bool containsLangFilter(List<QueryToken> tokens) {
   return tokens.any(check);
 }
 
-bool containsTokenFilter(List<QueryToken> tokens) {
+bool containsTypeFilter(List<QueryToken> tokens) {
   bool check(QueryToken t) {
-    if (t is FilterToken) return (t.key == 't' || t.key == 'type') && t.value.toLowerCase() == 'token';
+    if (t is FilterToken) return (t.key == 't' || t.key == 'type') && t.isNegated == false;
+    if (t is ListToken) return t.tokens.any(check);
+    return false;
+  }
+  return tokens.any(check);
+}
+
+bool containsSetFilter(List<QueryToken> tokens) {
+  bool check(QueryToken t) {
+    if (t is FilterToken) return (t.key == 's' || t.key == 'e' || t.key == 'set' || t.key == 'edition') && t.isNegated == false;
     if (t is ListToken) return t.tokens.any(check);
     return false;
   }
@@ -138,7 +147,7 @@ void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir) {
       'name' => a.name.compareTo(b.name),
       'released_at' => a.releasedAt.compareTo(b.releasedAt),
       'set' => a.setCode.compareTo(b.setCode),
-      'rarity' => a.rarity.compareTo(b.rarity),
+      'rarity' => a.rarityValue.compareTo(b.rarityValue),
       'color' => a.colorMask.compareTo(b.colorMask),
       'cmc' => a.cmc.compareTo(b.cmc),
       _ => a.name.compareTo(b.name),
@@ -332,6 +341,30 @@ Expression<bool> _numericExpression(Expression<double> col, FilterOp op, String 
   };
 }
 
+Expression<bool> _numericStringExpression(Expression<String> col, FilterOp op, String rawValue) {
+  // Convert * to 0, since Scryfall treats * as 0 for comparison purposes
+  final n = rawValue == '*' ? 0.0 : double.tryParse(rawValue);
+  if (n == null) throw FormatException('Ungültiger Zahlenwert: $rawValue');
+  final expr = switch (op) {
+    FilterOp.contains => col.cast<double>().equals(n),
+    FilterOp.eq => col.cast<double>().equals(n),
+    FilterOp.ne => col.cast<double>().equals(n).not(),
+    FilterOp.gt => col.cast<double>().isBiggerThanValue(n),
+    FilterOp.gte => col.cast<double>().isBiggerOrEqualValue(n),
+    FilterOp.lt => col.cast<double>().isSmallerThanValue(n),
+    FilterOp.lte => col.cast<double>().isSmallerOrEqualValue(n),
+  };
+  return col.isNull().not() & expr;
+}
+
+Expression<bool> _rarityCompareExpression(Expression<int> col, FilterOp op, String rawValue) {
+  final v = rawValue.toLowerCase();
+  final rarityOrder = ['common', 'uncommon', 'rare', 'mythic'];
+  final index = rarityOrder.indexOf(v) + 1;
+  if (index < 0 || index > 4) throw FormatException('Ungültige Seltenheit: $rawValue');
+  return _numericExpression(col.cast<double>(), op, index.toString());
+}
+
 Expression<bool> _colorMaskExpression(Expression<int> col, FilterOp op, String rawValue, bool isIdentity) {
   final v = rawValue.toLowerCase();
 
@@ -392,10 +425,13 @@ Expression<String> _tildeToNamePattern(Expression<String> nameCol, String rawVal
 }
 
 Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
+  // TODO: Handle faces
+  // TODO: Unsupported filters: edhrecrank, cube, game
   switch (f.key) {
     case 'name':
-      return t.name.like('%${f.value}%') | t.printedName.like('%${f.value}%');
+      return t.name.like('%${f.value}%') | t.printedName.like('%${f.value}%') | t.flavorName.like('%${f.value}%');
 
+    // Colors and Color Identity
     case 'c':
     case 'color':
       return _colorMaskExpression(t.colorMask, f.op, f.value, false);
@@ -404,10 +440,12 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     case 'identity':
       return _colorMaskExpression(t.colorIdentityMask, f.op, f.value, true);
 
+    // Card Types
     case 't':
     case 'type':
       return t.typeLine.like('%${f.value}%') | t.printedTypeLine.like('%${f.value}%');
 
+    // Card Text
     case 'o':
     case 'oracle':
       final pattern = _tildeToNamePattern(t.name, f.value);
@@ -417,12 +455,82 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     case 'keyword':
       return t.keywordsJson.like('%"${f.value}"%');
 
+    // Mana Costs
+    case 'm':
+    case 'mana':
+      return const Constant(true); // TODO: Implement
+    
+    case 'cmc':
+    case 'mv':
+      return _numericExpression(t.cmc, f.op, f.value);
+
+    // Power, Toughness, and Loyalty
+    case 'pow':
+    case 'power':
+      if (f.value == 'tou' || f.value == 'toughness') {
+        return const Constant(true); // TODO: Implement (power vs toughness comparison)
+      }
+      return _numericStringExpression(t.power, f.op, f.value);
+    
+    case 'tou':
+    case 'toughness':
+      if (f.value == 'pow' || f.value == 'power') {
+        return const Constant(true); // TODO: Implement (toughness vs power comparison)
+      }
+      return _numericStringExpression(t.toughness, f.op, f.value);
+    
+    case 'loy':
+    case 'loyalty':
+      return _numericStringExpression(t.loyalty, f.op, f.value);
+
+    // Rarity
+    case 'r':
+    case 'rarity':
+      return _rarityCompareExpression(t.rarityValue, f.op, f.value);
+
+    // Sets and Blocks
     case 's':
     case 'e':
     case 'set':
     case 'edition':
       return t.setCode.equals(f.value.toLowerCase());
 
+    case 'b':
+    case 'block':
+      return const Constant(true); // TODO: Implement (sets not yet in database)
+    
+    case 'g':
+    case 'group':
+      return const Constant(true); // TODO: Implement (sets not yet in database)
+    
+    case 'st':
+    case 'set_type':
+      return const Constant(true); // TODO: Implement (sets not yet in database)
+
+    // Format Legality
+    case 'f':
+    case 'format':
+    case 'legality':
+    case 'legal':
+      return _legalityColumn(t, f.value).equals('legal');
+
+    case 'banned':
+      return _legalityColumn(t, f.value).equals('banned');
+    
+    case 'restricted':
+      return _legalityColumn(t, f.value).equals('restricted');
+
+    // USD/EUR/TIX Price
+    case 'usd':
+      return _numericStringExpression(t.pricesUsd, f.op, f.value);
+    
+    case 'eur':
+      return _numericStringExpression(t.pricesEur, f.op, f.value);
+    
+    case 'tix':
+      return _numericStringExpression(t.pricesTix, f.op, f.value);
+
+    // Artist, Flavor Text and Watermark
     case 'a':
     case 'artist':
       return t.artist.like('%${f.value}%');
@@ -431,20 +539,54 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     case 'flavor':
       return t.flavorText.like('%${f.value}%');
 
-    case 'cmc':
-    case 'mv':
-      return _numericExpression(t.cmc, f.op, f.value);
+    case 'wm':
+    case 'watermark':
+      return t.watermark.like('%${f.value}%');
+    
+    case 'new':
+      return const Constant(true); // TODO: Implement
+      
+    // Border, Frame, Foil & Resolution
+    case 'border':
+      return const Constant(true); // TODO: Implement
 
-    case 'f':
-    case 'format':
-    case 'legality':
-    case 'legal':
-      return _legalityColumn(t, f.value).equals('legal');
+    case 'frame':
+      return const Constant(true); // TODO: Implement
+    
+    case 'stamp':
+      return const Constant(true); // TODO: Implement
 
+    // Year
+    case 'year':
+      int year = (f.value == 'now' || f.value == 'today') ? DateTime.now().year : int.tryParse(f.value) ?? 0;
+      return const Constant(true); // TODO: Implement (year comparison)
+    
+    case 'date':
+      DateTime date = (f.value == 'now' || f.value == 'today') ? DateTime.now() : DateTime.tryParse(f.value) ?? DateTime(0);
+      return const Constant(true); // TODO: Implement (date comparison)
+
+    // Tagger Tags
+    case 'art':
+    case 'atag':
+    case 'arttag':
+      return const Constant(true); // TODO: Implement
+    
+    case 'function':
+    case 'otag':
+    case 'oracletag':
+      return const Constant(true); // TODO: Implement
+
+    // Languages
     case 'lang':
     case 'language':
       if (f.value.toLowerCase() == 'any') return const Constant(true);
       return t.lang.equals(f.value.toLowerCase());
+
+    // Is and Not
+    case 'is':
+      return const Constant(true); // TODO: Implement
+    case 'not':
+      return const Constant(true); // TODO: Implement
 
     default:
       return const Constant(true);

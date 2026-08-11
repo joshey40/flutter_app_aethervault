@@ -94,6 +94,17 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _flavorNameMeta = const VerificationMeta(
+    'flavorName',
+  );
+  @override
+  late final GeneratedColumn<String> flavorName = GeneratedColumn<String>(
+    'flavor_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _setIdMeta = const VerificationMeta('setId');
   @override
   late final GeneratedColumn<String> setId = GeneratedColumn<String>(
@@ -196,6 +207,18 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _rarityValueMeta = const VerificationMeta(
+    'rarityValue',
+  );
+  @override
+  late final GeneratedColumn<int> rarityValue = GeneratedColumn<int>(
+    'rarity_value',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _releasedAtMeta = const VerificationMeta(
     'releasedAt',
   );
@@ -249,6 +272,17 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _manaCostMeta = const VerificationMeta(
+    'manaCost',
+  );
+  @override
+  late final GeneratedColumn<String> manaCost = GeneratedColumn<String>(
+    'mana_cost',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _typeLineMeta = const VerificationMeta(
     'typeLine',
   );
@@ -270,26 +304,6 @@ class $ScryfallCardsTable extends ScryfallCards
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-  );
-  static const VerificationMeta _manaCostMeta = const VerificationMeta(
-    'manaCost',
-  );
-  @override
-  late final GeneratedColumn<String> manaCost = GeneratedColumn<String>(
-    'mana_cost',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _cmcMeta = const VerificationMeta('cmc');
-  @override
-  late final GeneratedColumn<double> cmc = GeneratedColumn<double>(
-    'cmc',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
   );
   static const VerificationMeta _oracleTextMeta = const VerificationMeta(
     'oracleText',
@@ -393,6 +407,57 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _powerMeta = const VerificationMeta('power');
+  @override
+  late final GeneratedColumn<String> power = GeneratedColumn<String>(
+    'power',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _toughnessMeta = const VerificationMeta(
+    'toughness',
+  );
+  @override
+  late final GeneratedColumn<String> toughness = GeneratedColumn<String>(
+    'toughness',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _loyaltyMeta = const VerificationMeta(
+    'loyalty',
+  );
+  @override
+  late final GeneratedColumn<String> loyalty = GeneratedColumn<String>(
+    'loyalty',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _defenseMeta = const VerificationMeta(
+    'defense',
+  );
+  @override
+  late final GeneratedColumn<String> defense = GeneratedColumn<String>(
+    'defense',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cmcMeta = const VerificationMeta('cmc');
+  @override
+  late final GeneratedColumn<double> cmc = GeneratedColumn<double>(
+    'cmc',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _keywordsJsonMeta = const VerificationMeta(
     'keywordsJson',
@@ -1265,6 +1330,7 @@ class $ScryfallCardsTable extends ScryfallCards
     layout,
     name,
     printedName,
+    flavorName,
     setId,
     setCode,
     setName,
@@ -1275,15 +1341,15 @@ class $ScryfallCardsTable extends ScryfallCards
     collectorNumber,
     lang,
     rarity,
+    rarityValue,
     releasedAt,
     scryfallUri,
     uri,
     rulingsUri,
     printsSearchUri,
+    manaCost,
     typeLine,
     printedTypeLine,
-    manaCost,
-    cmc,
     oracleText,
     printedText,
     flavorText,
@@ -1293,6 +1359,11 @@ class $ScryfallCardsTable extends ScryfallCards
     colorIdentityMask,
     producedManaJson,
     producedManaMask,
+    power,
+    toughness,
+    loyalty,
+    defense,
+    cmc,
     keywordsJson,
     hasCardFaces,
     hasColorIndicator,
@@ -1445,6 +1516,12 @@ class $ScryfallCardsTable extends ScryfallCards
         ),
       );
     }
+    if (data.containsKey('flavor_name')) {
+      context.handle(
+        _flavorNameMeta,
+        flavorName.isAcceptableOrUnknown(data['flavor_name']!, _flavorNameMeta),
+      );
+    }
     if (data.containsKey('set_id')) {
       context.handle(
         _setIdMeta,
@@ -1534,6 +1611,15 @@ class $ScryfallCardsTable extends ScryfallCards
     } else if (isInserting) {
       context.missing(_rarityMeta);
     }
+    if (data.containsKey('rarity_value')) {
+      context.handle(
+        _rarityValueMeta,
+        rarityValue.isAcceptableOrUnknown(
+          data['rarity_value']!,
+          _rarityValueMeta,
+        ),
+      );
+    }
     if (data.containsKey('released_at')) {
       context.handle(
         _releasedAtMeta,
@@ -1580,6 +1666,12 @@ class $ScryfallCardsTable extends ScryfallCards
     } else if (isInserting) {
       context.missing(_printsSearchUriMeta);
     }
+    if (data.containsKey('mana_cost')) {
+      context.handle(
+        _manaCostMeta,
+        manaCost.isAcceptableOrUnknown(data['mana_cost']!, _manaCostMeta),
+      );
+    }
     if (data.containsKey('type_line')) {
       context.handle(
         _typeLineMeta,
@@ -1596,20 +1688,6 @@ class $ScryfallCardsTable extends ScryfallCards
           _printedTypeLineMeta,
         ),
       );
-    }
-    if (data.containsKey('mana_cost')) {
-      context.handle(
-        _manaCostMeta,
-        manaCost.isAcceptableOrUnknown(data['mana_cost']!, _manaCostMeta),
-      );
-    }
-    if (data.containsKey('cmc')) {
-      context.handle(
-        _cmcMeta,
-        cmc.isAcceptableOrUnknown(data['cmc']!, _cmcMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_cmcMeta);
     }
     if (data.containsKey('oracle_text')) {
       context.handle(
@@ -1679,6 +1757,38 @@ class $ScryfallCardsTable extends ScryfallCards
           _producedManaMaskMeta,
         ),
       );
+    }
+    if (data.containsKey('power')) {
+      context.handle(
+        _powerMeta,
+        power.isAcceptableOrUnknown(data['power']!, _powerMeta),
+      );
+    }
+    if (data.containsKey('toughness')) {
+      context.handle(
+        _toughnessMeta,
+        toughness.isAcceptableOrUnknown(data['toughness']!, _toughnessMeta),
+      );
+    }
+    if (data.containsKey('loyalty')) {
+      context.handle(
+        _loyaltyMeta,
+        loyalty.isAcceptableOrUnknown(data['loyalty']!, _loyaltyMeta),
+      );
+    }
+    if (data.containsKey('defense')) {
+      context.handle(
+        _defenseMeta,
+        defense.isAcceptableOrUnknown(data['defense']!, _defenseMeta),
+      );
+    }
+    if (data.containsKey('cmc')) {
+      context.handle(
+        _cmcMeta,
+        cmc.isAcceptableOrUnknown(data['cmc']!, _cmcMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cmcMeta);
     }
     if (data.containsKey('keywords_json')) {
       context.handle(
@@ -2297,6 +2407,10 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}printed_name'],
       ),
+      flavorName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flavor_name'],
+      ),
       setId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}set_id'],
@@ -2337,6 +2451,10 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}rarity'],
       )!,
+      rarityValue: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rarity_value'],
+      )!,
       releasedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}released_at'],
@@ -2357,6 +2475,10 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}prints_search_uri'],
       )!,
+      manaCost: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mana_cost'],
+      ),
       typeLine: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}type_line'],
@@ -2365,14 +2487,6 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}printed_type_line'],
       ),
-      manaCost: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}mana_cost'],
-      ),
-      cmc: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}cmc'],
-      )!,
       oracleText: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}oracle_text'],
@@ -2408,6 +2522,26 @@ class $ScryfallCardsTable extends ScryfallCards
       producedManaMask: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}produced_mana_mask'],
+      )!,
+      power: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}power'],
+      ),
+      toughness: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}toughness'],
+      ),
+      loyalty: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}loyalty'],
+      ),
+      defense: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}defense'],
+      ),
+      cmc: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}cmc'],
       )!,
       keywordsJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -2719,6 +2853,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final String layout;
   final String name;
   final String? printedName;
+  final String? flavorName;
   final String setId;
   final String setCode;
   final String setName;
@@ -2729,15 +2864,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final String collectorNumber;
   final String lang;
   final String rarity;
+  final int rarityValue;
   final String releasedAt;
   final String scryfallUri;
   final String uri;
   final String rulingsUri;
   final String printsSearchUri;
+  final String? manaCost;
   final String typeLine;
   final String? printedTypeLine;
-  final String? manaCost;
-  final double cmc;
   final String? oracleText;
   final String? printedText;
   final String? flavorText;
@@ -2747,6 +2882,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final int colorIdentityMask;
   final String? producedManaJson;
   final int producedManaMask;
+  final String? power;
+  final String? toughness;
+  final String? loyalty;
+  final String? defense;
+  final double cmc;
   final String? keywordsJson;
   final bool hasCardFaces;
   final bool hasColorIndicator;
@@ -2829,6 +2969,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     required this.layout,
     required this.name,
     this.printedName,
+    this.flavorName,
     required this.setId,
     required this.setCode,
     required this.setName,
@@ -2839,15 +2980,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     required this.collectorNumber,
     required this.lang,
     required this.rarity,
+    required this.rarityValue,
     required this.releasedAt,
     required this.scryfallUri,
     required this.uri,
     required this.rulingsUri,
     required this.printsSearchUri,
+    this.manaCost,
     required this.typeLine,
     this.printedTypeLine,
-    this.manaCost,
-    required this.cmc,
     this.oracleText,
     this.printedText,
     this.flavorText,
@@ -2857,6 +2998,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     required this.colorIdentityMask,
     this.producedManaJson,
     required this.producedManaMask,
+    this.power,
+    this.toughness,
+    this.loyalty,
+    this.defense,
+    required this.cmc,
     this.keywordsJson,
     required this.hasCardFaces,
     required this.hasColorIndicator,
@@ -2952,6 +3098,9 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     if (!nullToAbsent || printedName != null) {
       map['printed_name'] = Variable<String>(printedName);
     }
+    if (!nullToAbsent || flavorName != null) {
+      map['flavor_name'] = Variable<String>(flavorName);
+    }
     map['set_id'] = Variable<String>(setId);
     map['set_code'] = Variable<String>(setCode);
     map['set_name'] = Variable<String>(setName);
@@ -2962,19 +3111,19 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     map['collector_number'] = Variable<String>(collectorNumber);
     map['lang'] = Variable<String>(lang);
     map['rarity'] = Variable<String>(rarity);
+    map['rarity_value'] = Variable<int>(rarityValue);
     map['released_at'] = Variable<String>(releasedAt);
     map['scryfall_uri'] = Variable<String>(scryfallUri);
     map['uri'] = Variable<String>(uri);
     map['rulings_uri'] = Variable<String>(rulingsUri);
     map['prints_search_uri'] = Variable<String>(printsSearchUri);
+    if (!nullToAbsent || manaCost != null) {
+      map['mana_cost'] = Variable<String>(manaCost);
+    }
     map['type_line'] = Variable<String>(typeLine);
     if (!nullToAbsent || printedTypeLine != null) {
       map['printed_type_line'] = Variable<String>(printedTypeLine);
     }
-    if (!nullToAbsent || manaCost != null) {
-      map['mana_cost'] = Variable<String>(manaCost);
-    }
-    map['cmc'] = Variable<double>(cmc);
     if (!nullToAbsent || oracleText != null) {
       map['oracle_text'] = Variable<String>(oracleText);
     }
@@ -2996,6 +3145,19 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       map['produced_mana_json'] = Variable<String>(producedManaJson);
     }
     map['produced_mana_mask'] = Variable<int>(producedManaMask);
+    if (!nullToAbsent || power != null) {
+      map['power'] = Variable<String>(power);
+    }
+    if (!nullToAbsent || toughness != null) {
+      map['toughness'] = Variable<String>(toughness);
+    }
+    if (!nullToAbsent || loyalty != null) {
+      map['loyalty'] = Variable<String>(loyalty);
+    }
+    if (!nullToAbsent || defense != null) {
+      map['defense'] = Variable<String>(defense);
+    }
+    map['cmc'] = Variable<double>(cmc);
     if (!nullToAbsent || keywordsJson != null) {
       map['keywords_json'] = Variable<String>(keywordsJson);
     }
@@ -3208,6 +3370,9 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       printedName: printedName == null && nullToAbsent
           ? const Value.absent()
           : Value(printedName),
+      flavorName: flavorName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flavorName),
       setId: Value(setId),
       setCode: Value(setCode),
       setName: Value(setName),
@@ -3218,19 +3383,19 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       collectorNumber: Value(collectorNumber),
       lang: Value(lang),
       rarity: Value(rarity),
+      rarityValue: Value(rarityValue),
       releasedAt: Value(releasedAt),
       scryfallUri: Value(scryfallUri),
       uri: Value(uri),
       rulingsUri: Value(rulingsUri),
       printsSearchUri: Value(printsSearchUri),
+      manaCost: manaCost == null && nullToAbsent
+          ? const Value.absent()
+          : Value(manaCost),
       typeLine: Value(typeLine),
       printedTypeLine: printedTypeLine == null && nullToAbsent
           ? const Value.absent()
           : Value(printedTypeLine),
-      manaCost: manaCost == null && nullToAbsent
-          ? const Value.absent()
-          : Value(manaCost),
-      cmc: Value(cmc),
       oracleText: oracleText == null && nullToAbsent
           ? const Value.absent()
           : Value(oracleText),
@@ -3252,6 +3417,19 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ? const Value.absent()
           : Value(producedManaJson),
       producedManaMask: Value(producedManaMask),
+      power: power == null && nullToAbsent
+          ? const Value.absent()
+          : Value(power),
+      toughness: toughness == null && nullToAbsent
+          ? const Value.absent()
+          : Value(toughness),
+      loyalty: loyalty == null && nullToAbsent
+          ? const Value.absent()
+          : Value(loyalty),
+      defense: defense == null && nullToAbsent
+          ? const Value.absent()
+          : Value(defense),
+      cmc: Value(cmc),
       keywordsJson: keywordsJson == null && nullToAbsent
           ? const Value.absent()
           : Value(keywordsJson),
@@ -3456,6 +3634,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       layout: serializer.fromJson<String>(json['layout']),
       name: serializer.fromJson<String>(json['name']),
       printedName: serializer.fromJson<String?>(json['printedName']),
+      flavorName: serializer.fromJson<String?>(json['flavorName']),
       setId: serializer.fromJson<String>(json['setId']),
       setCode: serializer.fromJson<String>(json['setCode']),
       setName: serializer.fromJson<String>(json['setName']),
@@ -3466,15 +3645,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       collectorNumber: serializer.fromJson<String>(json['collectorNumber']),
       lang: serializer.fromJson<String>(json['lang']),
       rarity: serializer.fromJson<String>(json['rarity']),
+      rarityValue: serializer.fromJson<int>(json['rarityValue']),
       releasedAt: serializer.fromJson<String>(json['releasedAt']),
       scryfallUri: serializer.fromJson<String>(json['scryfallUri']),
       uri: serializer.fromJson<String>(json['uri']),
       rulingsUri: serializer.fromJson<String>(json['rulingsUri']),
       printsSearchUri: serializer.fromJson<String>(json['printsSearchUri']),
+      manaCost: serializer.fromJson<String?>(json['manaCost']),
       typeLine: serializer.fromJson<String>(json['typeLine']),
       printedTypeLine: serializer.fromJson<String?>(json['printedTypeLine']),
-      manaCost: serializer.fromJson<String?>(json['manaCost']),
-      cmc: serializer.fromJson<double>(json['cmc']),
       oracleText: serializer.fromJson<String?>(json['oracleText']),
       printedText: serializer.fromJson<String?>(json['printedText']),
       flavorText: serializer.fromJson<String?>(json['flavorText']),
@@ -3486,6 +3665,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       colorIdentityMask: serializer.fromJson<int>(json['colorIdentityMask']),
       producedManaJson: serializer.fromJson<String?>(json['producedManaJson']),
       producedManaMask: serializer.fromJson<int>(json['producedManaMask']),
+      power: serializer.fromJson<String?>(json['power']),
+      toughness: serializer.fromJson<String?>(json['toughness']),
+      loyalty: serializer.fromJson<String?>(json['loyalty']),
+      defense: serializer.fromJson<String?>(json['defense']),
+      cmc: serializer.fromJson<double>(json['cmc']),
       keywordsJson: serializer.fromJson<String?>(json['keywordsJson']),
       hasCardFaces: serializer.fromJson<bool>(json['hasCardFaces']),
       hasColorIndicator: serializer.fromJson<bool>(json['hasColorIndicator']),
@@ -3591,6 +3775,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       'layout': serializer.toJson<String>(layout),
       'name': serializer.toJson<String>(name),
       'printedName': serializer.toJson<String?>(printedName),
+      'flavorName': serializer.toJson<String?>(flavorName),
       'setId': serializer.toJson<String>(setId),
       'setCode': serializer.toJson<String>(setCode),
       'setName': serializer.toJson<String>(setName),
@@ -3601,15 +3786,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       'collectorNumber': serializer.toJson<String>(collectorNumber),
       'lang': serializer.toJson<String>(lang),
       'rarity': serializer.toJson<String>(rarity),
+      'rarityValue': serializer.toJson<int>(rarityValue),
       'releasedAt': serializer.toJson<String>(releasedAt),
       'scryfallUri': serializer.toJson<String>(scryfallUri),
       'uri': serializer.toJson<String>(uri),
       'rulingsUri': serializer.toJson<String>(rulingsUri),
       'printsSearchUri': serializer.toJson<String>(printsSearchUri),
+      'manaCost': serializer.toJson<String?>(manaCost),
       'typeLine': serializer.toJson<String>(typeLine),
       'printedTypeLine': serializer.toJson<String?>(printedTypeLine),
-      'manaCost': serializer.toJson<String?>(manaCost),
-      'cmc': serializer.toJson<double>(cmc),
       'oracleText': serializer.toJson<String?>(oracleText),
       'printedText': serializer.toJson<String?>(printedText),
       'flavorText': serializer.toJson<String?>(flavorText),
@@ -3619,6 +3804,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       'colorIdentityMask': serializer.toJson<int>(colorIdentityMask),
       'producedManaJson': serializer.toJson<String?>(producedManaJson),
       'producedManaMask': serializer.toJson<int>(producedManaMask),
+      'power': serializer.toJson<String?>(power),
+      'toughness': serializer.toJson<String?>(toughness),
+      'loyalty': serializer.toJson<String?>(loyalty),
+      'defense': serializer.toJson<String?>(defense),
+      'cmc': serializer.toJson<double>(cmc),
       'keywordsJson': serializer.toJson<String?>(keywordsJson),
       'hasCardFaces': serializer.toJson<bool>(hasCardFaces),
       'hasColorIndicator': serializer.toJson<bool>(hasColorIndicator),
@@ -3714,6 +3904,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     String? layout,
     String? name,
     Value<String?> printedName = const Value.absent(),
+    Value<String?> flavorName = const Value.absent(),
     String? setId,
     String? setCode,
     String? setName,
@@ -3724,15 +3915,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     String? collectorNumber,
     String? lang,
     String? rarity,
+    int? rarityValue,
     String? releasedAt,
     String? scryfallUri,
     String? uri,
     String? rulingsUri,
     String? printsSearchUri,
+    Value<String?> manaCost = const Value.absent(),
     String? typeLine,
     Value<String?> printedTypeLine = const Value.absent(),
-    Value<String?> manaCost = const Value.absent(),
-    double? cmc,
     Value<String?> oracleText = const Value.absent(),
     Value<String?> printedText = const Value.absent(),
     Value<String?> flavorText = const Value.absent(),
@@ -3742,6 +3933,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     int? colorIdentityMask,
     Value<String?> producedManaJson = const Value.absent(),
     int? producedManaMask,
+    Value<String?> power = const Value.absent(),
+    Value<String?> toughness = const Value.absent(),
+    Value<String?> loyalty = const Value.absent(),
+    Value<String?> defense = const Value.absent(),
+    double? cmc,
     Value<String?> keywordsJson = const Value.absent(),
     bool? hasCardFaces,
     bool? hasColorIndicator,
@@ -3826,6 +4022,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     layout: layout ?? this.layout,
     name: name ?? this.name,
     printedName: printedName.present ? printedName.value : this.printedName,
+    flavorName: flavorName.present ? flavorName.value : this.flavorName,
     setId: setId ?? this.setId,
     setCode: setCode ?? this.setCode,
     setName: setName ?? this.setName,
@@ -3836,17 +4033,17 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     collectorNumber: collectorNumber ?? this.collectorNumber,
     lang: lang ?? this.lang,
     rarity: rarity ?? this.rarity,
+    rarityValue: rarityValue ?? this.rarityValue,
     releasedAt: releasedAt ?? this.releasedAt,
     scryfallUri: scryfallUri ?? this.scryfallUri,
     uri: uri ?? this.uri,
     rulingsUri: rulingsUri ?? this.rulingsUri,
     printsSearchUri: printsSearchUri ?? this.printsSearchUri,
+    manaCost: manaCost.present ? manaCost.value : this.manaCost,
     typeLine: typeLine ?? this.typeLine,
     printedTypeLine: printedTypeLine.present
         ? printedTypeLine.value
         : this.printedTypeLine,
-    manaCost: manaCost.present ? manaCost.value : this.manaCost,
-    cmc: cmc ?? this.cmc,
     oracleText: oracleText.present ? oracleText.value : this.oracleText,
     printedText: printedText.present ? printedText.value : this.printedText,
     flavorText: flavorText.present ? flavorText.value : this.flavorText,
@@ -3860,6 +4057,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
         ? producedManaJson.value
         : this.producedManaJson,
     producedManaMask: producedManaMask ?? this.producedManaMask,
+    power: power.present ? power.value : this.power,
+    toughness: toughness.present ? toughness.value : this.toughness,
+    loyalty: loyalty.present ? loyalty.value : this.loyalty,
+    defense: defense.present ? defense.value : this.defense,
+    cmc: cmc ?? this.cmc,
     keywordsJson: keywordsJson.present ? keywordsJson.value : this.keywordsJson,
     hasCardFaces: hasCardFaces ?? this.hasCardFaces,
     hasColorIndicator: hasColorIndicator ?? this.hasColorIndicator,
@@ -4009,6 +4211,9 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       printedName: data.printedName.present
           ? data.printedName.value
           : this.printedName,
+      flavorName: data.flavorName.present
+          ? data.flavorName.value
+          : this.flavorName,
       setId: data.setId.present ? data.setId.value : this.setId,
       setCode: data.setCode.present ? data.setCode.value : this.setCode,
       setName: data.setName.present ? data.setName.value : this.setName,
@@ -4025,6 +4230,9 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           : this.collectorNumber,
       lang: data.lang.present ? data.lang.value : this.lang,
       rarity: data.rarity.present ? data.rarity.value : this.rarity,
+      rarityValue: data.rarityValue.present
+          ? data.rarityValue.value
+          : this.rarityValue,
       releasedAt: data.releasedAt.present
           ? data.releasedAt.value
           : this.releasedAt,
@@ -4038,12 +4246,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       printsSearchUri: data.printsSearchUri.present
           ? data.printsSearchUri.value
           : this.printsSearchUri,
+      manaCost: data.manaCost.present ? data.manaCost.value : this.manaCost,
       typeLine: data.typeLine.present ? data.typeLine.value : this.typeLine,
       printedTypeLine: data.printedTypeLine.present
           ? data.printedTypeLine.value
           : this.printedTypeLine,
-      manaCost: data.manaCost.present ? data.manaCost.value : this.manaCost,
-      cmc: data.cmc.present ? data.cmc.value : this.cmc,
       oracleText: data.oracleText.present
           ? data.oracleText.value
           : this.oracleText,
@@ -4069,6 +4276,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       producedManaMask: data.producedManaMask.present
           ? data.producedManaMask.value
           : this.producedManaMask,
+      power: data.power.present ? data.power.value : this.power,
+      toughness: data.toughness.present ? data.toughness.value : this.toughness,
+      loyalty: data.loyalty.present ? data.loyalty.value : this.loyalty,
+      defense: data.defense.present ? data.defense.value : this.defense,
+      cmc: data.cmc.present ? data.cmc.value : this.cmc,
       keywordsJson: data.keywordsJson.present
           ? data.keywordsJson.value
           : this.keywordsJson,
@@ -4260,6 +4472,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ..write('layout: $layout, ')
           ..write('name: $name, ')
           ..write('printedName: $printedName, ')
+          ..write('flavorName: $flavorName, ')
           ..write('setId: $setId, ')
           ..write('setCode: $setCode, ')
           ..write('setName: $setName, ')
@@ -4270,15 +4483,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ..write('collectorNumber: $collectorNumber, ')
           ..write('lang: $lang, ')
           ..write('rarity: $rarity, ')
+          ..write('rarityValue: $rarityValue, ')
           ..write('releasedAt: $releasedAt, ')
           ..write('scryfallUri: $scryfallUri, ')
           ..write('uri: $uri, ')
           ..write('rulingsUri: $rulingsUri, ')
           ..write('printsSearchUri: $printsSearchUri, ')
+          ..write('manaCost: $manaCost, ')
           ..write('typeLine: $typeLine, ')
           ..write('printedTypeLine: $printedTypeLine, ')
-          ..write('manaCost: $manaCost, ')
-          ..write('cmc: $cmc, ')
           ..write('oracleText: $oracleText, ')
           ..write('printedText: $printedText, ')
           ..write('flavorText: $flavorText, ')
@@ -4288,6 +4501,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ..write('colorIdentityMask: $colorIdentityMask, ')
           ..write('producedManaJson: $producedManaJson, ')
           ..write('producedManaMask: $producedManaMask, ')
+          ..write('power: $power, ')
+          ..write('toughness: $toughness, ')
+          ..write('loyalty: $loyalty, ')
+          ..write('defense: $defense, ')
+          ..write('cmc: $cmc, ')
           ..write('keywordsJson: $keywordsJson, ')
           ..write('hasCardFaces: $hasCardFaces, ')
           ..write('hasColorIndicator: $hasColorIndicator, ')
@@ -4379,6 +4597,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     layout,
     name,
     printedName,
+    flavorName,
     setId,
     setCode,
     setName,
@@ -4389,15 +4608,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     collectorNumber,
     lang,
     rarity,
+    rarityValue,
     releasedAt,
     scryfallUri,
     uri,
     rulingsUri,
     printsSearchUri,
+    manaCost,
     typeLine,
     printedTypeLine,
-    manaCost,
-    cmc,
     oracleText,
     printedText,
     flavorText,
@@ -4407,6 +4626,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     colorIdentityMask,
     producedManaJson,
     producedManaMask,
+    power,
+    toughness,
+    loyalty,
+    defense,
+    cmc,
     keywordsJson,
     hasCardFaces,
     hasColorIndicator,
@@ -4493,6 +4717,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           other.layout == this.layout &&
           other.name == this.name &&
           other.printedName == this.printedName &&
+          other.flavorName == this.flavorName &&
           other.setId == this.setId &&
           other.setCode == this.setCode &&
           other.setName == this.setName &&
@@ -4503,15 +4728,15 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           other.collectorNumber == this.collectorNumber &&
           other.lang == this.lang &&
           other.rarity == this.rarity &&
+          other.rarityValue == this.rarityValue &&
           other.releasedAt == this.releasedAt &&
           other.scryfallUri == this.scryfallUri &&
           other.uri == this.uri &&
           other.rulingsUri == this.rulingsUri &&
           other.printsSearchUri == this.printsSearchUri &&
+          other.manaCost == this.manaCost &&
           other.typeLine == this.typeLine &&
           other.printedTypeLine == this.printedTypeLine &&
-          other.manaCost == this.manaCost &&
-          other.cmc == this.cmc &&
           other.oracleText == this.oracleText &&
           other.printedText == this.printedText &&
           other.flavorText == this.flavorText &&
@@ -4521,6 +4746,11 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           other.colorIdentityMask == this.colorIdentityMask &&
           other.producedManaJson == this.producedManaJson &&
           other.producedManaMask == this.producedManaMask &&
+          other.power == this.power &&
+          other.toughness == this.toughness &&
+          other.loyalty == this.loyalty &&
+          other.defense == this.defense &&
+          other.cmc == this.cmc &&
           other.keywordsJson == this.keywordsJson &&
           other.hasCardFaces == this.hasCardFaces &&
           other.hasColorIndicator == this.hasColorIndicator &&
@@ -4607,6 +4837,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<String> layout;
   final Value<String> name;
   final Value<String?> printedName;
+  final Value<String?> flavorName;
   final Value<String> setId;
   final Value<String> setCode;
   final Value<String> setName;
@@ -4617,15 +4848,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<String> collectorNumber;
   final Value<String> lang;
   final Value<String> rarity;
+  final Value<int> rarityValue;
   final Value<String> releasedAt;
   final Value<String> scryfallUri;
   final Value<String> uri;
   final Value<String> rulingsUri;
   final Value<String> printsSearchUri;
+  final Value<String?> manaCost;
   final Value<String> typeLine;
   final Value<String?> printedTypeLine;
-  final Value<String?> manaCost;
-  final Value<double> cmc;
   final Value<String?> oracleText;
   final Value<String?> printedText;
   final Value<String?> flavorText;
@@ -4635,6 +4866,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<int> colorIdentityMask;
   final Value<String?> producedManaJson;
   final Value<int> producedManaMask;
+  final Value<String?> power;
+  final Value<String?> toughness;
+  final Value<String?> loyalty;
+  final Value<String?> defense;
+  final Value<double> cmc;
   final Value<String?> keywordsJson;
   final Value<bool> hasCardFaces;
   final Value<bool> hasColorIndicator;
@@ -4718,6 +4954,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.layout = const Value.absent(),
     this.name = const Value.absent(),
     this.printedName = const Value.absent(),
+    this.flavorName = const Value.absent(),
     this.setId = const Value.absent(),
     this.setCode = const Value.absent(),
     this.setName = const Value.absent(),
@@ -4728,15 +4965,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.collectorNumber = const Value.absent(),
     this.lang = const Value.absent(),
     this.rarity = const Value.absent(),
+    this.rarityValue = const Value.absent(),
     this.releasedAt = const Value.absent(),
     this.scryfallUri = const Value.absent(),
     this.uri = const Value.absent(),
     this.rulingsUri = const Value.absent(),
     this.printsSearchUri = const Value.absent(),
+    this.manaCost = const Value.absent(),
     this.typeLine = const Value.absent(),
     this.printedTypeLine = const Value.absent(),
-    this.manaCost = const Value.absent(),
-    this.cmc = const Value.absent(),
     this.oracleText = const Value.absent(),
     this.printedText = const Value.absent(),
     this.flavorText = const Value.absent(),
@@ -4746,6 +4983,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.colorIdentityMask = const Value.absent(),
     this.producedManaJson = const Value.absent(),
     this.producedManaMask = const Value.absent(),
+    this.power = const Value.absent(),
+    this.toughness = const Value.absent(),
+    this.loyalty = const Value.absent(),
+    this.defense = const Value.absent(),
+    this.cmc = const Value.absent(),
     this.keywordsJson = const Value.absent(),
     this.hasCardFaces = const Value.absent(),
     this.hasColorIndicator = const Value.absent(),
@@ -4830,6 +5072,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     required String layout,
     required String name,
     this.printedName = const Value.absent(),
+    this.flavorName = const Value.absent(),
     required String setId,
     required String setCode,
     required String setName,
@@ -4840,15 +5083,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     required String collectorNumber,
     required String lang,
     required String rarity,
+    this.rarityValue = const Value.absent(),
     required String releasedAt,
     required String scryfallUri,
     required String uri,
     required String rulingsUri,
     required String printsSearchUri,
+    this.manaCost = const Value.absent(),
     required String typeLine,
     this.printedTypeLine = const Value.absent(),
-    this.manaCost = const Value.absent(),
-    required double cmc,
     this.oracleText = const Value.absent(),
     this.printedText = const Value.absent(),
     this.flavorText = const Value.absent(),
@@ -4858,6 +5101,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.colorIdentityMask = const Value.absent(),
     this.producedManaJson = const Value.absent(),
     this.producedManaMask = const Value.absent(),
+    this.power = const Value.absent(),
+    this.toughness = const Value.absent(),
+    this.loyalty = const Value.absent(),
+    this.defense = const Value.absent(),
+    required double cmc,
     this.keywordsJson = const Value.absent(),
     this.hasCardFaces = const Value.absent(),
     this.hasColorIndicator = const Value.absent(),
@@ -4961,6 +5209,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Expression<String>? layout,
     Expression<String>? name,
     Expression<String>? printedName,
+    Expression<String>? flavorName,
     Expression<String>? setId,
     Expression<String>? setCode,
     Expression<String>? setName,
@@ -4971,15 +5220,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Expression<String>? collectorNumber,
     Expression<String>? lang,
     Expression<String>? rarity,
+    Expression<int>? rarityValue,
     Expression<String>? releasedAt,
     Expression<String>? scryfallUri,
     Expression<String>? uri,
     Expression<String>? rulingsUri,
     Expression<String>? printsSearchUri,
+    Expression<String>? manaCost,
     Expression<String>? typeLine,
     Expression<String>? printedTypeLine,
-    Expression<String>? manaCost,
-    Expression<double>? cmc,
     Expression<String>? oracleText,
     Expression<String>? printedText,
     Expression<String>? flavorText,
@@ -4989,6 +5238,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Expression<int>? colorIdentityMask,
     Expression<String>? producedManaJson,
     Expression<int>? producedManaMask,
+    Expression<String>? power,
+    Expression<String>? toughness,
+    Expression<String>? loyalty,
+    Expression<String>? defense,
+    Expression<double>? cmc,
     Expression<String>? keywordsJson,
     Expression<bool>? hasCardFaces,
     Expression<bool>? hasColorIndicator,
@@ -5073,6 +5327,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       if (layout != null) 'layout': layout,
       if (name != null) 'name': name,
       if (printedName != null) 'printed_name': printedName,
+      if (flavorName != null) 'flavor_name': flavorName,
       if (setId != null) 'set_id': setId,
       if (setCode != null) 'set_code': setCode,
       if (setName != null) 'set_name': setName,
@@ -5083,15 +5338,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       if (collectorNumber != null) 'collector_number': collectorNumber,
       if (lang != null) 'lang': lang,
       if (rarity != null) 'rarity': rarity,
+      if (rarityValue != null) 'rarity_value': rarityValue,
       if (releasedAt != null) 'released_at': releasedAt,
       if (scryfallUri != null) 'scryfall_uri': scryfallUri,
       if (uri != null) 'uri': uri,
       if (rulingsUri != null) 'rulings_uri': rulingsUri,
       if (printsSearchUri != null) 'prints_search_uri': printsSearchUri,
+      if (manaCost != null) 'mana_cost': manaCost,
       if (typeLine != null) 'type_line': typeLine,
       if (printedTypeLine != null) 'printed_type_line': printedTypeLine,
-      if (manaCost != null) 'mana_cost': manaCost,
-      if (cmc != null) 'cmc': cmc,
       if (oracleText != null) 'oracle_text': oracleText,
       if (printedText != null) 'printed_text': printedText,
       if (flavorText != null) 'flavor_text': flavorText,
@@ -5101,6 +5356,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       if (colorIdentityMask != null) 'color_identity_mask': colorIdentityMask,
       if (producedManaJson != null) 'produced_mana_json': producedManaJson,
       if (producedManaMask != null) 'produced_mana_mask': producedManaMask,
+      if (power != null) 'power': power,
+      if (toughness != null) 'toughness': toughness,
+      if (loyalty != null) 'loyalty': loyalty,
+      if (defense != null) 'defense': defense,
+      if (cmc != null) 'cmc': cmc,
       if (keywordsJson != null) 'keywords_json': keywordsJson,
       if (hasCardFaces != null) 'has_card_faces': hasCardFaces,
       if (hasColorIndicator != null) 'has_color_indicator': hasColorIndicator,
@@ -5198,6 +5458,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Value<String>? layout,
     Value<String>? name,
     Value<String?>? printedName,
+    Value<String?>? flavorName,
     Value<String>? setId,
     Value<String>? setCode,
     Value<String>? setName,
@@ -5208,15 +5469,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Value<String>? collectorNumber,
     Value<String>? lang,
     Value<String>? rarity,
+    Value<int>? rarityValue,
     Value<String>? releasedAt,
     Value<String>? scryfallUri,
     Value<String>? uri,
     Value<String>? rulingsUri,
     Value<String>? printsSearchUri,
+    Value<String?>? manaCost,
     Value<String>? typeLine,
     Value<String?>? printedTypeLine,
-    Value<String?>? manaCost,
-    Value<double>? cmc,
     Value<String?>? oracleText,
     Value<String?>? printedText,
     Value<String?>? flavorText,
@@ -5226,6 +5487,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Value<int>? colorIdentityMask,
     Value<String?>? producedManaJson,
     Value<int>? producedManaMask,
+    Value<String?>? power,
+    Value<String?>? toughness,
+    Value<String?>? loyalty,
+    Value<String?>? defense,
+    Value<double>? cmc,
     Value<String?>? keywordsJson,
     Value<bool>? hasCardFaces,
     Value<bool>? hasColorIndicator,
@@ -5310,6 +5576,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       layout: layout ?? this.layout,
       name: name ?? this.name,
       printedName: printedName ?? this.printedName,
+      flavorName: flavorName ?? this.flavorName,
       setId: setId ?? this.setId,
       setCode: setCode ?? this.setCode,
       setName: setName ?? this.setName,
@@ -5320,15 +5587,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       collectorNumber: collectorNumber ?? this.collectorNumber,
       lang: lang ?? this.lang,
       rarity: rarity ?? this.rarity,
+      rarityValue: rarityValue ?? this.rarityValue,
       releasedAt: releasedAt ?? this.releasedAt,
       scryfallUri: scryfallUri ?? this.scryfallUri,
       uri: uri ?? this.uri,
       rulingsUri: rulingsUri ?? this.rulingsUri,
       printsSearchUri: printsSearchUri ?? this.printsSearchUri,
+      manaCost: manaCost ?? this.manaCost,
       typeLine: typeLine ?? this.typeLine,
       printedTypeLine: printedTypeLine ?? this.printedTypeLine,
-      manaCost: manaCost ?? this.manaCost,
-      cmc: cmc ?? this.cmc,
       oracleText: oracleText ?? this.oracleText,
       printedText: printedText ?? this.printedText,
       flavorText: flavorText ?? this.flavorText,
@@ -5338,6 +5605,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       colorIdentityMask: colorIdentityMask ?? this.colorIdentityMask,
       producedManaJson: producedManaJson ?? this.producedManaJson,
       producedManaMask: producedManaMask ?? this.producedManaMask,
+      power: power ?? this.power,
+      toughness: toughness ?? this.toughness,
+      loyalty: loyalty ?? this.loyalty,
+      defense: defense ?? this.defense,
+      cmc: cmc ?? this.cmc,
       keywordsJson: keywordsJson ?? this.keywordsJson,
       hasCardFaces: hasCardFaces ?? this.hasCardFaces,
       hasColorIndicator: hasColorIndicator ?? this.hasColorIndicator,
@@ -5449,6 +5721,9 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (printedName.present) {
       map['printed_name'] = Variable<String>(printedName.value);
     }
+    if (flavorName.present) {
+      map['flavor_name'] = Variable<String>(flavorName.value);
+    }
     if (setId.present) {
       map['set_id'] = Variable<String>(setId.value);
     }
@@ -5479,6 +5754,9 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (rarity.present) {
       map['rarity'] = Variable<String>(rarity.value);
     }
+    if (rarityValue.present) {
+      map['rarity_value'] = Variable<int>(rarityValue.value);
+    }
     if (releasedAt.present) {
       map['released_at'] = Variable<String>(releasedAt.value);
     }
@@ -5494,17 +5772,14 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     if (printsSearchUri.present) {
       map['prints_search_uri'] = Variable<String>(printsSearchUri.value);
     }
+    if (manaCost.present) {
+      map['mana_cost'] = Variable<String>(manaCost.value);
+    }
     if (typeLine.present) {
       map['type_line'] = Variable<String>(typeLine.value);
     }
     if (printedTypeLine.present) {
       map['printed_type_line'] = Variable<String>(printedTypeLine.value);
-    }
-    if (manaCost.present) {
-      map['mana_cost'] = Variable<String>(manaCost.value);
-    }
-    if (cmc.present) {
-      map['cmc'] = Variable<double>(cmc.value);
     }
     if (oracleText.present) {
       map['oracle_text'] = Variable<String>(oracleText.value);
@@ -5532,6 +5807,21 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     }
     if (producedManaMask.present) {
       map['produced_mana_mask'] = Variable<int>(producedManaMask.value);
+    }
+    if (power.present) {
+      map['power'] = Variable<String>(power.value);
+    }
+    if (toughness.present) {
+      map['toughness'] = Variable<String>(toughness.value);
+    }
+    if (loyalty.present) {
+      map['loyalty'] = Variable<String>(loyalty.value);
+    }
+    if (defense.present) {
+      map['defense'] = Variable<String>(defense.value);
+    }
+    if (cmc.present) {
+      map['cmc'] = Variable<double>(cmc.value);
     }
     if (keywordsJson.present) {
       map['keywords_json'] = Variable<String>(keywordsJson.value);
@@ -5783,6 +6073,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           ..write('layout: $layout, ')
           ..write('name: $name, ')
           ..write('printedName: $printedName, ')
+          ..write('flavorName: $flavorName, ')
           ..write('setId: $setId, ')
           ..write('setCode: $setCode, ')
           ..write('setName: $setName, ')
@@ -5793,15 +6084,15 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           ..write('collectorNumber: $collectorNumber, ')
           ..write('lang: $lang, ')
           ..write('rarity: $rarity, ')
+          ..write('rarityValue: $rarityValue, ')
           ..write('releasedAt: $releasedAt, ')
           ..write('scryfallUri: $scryfallUri, ')
           ..write('uri: $uri, ')
           ..write('rulingsUri: $rulingsUri, ')
           ..write('printsSearchUri: $printsSearchUri, ')
+          ..write('manaCost: $manaCost, ')
           ..write('typeLine: $typeLine, ')
           ..write('printedTypeLine: $printedTypeLine, ')
-          ..write('manaCost: $manaCost, ')
-          ..write('cmc: $cmc, ')
           ..write('oracleText: $oracleText, ')
           ..write('printedText: $printedText, ')
           ..write('flavorText: $flavorText, ')
@@ -5811,6 +6102,11 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           ..write('colorIdentityMask: $colorIdentityMask, ')
           ..write('producedManaJson: $producedManaJson, ')
           ..write('producedManaMask: $producedManaMask, ')
+          ..write('power: $power, ')
+          ..write('toughness: $toughness, ')
+          ..write('loyalty: $loyalty, ')
+          ..write('defense: $defense, ')
+          ..write('cmc: $cmc, ')
           ..write('keywordsJson: $keywordsJson, ')
           ..write('hasCardFaces: $hasCardFaces, ')
           ..write('hasColorIndicator: $hasColorIndicator, ')
@@ -5938,6 +6234,17 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
   @override
   late final GeneratedColumn<String> printedName = GeneratedColumn<String>(
     'printed_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _flavorNameMeta = const VerificationMeta(
+    'flavorName',
+  );
+  @override
+  late final GeneratedColumn<String> flavorName = GeneratedColumn<String>(
+    'flavor_name',
     aliasedName,
     true,
     type: DriftSqlType.string,
@@ -6101,9 +6408,9 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
   late final GeneratedColumn<double> cmc = GeneratedColumn<double>(
     'cmc',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.double,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _artistMeta = const VerificationMeta('artist');
   @override
@@ -6245,6 +6552,7 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
     faceIndex,
     name,
     printedName,
+    flavorName,
     manaCost,
     typeLine,
     printedTypeLine,
@@ -6316,6 +6624,12 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
           data['printed_name']!,
           _printedNameMeta,
         ),
+      );
+    }
+    if (data.containsKey('flavor_name')) {
+      context.handle(
+        _flavorNameMeta,
+        flavorName.isAcceptableOrUnknown(data['flavor_name']!, _flavorNameMeta),
       );
     }
     if (data.containsKey('mana_cost')) {
@@ -6419,6 +6733,8 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
         _cmcMeta,
         cmc.isAcceptableOrUnknown(data['cmc']!, _cmcMeta),
       );
+    } else if (isInserting) {
+      context.missing(_cmcMeta);
     }
     if (data.containsKey('artist')) {
       context.handle(
@@ -6535,6 +6851,10 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
         DriftSqlType.string,
         data['${effectivePrefix}printed_name'],
       ),
+      flavorName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flavor_name'],
+      ),
       manaCost: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}mana_cost'],
@@ -6594,7 +6914,7 @@ class $ScryfallCardFacesTable extends ScryfallCardFaces
       cmc: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}cmc'],
-      ),
+      )!,
       artist: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}artist'],
@@ -6658,6 +6978,7 @@ class ScryfallCardFace extends DataClass
   final int faceIndex;
   final String name;
   final String? printedName;
+  final String? flavorName;
   final String? manaCost;
   final String? typeLine;
   final String? printedTypeLine;
@@ -6672,7 +6993,7 @@ class ScryfallCardFace extends DataClass
   final String? toughness;
   final String? loyalty;
   final String? defense;
-  final double? cmc;
+  final double cmc;
   final String? artist;
   final String? artistId;
   final String? illustrationId;
@@ -6690,6 +7011,7 @@ class ScryfallCardFace extends DataClass
     required this.faceIndex,
     required this.name,
     this.printedName,
+    this.flavorName,
     this.manaCost,
     this.typeLine,
     this.printedTypeLine,
@@ -6704,7 +7026,7 @@ class ScryfallCardFace extends DataClass
     this.toughness,
     this.loyalty,
     this.defense,
-    this.cmc,
+    required this.cmc,
     this.artist,
     this.artistId,
     this.illustrationId,
@@ -6726,6 +7048,9 @@ class ScryfallCardFace extends DataClass
     map['name'] = Variable<String>(name);
     if (!nullToAbsent || printedName != null) {
       map['printed_name'] = Variable<String>(printedName);
+    }
+    if (!nullToAbsent || flavorName != null) {
+      map['flavor_name'] = Variable<String>(flavorName);
     }
     if (!nullToAbsent || manaCost != null) {
       map['mana_cost'] = Variable<String>(manaCost);
@@ -6765,9 +7090,7 @@ class ScryfallCardFace extends DataClass
     if (!nullToAbsent || defense != null) {
       map['defense'] = Variable<String>(defense);
     }
-    if (!nullToAbsent || cmc != null) {
-      map['cmc'] = Variable<double>(cmc);
-    }
+    map['cmc'] = Variable<double>(cmc);
     if (!nullToAbsent || artist != null) {
       map['artist'] = Variable<String>(artist);
     }
@@ -6813,6 +7136,9 @@ class ScryfallCardFace extends DataClass
       printedName: printedName == null && nullToAbsent
           ? const Value.absent()
           : Value(printedName),
+      flavorName: flavorName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(flavorName),
       manaCost: manaCost == null && nullToAbsent
           ? const Value.absent()
           : Value(manaCost),
@@ -6851,7 +7177,7 @@ class ScryfallCardFace extends DataClass
       defense: defense == null && nullToAbsent
           ? const Value.absent()
           : Value(defense),
-      cmc: cmc == null && nullToAbsent ? const Value.absent() : Value(cmc),
+      cmc: Value(cmc),
       artist: artist == null && nullToAbsent
           ? const Value.absent()
           : Value(artist),
@@ -6899,6 +7225,7 @@ class ScryfallCardFace extends DataClass
       faceIndex: serializer.fromJson<int>(json['faceIndex']),
       name: serializer.fromJson<String>(json['name']),
       printedName: serializer.fromJson<String?>(json['printedName']),
+      flavorName: serializer.fromJson<String?>(json['flavorName']),
       manaCost: serializer.fromJson<String?>(json['manaCost']),
       typeLine: serializer.fromJson<String?>(json['typeLine']),
       printedTypeLine: serializer.fromJson<String?>(json['printedTypeLine']),
@@ -6915,7 +7242,7 @@ class ScryfallCardFace extends DataClass
       toughness: serializer.fromJson<String?>(json['toughness']),
       loyalty: serializer.fromJson<String?>(json['loyalty']),
       defense: serializer.fromJson<String?>(json['defense']),
-      cmc: serializer.fromJson<double?>(json['cmc']),
+      cmc: serializer.fromJson<double>(json['cmc']),
       artist: serializer.fromJson<String?>(json['artist']),
       artistId: serializer.fromJson<String?>(json['artistId']),
       illustrationId: serializer.fromJson<String?>(json['illustrationId']),
@@ -6938,6 +7265,7 @@ class ScryfallCardFace extends DataClass
       'faceIndex': serializer.toJson<int>(faceIndex),
       'name': serializer.toJson<String>(name),
       'printedName': serializer.toJson<String?>(printedName),
+      'flavorName': serializer.toJson<String?>(flavorName),
       'manaCost': serializer.toJson<String?>(manaCost),
       'typeLine': serializer.toJson<String?>(typeLine),
       'printedTypeLine': serializer.toJson<String?>(printedTypeLine),
@@ -6952,7 +7280,7 @@ class ScryfallCardFace extends DataClass
       'toughness': serializer.toJson<String?>(toughness),
       'loyalty': serializer.toJson<String?>(loyalty),
       'defense': serializer.toJson<String?>(defense),
-      'cmc': serializer.toJson<double?>(cmc),
+      'cmc': serializer.toJson<double>(cmc),
       'artist': serializer.toJson<String?>(artist),
       'artistId': serializer.toJson<String?>(artistId),
       'illustrationId': serializer.toJson<String?>(illustrationId),
@@ -6973,6 +7301,7 @@ class ScryfallCardFace extends DataClass
     int? faceIndex,
     String? name,
     Value<String?> printedName = const Value.absent(),
+    Value<String?> flavorName = const Value.absent(),
     Value<String?> manaCost = const Value.absent(),
     Value<String?> typeLine = const Value.absent(),
     Value<String?> printedTypeLine = const Value.absent(),
@@ -6987,7 +7316,7 @@ class ScryfallCardFace extends DataClass
     Value<String?> toughness = const Value.absent(),
     Value<String?> loyalty = const Value.absent(),
     Value<String?> defense = const Value.absent(),
-    Value<double?> cmc = const Value.absent(),
+    double? cmc,
     Value<String?> artist = const Value.absent(),
     Value<String?> artistId = const Value.absent(),
     Value<String?> illustrationId = const Value.absent(),
@@ -7005,6 +7334,7 @@ class ScryfallCardFace extends DataClass
     faceIndex: faceIndex ?? this.faceIndex,
     name: name ?? this.name,
     printedName: printedName.present ? printedName.value : this.printedName,
+    flavorName: flavorName.present ? flavorName.value : this.flavorName,
     manaCost: manaCost.present ? manaCost.value : this.manaCost,
     typeLine: typeLine.present ? typeLine.value : this.typeLine,
     printedTypeLine: printedTypeLine.present
@@ -7023,7 +7353,7 @@ class ScryfallCardFace extends DataClass
     toughness: toughness.present ? toughness.value : this.toughness,
     loyalty: loyalty.present ? loyalty.value : this.loyalty,
     defense: defense.present ? defense.value : this.defense,
-    cmc: cmc.present ? cmc.value : this.cmc,
+    cmc: cmc ?? this.cmc,
     artist: artist.present ? artist.value : this.artist,
     artistId: artistId.present ? artistId.value : this.artistId,
     illustrationId: illustrationId.present
@@ -7049,6 +7379,9 @@ class ScryfallCardFace extends DataClass
       printedName: data.printedName.present
           ? data.printedName.value
           : this.printedName,
+      flavorName: data.flavorName.present
+          ? data.flavorName.value
+          : this.flavorName,
       manaCost: data.manaCost.present ? data.manaCost.value : this.manaCost,
       typeLine: data.typeLine.present ? data.typeLine.value : this.typeLine,
       printedTypeLine: data.printedTypeLine.present
@@ -7116,6 +7449,7 @@ class ScryfallCardFace extends DataClass
           ..write('faceIndex: $faceIndex, ')
           ..write('name: $name, ')
           ..write('printedName: $printedName, ')
+          ..write('flavorName: $flavorName, ')
           ..write('manaCost: $manaCost, ')
           ..write('typeLine: $typeLine, ')
           ..write('printedTypeLine: $printedTypeLine, ')
@@ -7153,6 +7487,7 @@ class ScryfallCardFace extends DataClass
     faceIndex,
     name,
     printedName,
+    flavorName,
     manaCost,
     typeLine,
     printedTypeLine,
@@ -7189,6 +7524,7 @@ class ScryfallCardFace extends DataClass
           other.faceIndex == this.faceIndex &&
           other.name == this.name &&
           other.printedName == this.printedName &&
+          other.flavorName == this.flavorName &&
           other.manaCost == this.manaCost &&
           other.typeLine == this.typeLine &&
           other.printedTypeLine == this.printedTypeLine &&
@@ -7223,6 +7559,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
   final Value<int> faceIndex;
   final Value<String> name;
   final Value<String?> printedName;
+  final Value<String?> flavorName;
   final Value<String?> manaCost;
   final Value<String?> typeLine;
   final Value<String?> printedTypeLine;
@@ -7237,7 +7574,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
   final Value<String?> toughness;
   final Value<String?> loyalty;
   final Value<String?> defense;
-  final Value<double?> cmc;
+  final Value<double> cmc;
   final Value<String?> artist;
   final Value<String?> artistId;
   final Value<String?> illustrationId;
@@ -7256,6 +7593,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     this.faceIndex = const Value.absent(),
     this.name = const Value.absent(),
     this.printedName = const Value.absent(),
+    this.flavorName = const Value.absent(),
     this.manaCost = const Value.absent(),
     this.typeLine = const Value.absent(),
     this.printedTypeLine = const Value.absent(),
@@ -7290,6 +7628,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     required int faceIndex,
     required String name,
     this.printedName = const Value.absent(),
+    this.flavorName = const Value.absent(),
     this.manaCost = const Value.absent(),
     this.typeLine = const Value.absent(),
     this.printedTypeLine = const Value.absent(),
@@ -7304,7 +7643,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     this.toughness = const Value.absent(),
     this.loyalty = const Value.absent(),
     this.defense = const Value.absent(),
-    this.cmc = const Value.absent(),
+    required double cmc,
     this.artist = const Value.absent(),
     this.artistId = const Value.absent(),
     this.illustrationId = const Value.absent(),
@@ -7320,12 +7659,14 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     this.rowid = const Value.absent(),
   }) : cardId = Value(cardId),
        faceIndex = Value(faceIndex),
-       name = Value(name);
+       name = Value(name),
+       cmc = Value(cmc);
   static Insertable<ScryfallCardFace> custom({
     Expression<String>? cardId,
     Expression<int>? faceIndex,
     Expression<String>? name,
     Expression<String>? printedName,
+    Expression<String>? flavorName,
     Expression<String>? manaCost,
     Expression<String>? typeLine,
     Expression<String>? printedTypeLine,
@@ -7360,6 +7701,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
       if (faceIndex != null) 'face_index': faceIndex,
       if (name != null) 'name': name,
       if (printedName != null) 'printed_name': printedName,
+      if (flavorName != null) 'flavor_name': flavorName,
       if (manaCost != null) 'mana_cost': manaCost,
       if (typeLine != null) 'type_line': typeLine,
       if (printedTypeLine != null) 'printed_type_line': printedTypeLine,
@@ -7398,6 +7740,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     Value<int>? faceIndex,
     Value<String>? name,
     Value<String?>? printedName,
+    Value<String?>? flavorName,
     Value<String?>? manaCost,
     Value<String?>? typeLine,
     Value<String?>? printedTypeLine,
@@ -7412,7 +7755,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     Value<String?>? toughness,
     Value<String?>? loyalty,
     Value<String?>? defense,
-    Value<double?>? cmc,
+    Value<double>? cmc,
     Value<String?>? artist,
     Value<String?>? artistId,
     Value<String?>? illustrationId,
@@ -7432,6 +7775,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
       faceIndex: faceIndex ?? this.faceIndex,
       name: name ?? this.name,
       printedName: printedName ?? this.printedName,
+      flavorName: flavorName ?? this.flavorName,
       manaCost: manaCost ?? this.manaCost,
       typeLine: typeLine ?? this.typeLine,
       printedTypeLine: printedTypeLine ?? this.printedTypeLine,
@@ -7477,6 +7821,9 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
     }
     if (printedName.present) {
       map['printed_name'] = Variable<String>(printedName.value);
+    }
+    if (flavorName.present) {
+      map['flavor_name'] = Variable<String>(flavorName.value);
     }
     if (manaCost.present) {
       map['mana_cost'] = Variable<String>(manaCost.value);
@@ -7572,6 +7919,7 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
           ..write('faceIndex: $faceIndex, ')
           ..write('name: $name, ')
           ..write('printedName: $printedName, ')
+          ..write('flavorName: $flavorName, ')
           ..write('manaCost: $manaCost, ')
           ..write('typeLine: $typeLine, ')
           ..write('printedTypeLine: $printedTypeLine, ')
@@ -7605,12 +7953,588 @@ class ScryfallCardFacesCompanion extends UpdateCompanion<ScryfallCardFace> {
   }
 }
 
+class $ScryfallTagsTable extends ScryfallTags
+    with TableInfo<$ScryfallTagsTable, ScryfallTag> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScryfallTagsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scryfallIdMeta = const VerificationMeta(
+    'scryfallId',
+  );
+  @override
+  late final GeneratedColumn<String> scryfallId = GeneratedColumn<String>(
+    'scryfall_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _slugMeta = const VerificationMeta('slug');
+  @override
+  late final GeneratedColumn<String> slug = GeneratedColumn<String>(
+    'slug',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String>
+  parentIdsJson = GeneratedColumn<String>(
+    'parent_ids_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<String>>($ScryfallTagsTable.$converterparentIdsJson);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String>
+  childIdsJson = GeneratedColumn<String>(
+    'child_ids_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<String>>($ScryfallTagsTable.$converterchildIdsJson);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String>
+  aliasesJson = GeneratedColumn<String>(
+    'aliases_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<List<String>>($ScryfallTagsTable.$converteraliasesJson);
+  @override
+  late final GeneratedColumnWithTypeConverter<List<String>, String> taggedJson =
+      GeneratedColumn<String>(
+        'tagged_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      ).withConverter<List<String>>($ScryfallTagsTable.$convertertaggedJson);
+  @override
+  List<GeneratedColumn> get $columns => [
+    scryfallId,
+    label,
+    slug,
+    description,
+    type,
+    parentIdsJson,
+    childIdsJson,
+    aliasesJson,
+    taggedJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scryfall_tags';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScryfallTag> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scryfall_id')) {
+      context.handle(
+        _scryfallIdMeta,
+        scryfallId.isAcceptableOrUnknown(data['scryfall_id']!, _scryfallIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scryfallIdMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('slug')) {
+      context.handle(
+        _slugMeta,
+        slug.isAcceptableOrUnknown(data['slug']!, _slugMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_slugMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scryfallId};
+  @override
+  ScryfallTag map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScryfallTag(
+      scryfallId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scryfall_id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      slug: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}slug'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      parentIdsJson: $ScryfallTagsTable.$converterparentIdsJson.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}parent_ids_json'],
+        )!,
+      ),
+      childIdsJson: $ScryfallTagsTable.$converterchildIdsJson.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}child_ids_json'],
+        )!,
+      ),
+      aliasesJson: $ScryfallTagsTable.$converteraliasesJson.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}aliases_json'],
+        )!,
+      ),
+      taggedJson: $ScryfallTagsTable.$convertertaggedJson.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}tagged_json'],
+        )!,
+      ),
+    );
+  }
+
+  @override
+  $ScryfallTagsTable createAlias(String alias) {
+    return $ScryfallTagsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<List<String>, String> $converterparentIdsJson =
+      const StringListConverter();
+  static TypeConverter<List<String>, String> $converterchildIdsJson =
+      const StringListConverter();
+  static TypeConverter<List<String>, String> $converteraliasesJson =
+      const StringListConverter();
+  static TypeConverter<List<String>, String> $convertertaggedJson =
+      const StringListConverter();
+}
+
+class ScryfallTag extends DataClass implements Insertable<ScryfallTag> {
+  final String scryfallId;
+  final String label;
+  final String slug;
+  final String description;
+  final String type;
+  final List<String> parentIdsJson;
+  final List<String> childIdsJson;
+  final List<String> aliasesJson;
+  final List<String> taggedJson;
+  const ScryfallTag({
+    required this.scryfallId,
+    required this.label,
+    required this.slug,
+    required this.description,
+    required this.type,
+    required this.parentIdsJson,
+    required this.childIdsJson,
+    required this.aliasesJson,
+    required this.taggedJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scryfall_id'] = Variable<String>(scryfallId);
+    map['label'] = Variable<String>(label);
+    map['slug'] = Variable<String>(slug);
+    map['description'] = Variable<String>(description);
+    map['type'] = Variable<String>(type);
+    {
+      map['parent_ids_json'] = Variable<String>(
+        $ScryfallTagsTable.$converterparentIdsJson.toSql(parentIdsJson),
+      );
+    }
+    {
+      map['child_ids_json'] = Variable<String>(
+        $ScryfallTagsTable.$converterchildIdsJson.toSql(childIdsJson),
+      );
+    }
+    {
+      map['aliases_json'] = Variable<String>(
+        $ScryfallTagsTable.$converteraliasesJson.toSql(aliasesJson),
+      );
+    }
+    {
+      map['tagged_json'] = Variable<String>(
+        $ScryfallTagsTable.$convertertaggedJson.toSql(taggedJson),
+      );
+    }
+    return map;
+  }
+
+  ScryfallTagsCompanion toCompanion(bool nullToAbsent) {
+    return ScryfallTagsCompanion(
+      scryfallId: Value(scryfallId),
+      label: Value(label),
+      slug: Value(slug),
+      description: Value(description),
+      type: Value(type),
+      parentIdsJson: Value(parentIdsJson),
+      childIdsJson: Value(childIdsJson),
+      aliasesJson: Value(aliasesJson),
+      taggedJson: Value(taggedJson),
+    );
+  }
+
+  factory ScryfallTag.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScryfallTag(
+      scryfallId: serializer.fromJson<String>(json['scryfallId']),
+      label: serializer.fromJson<String>(json['label']),
+      slug: serializer.fromJson<String>(json['slug']),
+      description: serializer.fromJson<String>(json['description']),
+      type: serializer.fromJson<String>(json['type']),
+      parentIdsJson: serializer.fromJson<List<String>>(json['parentIdsJson']),
+      childIdsJson: serializer.fromJson<List<String>>(json['childIdsJson']),
+      aliasesJson: serializer.fromJson<List<String>>(json['aliasesJson']),
+      taggedJson: serializer.fromJson<List<String>>(json['taggedJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scryfallId': serializer.toJson<String>(scryfallId),
+      'label': serializer.toJson<String>(label),
+      'slug': serializer.toJson<String>(slug),
+      'description': serializer.toJson<String>(description),
+      'type': serializer.toJson<String>(type),
+      'parentIdsJson': serializer.toJson<List<String>>(parentIdsJson),
+      'childIdsJson': serializer.toJson<List<String>>(childIdsJson),
+      'aliasesJson': serializer.toJson<List<String>>(aliasesJson),
+      'taggedJson': serializer.toJson<List<String>>(taggedJson),
+    };
+  }
+
+  ScryfallTag copyWith({
+    String? scryfallId,
+    String? label,
+    String? slug,
+    String? description,
+    String? type,
+    List<String>? parentIdsJson,
+    List<String>? childIdsJson,
+    List<String>? aliasesJson,
+    List<String>? taggedJson,
+  }) => ScryfallTag(
+    scryfallId: scryfallId ?? this.scryfallId,
+    label: label ?? this.label,
+    slug: slug ?? this.slug,
+    description: description ?? this.description,
+    type: type ?? this.type,
+    parentIdsJson: parentIdsJson ?? this.parentIdsJson,
+    childIdsJson: childIdsJson ?? this.childIdsJson,
+    aliasesJson: aliasesJson ?? this.aliasesJson,
+    taggedJson: taggedJson ?? this.taggedJson,
+  );
+  ScryfallTag copyWithCompanion(ScryfallTagsCompanion data) {
+    return ScryfallTag(
+      scryfallId: data.scryfallId.present
+          ? data.scryfallId.value
+          : this.scryfallId,
+      label: data.label.present ? data.label.value : this.label,
+      slug: data.slug.present ? data.slug.value : this.slug,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      type: data.type.present ? data.type.value : this.type,
+      parentIdsJson: data.parentIdsJson.present
+          ? data.parentIdsJson.value
+          : this.parentIdsJson,
+      childIdsJson: data.childIdsJson.present
+          ? data.childIdsJson.value
+          : this.childIdsJson,
+      aliasesJson: data.aliasesJson.present
+          ? data.aliasesJson.value
+          : this.aliasesJson,
+      taggedJson: data.taggedJson.present
+          ? data.taggedJson.value
+          : this.taggedJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScryfallTag(')
+          ..write('scryfallId: $scryfallId, ')
+          ..write('label: $label, ')
+          ..write('slug: $slug, ')
+          ..write('description: $description, ')
+          ..write('type: $type, ')
+          ..write('parentIdsJson: $parentIdsJson, ')
+          ..write('childIdsJson: $childIdsJson, ')
+          ..write('aliasesJson: $aliasesJson, ')
+          ..write('taggedJson: $taggedJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    scryfallId,
+    label,
+    slug,
+    description,
+    type,
+    parentIdsJson,
+    childIdsJson,
+    aliasesJson,
+    taggedJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScryfallTag &&
+          other.scryfallId == this.scryfallId &&
+          other.label == this.label &&
+          other.slug == this.slug &&
+          other.description == this.description &&
+          other.type == this.type &&
+          other.parentIdsJson == this.parentIdsJson &&
+          other.childIdsJson == this.childIdsJson &&
+          other.aliasesJson == this.aliasesJson &&
+          other.taggedJson == this.taggedJson);
+}
+
+class ScryfallTagsCompanion extends UpdateCompanion<ScryfallTag> {
+  final Value<String> scryfallId;
+  final Value<String> label;
+  final Value<String> slug;
+  final Value<String> description;
+  final Value<String> type;
+  final Value<List<String>> parentIdsJson;
+  final Value<List<String>> childIdsJson;
+  final Value<List<String>> aliasesJson;
+  final Value<List<String>> taggedJson;
+  final Value<int> rowid;
+  const ScryfallTagsCompanion({
+    this.scryfallId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.slug = const Value.absent(),
+    this.description = const Value.absent(),
+    this.type = const Value.absent(),
+    this.parentIdsJson = const Value.absent(),
+    this.childIdsJson = const Value.absent(),
+    this.aliasesJson = const Value.absent(),
+    this.taggedJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScryfallTagsCompanion.insert({
+    required String scryfallId,
+    required String label,
+    required String slug,
+    required String description,
+    required String type,
+    required List<String> parentIdsJson,
+    required List<String> childIdsJson,
+    required List<String> aliasesJson,
+    required List<String> taggedJson,
+    this.rowid = const Value.absent(),
+  }) : scryfallId = Value(scryfallId),
+       label = Value(label),
+       slug = Value(slug),
+       description = Value(description),
+       type = Value(type),
+       parentIdsJson = Value(parentIdsJson),
+       childIdsJson = Value(childIdsJson),
+       aliasesJson = Value(aliasesJson),
+       taggedJson = Value(taggedJson);
+  static Insertable<ScryfallTag> custom({
+    Expression<String>? scryfallId,
+    Expression<String>? label,
+    Expression<String>? slug,
+    Expression<String>? description,
+    Expression<String>? type,
+    Expression<String>? parentIdsJson,
+    Expression<String>? childIdsJson,
+    Expression<String>? aliasesJson,
+    Expression<String>? taggedJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scryfallId != null) 'scryfall_id': scryfallId,
+      if (label != null) 'label': label,
+      if (slug != null) 'slug': slug,
+      if (description != null) 'description': description,
+      if (type != null) 'type': type,
+      if (parentIdsJson != null) 'parent_ids_json': parentIdsJson,
+      if (childIdsJson != null) 'child_ids_json': childIdsJson,
+      if (aliasesJson != null) 'aliases_json': aliasesJson,
+      if (taggedJson != null) 'tagged_json': taggedJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScryfallTagsCompanion copyWith({
+    Value<String>? scryfallId,
+    Value<String>? label,
+    Value<String>? slug,
+    Value<String>? description,
+    Value<String>? type,
+    Value<List<String>>? parentIdsJson,
+    Value<List<String>>? childIdsJson,
+    Value<List<String>>? aliasesJson,
+    Value<List<String>>? taggedJson,
+    Value<int>? rowid,
+  }) {
+    return ScryfallTagsCompanion(
+      scryfallId: scryfallId ?? this.scryfallId,
+      label: label ?? this.label,
+      slug: slug ?? this.slug,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      parentIdsJson: parentIdsJson ?? this.parentIdsJson,
+      childIdsJson: childIdsJson ?? this.childIdsJson,
+      aliasesJson: aliasesJson ?? this.aliasesJson,
+      taggedJson: taggedJson ?? this.taggedJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scryfallId.present) {
+      map['scryfall_id'] = Variable<String>(scryfallId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (slug.present) {
+      map['slug'] = Variable<String>(slug.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (parentIdsJson.present) {
+      map['parent_ids_json'] = Variable<String>(
+        $ScryfallTagsTable.$converterparentIdsJson.toSql(parentIdsJson.value),
+      );
+    }
+    if (childIdsJson.present) {
+      map['child_ids_json'] = Variable<String>(
+        $ScryfallTagsTable.$converterchildIdsJson.toSql(childIdsJson.value),
+      );
+    }
+    if (aliasesJson.present) {
+      map['aliases_json'] = Variable<String>(
+        $ScryfallTagsTable.$converteraliasesJson.toSql(aliasesJson.value),
+      );
+    }
+    if (taggedJson.present) {
+      map['tagged_json'] = Variable<String>(
+        $ScryfallTagsTable.$convertertaggedJson.toSql(taggedJson.value),
+      );
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScryfallTagsCompanion(')
+          ..write('scryfallId: $scryfallId, ')
+          ..write('label: $label, ')
+          ..write('slug: $slug, ')
+          ..write('description: $description, ')
+          ..write('type: $type, ')
+          ..write('parentIdsJson: $parentIdsJson, ')
+          ..write('childIdsJson: $childIdsJson, ')
+          ..write('aliasesJson: $aliasesJson, ')
+          ..write('taggedJson: $taggedJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $ScryfallCardsTable scryfallCards = $ScryfallCardsTable(this);
   late final $ScryfallCardFacesTable scryfallCardFaces =
       $ScryfallCardFacesTable(this);
+  late final $ScryfallTagsTable scryfallTags = $ScryfallTagsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -7618,6 +8542,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     scryfallCards,
     scryfallCardFaces,
+    scryfallTags,
   ];
 }
 
@@ -7631,6 +8556,7 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
       required String layout,
       required String name,
       Value<String?> printedName,
+      Value<String?> flavorName,
       required String setId,
       required String setCode,
       required String setName,
@@ -7641,15 +8567,15 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
       required String collectorNumber,
       required String lang,
       required String rarity,
+      Value<int> rarityValue,
       required String releasedAt,
       required String scryfallUri,
       required String uri,
       required String rulingsUri,
       required String printsSearchUri,
+      Value<String?> manaCost,
       required String typeLine,
       Value<String?> printedTypeLine,
-      Value<String?> manaCost,
-      required double cmc,
       Value<String?> oracleText,
       Value<String?> printedText,
       Value<String?> flavorText,
@@ -7659,6 +8585,11 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
       Value<int> colorIdentityMask,
       Value<String?> producedManaJson,
       Value<int> producedManaMask,
+      Value<String?> power,
+      Value<String?> toughness,
+      Value<String?> loyalty,
+      Value<String?> defense,
+      required double cmc,
       Value<String?> keywordsJson,
       Value<bool> hasCardFaces,
       Value<bool> hasColorIndicator,
@@ -7744,6 +8675,7 @@ typedef $$ScryfallCardsTableUpdateCompanionBuilder =
       Value<String> layout,
       Value<String> name,
       Value<String?> printedName,
+      Value<String?> flavorName,
       Value<String> setId,
       Value<String> setCode,
       Value<String> setName,
@@ -7754,15 +8686,15 @@ typedef $$ScryfallCardsTableUpdateCompanionBuilder =
       Value<String> collectorNumber,
       Value<String> lang,
       Value<String> rarity,
+      Value<int> rarityValue,
       Value<String> releasedAt,
       Value<String> scryfallUri,
       Value<String> uri,
       Value<String> rulingsUri,
       Value<String> printsSearchUri,
+      Value<String?> manaCost,
       Value<String> typeLine,
       Value<String?> printedTypeLine,
-      Value<String?> manaCost,
-      Value<double> cmc,
       Value<String?> oracleText,
       Value<String?> printedText,
       Value<String?> flavorText,
@@ -7772,6 +8704,11 @@ typedef $$ScryfallCardsTableUpdateCompanionBuilder =
       Value<int> colorIdentityMask,
       Value<String?> producedManaJson,
       Value<int> producedManaMask,
+      Value<String?> power,
+      Value<String?> toughness,
+      Value<String?> loyalty,
+      Value<String?> defense,
+      Value<double> cmc,
       Value<String?> keywordsJson,
       Value<bool> hasCardFaces,
       Value<bool> hasColorIndicator,
@@ -7932,6 +8869,11 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get flavorName => $composableBuilder(
+    column: $table.flavorName,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get setId => $composableBuilder(
     column: $table.setId,
     builder: (column) => ColumnFilters(column),
@@ -7982,6 +8924,11 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<int> get rarityValue => $composableBuilder(
+    column: $table.rarityValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get releasedAt => $composableBuilder(
     column: $table.releasedAt,
     builder: (column) => ColumnFilters(column),
@@ -8007,6 +8954,11 @@ class $$ScryfallCardsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get manaCost => $composableBuilder(
+    column: $table.manaCost,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get typeLine => $composableBuilder(
     column: $table.typeLine,
     builder: (column) => ColumnFilters(column),
@@ -8014,16 +8966,6 @@ class $$ScryfallCardsTableFilterComposer
 
   ColumnFilters<String> get printedTypeLine => $composableBuilder(
     column: $table.printedTypeLine,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get manaCost => $composableBuilder(
-    column: $table.manaCost,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<double> get cmc => $composableBuilder(
-    column: $table.cmc,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8069,6 +9011,31 @@ class $$ScryfallCardsTableFilterComposer
 
   ColumnFilters<int> get producedManaMask => $composableBuilder(
     column: $table.producedManaMask,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get power => $composableBuilder(
+    column: $table.power,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get toughness => $composableBuilder(
+    column: $table.toughness,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get loyalty => $composableBuilder(
+    column: $table.loyalty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get defense => $composableBuilder(
+    column: $table.defense,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get cmc => $composableBuilder(
+    column: $table.cmc,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -8514,6 +9481,11 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get flavorName => $composableBuilder(
+    column: $table.flavorName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get setId => $composableBuilder(
     column: $table.setId,
     builder: (column) => ColumnOrderings(column),
@@ -8564,6 +9536,11 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get rarityValue => $composableBuilder(
+    column: $table.rarityValue,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get releasedAt => $composableBuilder(
     column: $table.releasedAt,
     builder: (column) => ColumnOrderings(column),
@@ -8589,6 +9566,11 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get manaCost => $composableBuilder(
+    column: $table.manaCost,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get typeLine => $composableBuilder(
     column: $table.typeLine,
     builder: (column) => ColumnOrderings(column),
@@ -8596,16 +9578,6 @@ class $$ScryfallCardsTableOrderingComposer
 
   ColumnOrderings<String> get printedTypeLine => $composableBuilder(
     column: $table.printedTypeLine,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get manaCost => $composableBuilder(
-    column: $table.manaCost,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<double> get cmc => $composableBuilder(
-    column: $table.cmc,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -8651,6 +9623,31 @@ class $$ScryfallCardsTableOrderingComposer
 
   ColumnOrderings<int> get producedManaMask => $composableBuilder(
     column: $table.producedManaMask,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get power => $composableBuilder(
+    column: $table.power,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get toughness => $composableBuilder(
+    column: $table.toughness,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get loyalty => $composableBuilder(
+    column: $table.loyalty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get defense => $composableBuilder(
+    column: $table.defense,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get cmc => $composableBuilder(
+    column: $table.cmc,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -9065,6 +10062,11 @@ class $$ScryfallCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get flavorName => $composableBuilder(
+    column: $table.flavorName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get setId =>
       $composableBuilder(column: $table.setId, builder: (column) => column);
 
@@ -9101,6 +10103,11 @@ class $$ScryfallCardsTableAnnotationComposer
   GeneratedColumn<String> get rarity =>
       $composableBuilder(column: $table.rarity, builder: (column) => column);
 
+  GeneratedColumn<int> get rarityValue => $composableBuilder(
+    column: $table.rarityValue,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get releasedAt => $composableBuilder(
     column: $table.releasedAt,
     builder: (column) => column,
@@ -9124,6 +10131,9 @@ class $$ScryfallCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get manaCost =>
+      $composableBuilder(column: $table.manaCost, builder: (column) => column);
+
   GeneratedColumn<String> get typeLine =>
       $composableBuilder(column: $table.typeLine, builder: (column) => column);
 
@@ -9131,12 +10141,6 @@ class $$ScryfallCardsTableAnnotationComposer
     column: $table.printedTypeLine,
     builder: (column) => column,
   );
-
-  GeneratedColumn<String> get manaCost =>
-      $composableBuilder(column: $table.manaCost, builder: (column) => column);
-
-  GeneratedColumn<double> get cmc =>
-      $composableBuilder(column: $table.cmc, builder: (column) => column);
 
   GeneratedColumn<String> get oracleText => $composableBuilder(
     column: $table.oracleText,
@@ -9180,6 +10184,21 @@ class $$ScryfallCardsTableAnnotationComposer
     column: $table.producedManaMask,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get power =>
+      $composableBuilder(column: $table.power, builder: (column) => column);
+
+  GeneratedColumn<String> get toughness =>
+      $composableBuilder(column: $table.toughness, builder: (column) => column);
+
+  GeneratedColumn<String> get loyalty =>
+      $composableBuilder(column: $table.loyalty, builder: (column) => column);
+
+  GeneratedColumn<String> get defense =>
+      $composableBuilder(column: $table.defense, builder: (column) => column);
+
+  GeneratedColumn<double> get cmc =>
+      $composableBuilder(column: $table.cmc, builder: (column) => column);
 
   GeneratedColumn<String> get keywordsJson => $composableBuilder(
     column: $table.keywordsJson,
@@ -9567,6 +10586,7 @@ class $$ScryfallCardsTableTableManager
                 Value<String> layout = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> printedName = const Value.absent(),
+                Value<String?> flavorName = const Value.absent(),
                 Value<String> setId = const Value.absent(),
                 Value<String> setCode = const Value.absent(),
                 Value<String> setName = const Value.absent(),
@@ -9577,15 +10597,15 @@ class $$ScryfallCardsTableTableManager
                 Value<String> collectorNumber = const Value.absent(),
                 Value<String> lang = const Value.absent(),
                 Value<String> rarity = const Value.absent(),
+                Value<int> rarityValue = const Value.absent(),
                 Value<String> releasedAt = const Value.absent(),
                 Value<String> scryfallUri = const Value.absent(),
                 Value<String> uri = const Value.absent(),
                 Value<String> rulingsUri = const Value.absent(),
                 Value<String> printsSearchUri = const Value.absent(),
+                Value<String?> manaCost = const Value.absent(),
                 Value<String> typeLine = const Value.absent(),
                 Value<String?> printedTypeLine = const Value.absent(),
-                Value<String?> manaCost = const Value.absent(),
-                Value<double> cmc = const Value.absent(),
                 Value<String?> oracleText = const Value.absent(),
                 Value<String?> printedText = const Value.absent(),
                 Value<String?> flavorText = const Value.absent(),
@@ -9595,6 +10615,11 @@ class $$ScryfallCardsTableTableManager
                 Value<int> colorIdentityMask = const Value.absent(),
                 Value<String?> producedManaJson = const Value.absent(),
                 Value<int> producedManaMask = const Value.absent(),
+                Value<String?> power = const Value.absent(),
+                Value<String?> toughness = const Value.absent(),
+                Value<String?> loyalty = const Value.absent(),
+                Value<String?> defense = const Value.absent(),
+                Value<double> cmc = const Value.absent(),
                 Value<String?> keywordsJson = const Value.absent(),
                 Value<bool> hasCardFaces = const Value.absent(),
                 Value<bool> hasColorIndicator = const Value.absent(),
@@ -9680,6 +10705,7 @@ class $$ScryfallCardsTableTableManager
                 layout: layout,
                 name: name,
                 printedName: printedName,
+                flavorName: flavorName,
                 setId: setId,
                 setCode: setCode,
                 setName: setName,
@@ -9690,15 +10716,15 @@ class $$ScryfallCardsTableTableManager
                 collectorNumber: collectorNumber,
                 lang: lang,
                 rarity: rarity,
+                rarityValue: rarityValue,
                 releasedAt: releasedAt,
                 scryfallUri: scryfallUri,
                 uri: uri,
                 rulingsUri: rulingsUri,
                 printsSearchUri: printsSearchUri,
+                manaCost: manaCost,
                 typeLine: typeLine,
                 printedTypeLine: printedTypeLine,
-                manaCost: manaCost,
-                cmc: cmc,
                 oracleText: oracleText,
                 printedText: printedText,
                 flavorText: flavorText,
@@ -9708,6 +10734,11 @@ class $$ScryfallCardsTableTableManager
                 colorIdentityMask: colorIdentityMask,
                 producedManaJson: producedManaJson,
                 producedManaMask: producedManaMask,
+                power: power,
+                toughness: toughness,
+                loyalty: loyalty,
+                defense: defense,
+                cmc: cmc,
                 keywordsJson: keywordsJson,
                 hasCardFaces: hasCardFaces,
                 hasColorIndicator: hasColorIndicator,
@@ -9795,6 +10826,7 @@ class $$ScryfallCardsTableTableManager
                 required String layout,
                 required String name,
                 Value<String?> printedName = const Value.absent(),
+                Value<String?> flavorName = const Value.absent(),
                 required String setId,
                 required String setCode,
                 required String setName,
@@ -9805,15 +10837,15 @@ class $$ScryfallCardsTableTableManager
                 required String collectorNumber,
                 required String lang,
                 required String rarity,
+                Value<int> rarityValue = const Value.absent(),
                 required String releasedAt,
                 required String scryfallUri,
                 required String uri,
                 required String rulingsUri,
                 required String printsSearchUri,
+                Value<String?> manaCost = const Value.absent(),
                 required String typeLine,
                 Value<String?> printedTypeLine = const Value.absent(),
-                Value<String?> manaCost = const Value.absent(),
-                required double cmc,
                 Value<String?> oracleText = const Value.absent(),
                 Value<String?> printedText = const Value.absent(),
                 Value<String?> flavorText = const Value.absent(),
@@ -9823,6 +10855,11 @@ class $$ScryfallCardsTableTableManager
                 Value<int> colorIdentityMask = const Value.absent(),
                 Value<String?> producedManaJson = const Value.absent(),
                 Value<int> producedManaMask = const Value.absent(),
+                Value<String?> power = const Value.absent(),
+                Value<String?> toughness = const Value.absent(),
+                Value<String?> loyalty = const Value.absent(),
+                Value<String?> defense = const Value.absent(),
+                required double cmc,
                 Value<String?> keywordsJson = const Value.absent(),
                 Value<bool> hasCardFaces = const Value.absent(),
                 Value<bool> hasColorIndicator = const Value.absent(),
@@ -9908,6 +10945,7 @@ class $$ScryfallCardsTableTableManager
                 layout: layout,
                 name: name,
                 printedName: printedName,
+                flavorName: flavorName,
                 setId: setId,
                 setCode: setCode,
                 setName: setName,
@@ -9918,15 +10956,15 @@ class $$ScryfallCardsTableTableManager
                 collectorNumber: collectorNumber,
                 lang: lang,
                 rarity: rarity,
+                rarityValue: rarityValue,
                 releasedAt: releasedAt,
                 scryfallUri: scryfallUri,
                 uri: uri,
                 rulingsUri: rulingsUri,
                 printsSearchUri: printsSearchUri,
+                manaCost: manaCost,
                 typeLine: typeLine,
                 printedTypeLine: printedTypeLine,
-                manaCost: manaCost,
-                cmc: cmc,
                 oracleText: oracleText,
                 printedText: printedText,
                 flavorText: flavorText,
@@ -9936,6 +10974,11 @@ class $$ScryfallCardsTableTableManager
                 colorIdentityMask: colorIdentityMask,
                 producedManaJson: producedManaJson,
                 producedManaMask: producedManaMask,
+                power: power,
+                toughness: toughness,
+                loyalty: loyalty,
+                defense: defense,
+                cmc: cmc,
                 keywordsJson: keywordsJson,
                 hasCardFaces: hasCardFaces,
                 hasColorIndicator: hasColorIndicator,
@@ -10079,6 +11122,7 @@ typedef $$ScryfallCardFacesTableCreateCompanionBuilder =
       required int faceIndex,
       required String name,
       Value<String?> printedName,
+      Value<String?> flavorName,
       Value<String?> manaCost,
       Value<String?> typeLine,
       Value<String?> printedTypeLine,
@@ -10093,7 +11137,7 @@ typedef $$ScryfallCardFacesTableCreateCompanionBuilder =
       Value<String?> toughness,
       Value<String?> loyalty,
       Value<String?> defense,
-      Value<double?> cmc,
+      required double cmc,
       Value<String?> artist,
       Value<String?> artistId,
       Value<String?> illustrationId,
@@ -10114,6 +11158,7 @@ typedef $$ScryfallCardFacesTableUpdateCompanionBuilder =
       Value<int> faceIndex,
       Value<String> name,
       Value<String?> printedName,
+      Value<String?> flavorName,
       Value<String?> manaCost,
       Value<String?> typeLine,
       Value<String?> printedTypeLine,
@@ -10128,7 +11173,7 @@ typedef $$ScryfallCardFacesTableUpdateCompanionBuilder =
       Value<String?> toughness,
       Value<String?> loyalty,
       Value<String?> defense,
-      Value<double?> cmc,
+      Value<double> cmc,
       Value<String?> artist,
       Value<String?> artistId,
       Value<String?> illustrationId,
@@ -10196,6 +11241,11 @@ class $$ScryfallCardFacesTableFilterComposer
 
   ColumnFilters<String> get printedName => $composableBuilder(
     column: $table.printedName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get flavorName => $composableBuilder(
+    column: $table.flavorName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10382,6 +11432,11 @@ class $$ScryfallCardFacesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get flavorName => $composableBuilder(
+    column: $table.flavorName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get manaCost => $composableBuilder(
     column: $table.manaCost,
     builder: (column) => ColumnOrderings(column),
@@ -10561,6 +11616,11 @@ class $$ScryfallCardFacesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get flavorName => $composableBuilder(
+    column: $table.flavorName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get manaCost =>
       $composableBuilder(column: $table.manaCost, builder: (column) => column);
 
@@ -10733,6 +11793,7 @@ class $$ScryfallCardFacesTableTableManager
                 Value<int> faceIndex = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> printedName = const Value.absent(),
+                Value<String?> flavorName = const Value.absent(),
                 Value<String?> manaCost = const Value.absent(),
                 Value<String?> typeLine = const Value.absent(),
                 Value<String?> printedTypeLine = const Value.absent(),
@@ -10747,7 +11808,7 @@ class $$ScryfallCardFacesTableTableManager
                 Value<String?> toughness = const Value.absent(),
                 Value<String?> loyalty = const Value.absent(),
                 Value<String?> defense = const Value.absent(),
-                Value<double?> cmc = const Value.absent(),
+                Value<double> cmc = const Value.absent(),
                 Value<String?> artist = const Value.absent(),
                 Value<String?> artistId = const Value.absent(),
                 Value<String?> illustrationId = const Value.absent(),
@@ -10766,6 +11827,7 @@ class $$ScryfallCardFacesTableTableManager
                 faceIndex: faceIndex,
                 name: name,
                 printedName: printedName,
+                flavorName: flavorName,
                 manaCost: manaCost,
                 typeLine: typeLine,
                 printedTypeLine: printedTypeLine,
@@ -10801,6 +11863,7 @@ class $$ScryfallCardFacesTableTableManager
                 required int faceIndex,
                 required String name,
                 Value<String?> printedName = const Value.absent(),
+                Value<String?> flavorName = const Value.absent(),
                 Value<String?> manaCost = const Value.absent(),
                 Value<String?> typeLine = const Value.absent(),
                 Value<String?> printedTypeLine = const Value.absent(),
@@ -10815,7 +11878,7 @@ class $$ScryfallCardFacesTableTableManager
                 Value<String?> toughness = const Value.absent(),
                 Value<String?> loyalty = const Value.absent(),
                 Value<String?> defense = const Value.absent(),
-                Value<double?> cmc = const Value.absent(),
+                required double cmc,
                 Value<String?> artist = const Value.absent(),
                 Value<String?> artistId = const Value.absent(),
                 Value<String?> illustrationId = const Value.absent(),
@@ -10834,6 +11897,7 @@ class $$ScryfallCardFacesTableTableManager
                 faceIndex: faceIndex,
                 name: name,
                 printedName: printedName,
+                flavorName: flavorName,
                 manaCost: manaCost,
                 typeLine: typeLine,
                 printedTypeLine: printedTypeLine,
@@ -10932,6 +11996,302 @@ typedef $$ScryfallCardFacesTableProcessedTableManager =
       ScryfallCardFace,
       PrefetchHooks Function({bool cardId})
     >;
+typedef $$ScryfallTagsTableCreateCompanionBuilder =
+    ScryfallTagsCompanion Function({
+      required String scryfallId,
+      required String label,
+      required String slug,
+      required String description,
+      required String type,
+      required List<String> parentIdsJson,
+      required List<String> childIdsJson,
+      required List<String> aliasesJson,
+      required List<String> taggedJson,
+      Value<int> rowid,
+    });
+typedef $$ScryfallTagsTableUpdateCompanionBuilder =
+    ScryfallTagsCompanion Function({
+      Value<String> scryfallId,
+      Value<String> label,
+      Value<String> slug,
+      Value<String> description,
+      Value<String> type,
+      Value<List<String>> parentIdsJson,
+      Value<List<String>> childIdsJson,
+      Value<List<String>> aliasesJson,
+      Value<List<String>> taggedJson,
+      Value<int> rowid,
+    });
+
+class $$ScryfallTagsTableFilterComposer
+    extends Composer<_$AppDatabase, $ScryfallTagsTable> {
+  $$ScryfallTagsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get slug => $composableBuilder(
+    column: $table.slug,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get parentIdsJson => $composableBuilder(
+    column: $table.parentIdsJson,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get childIdsJson => $composableBuilder(
+    column: $table.childIdsJson,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<List<String>, List<String>, String>
+  get taggedJson => $composableBuilder(
+    column: $table.taggedJson,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+}
+
+class $$ScryfallTagsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScryfallTagsTable> {
+  $$ScryfallTagsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get slug => $composableBuilder(
+    column: $table.slug,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parentIdsJson => $composableBuilder(
+    column: $table.parentIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get childIdsJson => $composableBuilder(
+    column: $table.childIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get aliasesJson => $composableBuilder(
+    column: $table.aliasesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taggedJson => $composableBuilder(
+    column: $table.taggedJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScryfallTagsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScryfallTagsTable> {
+  $$ScryfallTagsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get slug =>
+      $composableBuilder(column: $table.slug, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get parentIdsJson =>
+      $composableBuilder(
+        column: $table.parentIdsJson,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get childIdsJson =>
+      $composableBuilder(
+        column: $table.childIdsJson,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get aliasesJson =>
+      $composableBuilder(
+        column: $table.aliasesJson,
+        builder: (column) => column,
+      );
+
+  GeneratedColumnWithTypeConverter<List<String>, String> get taggedJson =>
+      $composableBuilder(
+        column: $table.taggedJson,
+        builder: (column) => column,
+      );
+}
+
+class $$ScryfallTagsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScryfallTagsTable,
+          ScryfallTag,
+          $$ScryfallTagsTableFilterComposer,
+          $$ScryfallTagsTableOrderingComposer,
+          $$ScryfallTagsTableAnnotationComposer,
+          $$ScryfallTagsTableCreateCompanionBuilder,
+          $$ScryfallTagsTableUpdateCompanionBuilder,
+          (
+            ScryfallTag,
+            BaseReferences<_$AppDatabase, $ScryfallTagsTable, ScryfallTag>,
+          ),
+          ScryfallTag,
+          PrefetchHooks Function()
+        > {
+  $$ScryfallTagsTableTableManager(_$AppDatabase db, $ScryfallTagsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScryfallTagsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScryfallTagsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScryfallTagsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> scryfallId = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> slug = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<List<String>> parentIdsJson = const Value.absent(),
+                Value<List<String>> childIdsJson = const Value.absent(),
+                Value<List<String>> aliasesJson = const Value.absent(),
+                Value<List<String>> taggedJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScryfallTagsCompanion(
+                scryfallId: scryfallId,
+                label: label,
+                slug: slug,
+                description: description,
+                type: type,
+                parentIdsJson: parentIdsJson,
+                childIdsJson: childIdsJson,
+                aliasesJson: aliasesJson,
+                taggedJson: taggedJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String scryfallId,
+                required String label,
+                required String slug,
+                required String description,
+                required String type,
+                required List<String> parentIdsJson,
+                required List<String> childIdsJson,
+                required List<String> aliasesJson,
+                required List<String> taggedJson,
+                Value<int> rowid = const Value.absent(),
+              }) => ScryfallTagsCompanion.insert(
+                scryfallId: scryfallId,
+                label: label,
+                slug: slug,
+                description: description,
+                type: type,
+                parentIdsJson: parentIdsJson,
+                childIdsJson: childIdsJson,
+                aliasesJson: aliasesJson,
+                taggedJson: taggedJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScryfallTagsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScryfallTagsTable,
+      ScryfallTag,
+      $$ScryfallTagsTableFilterComposer,
+      $$ScryfallTagsTableOrderingComposer,
+      $$ScryfallTagsTableAnnotationComposer,
+      $$ScryfallTagsTableCreateCompanionBuilder,
+      $$ScryfallTagsTableUpdateCompanionBuilder,
+      (
+        ScryfallTag,
+        BaseReferences<_$AppDatabase, $ScryfallTagsTable, ScryfallTag>,
+      ),
+      ScryfallTag,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10940,4 +12300,6 @@ class $AppDatabaseManager {
       $$ScryfallCardsTableTableManager(_db, _db.scryfallCards);
   $$ScryfallCardFacesTableTableManager get scryfallCardFaces =>
       $$ScryfallCardFacesTableTableManager(_db, _db.scryfallCardFaces);
+  $$ScryfallTagsTableTableManager get scryfallTags =>
+      $$ScryfallTagsTableTableManager(_db, _db.scryfallTags);
 }

@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'dart:convert';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -7,6 +8,15 @@ import 'scryfall_query.dart';
 // The database.g.dart file is generated with the build_runner: dart run build_runner build or dart run build_runner watch
 part 'database.g.dart';
 
+class StringListConverter extends TypeConverter<List<String>, String> {
+  const StringListConverter();
+
+  @override
+  List<String> fromSql(String fromDb) { return List<String>.from(json.decode(fromDb)); }
+
+  @override
+  String toSql(List<String> value) { return json.encode(value); }
+}
 class ScryfallCards extends Table {
   TextColumn get scryfallId => text()();
   TextColumn get oracleId => text().nullable()();
@@ -18,6 +28,7 @@ class ScryfallCards extends Table {
 
   TextColumn get name => text()();
   TextColumn get printedName => text().nullable()();
+  TextColumn get flavorName => text().nullable()();
 
   TextColumn get setId => text()();
   TextColumn get setCode => text()();
@@ -30,6 +41,7 @@ class ScryfallCards extends Table {
   TextColumn get collectorNumber => text()();
   TextColumn get lang => text()();
   TextColumn get rarity => text()();
+  IntColumn get rarityValue => integer().withDefault(const Constant(0))();
   TextColumn get releasedAt => text()();
 
   TextColumn get scryfallUri => text()();
@@ -37,10 +49,9 @@ class ScryfallCards extends Table {
   TextColumn get rulingsUri => text()();
   TextColumn get printsSearchUri => text()();
 
+  TextColumn get manaCost => text().nullable()();
   TextColumn get typeLine => text()();
   TextColumn get printedTypeLine => text().nullable()();
-  TextColumn get manaCost => text().nullable()();
-  RealColumn get cmc => real()();
   TextColumn get oracleText => text().nullable()();
   TextColumn get printedText => text().nullable()();
   TextColumn get flavorText => text().nullable()();
@@ -51,6 +62,12 @@ class ScryfallCards extends Table {
   IntColumn get colorIdentityMask => integer().withDefault(const Constant(0))();
   TextColumn get producedManaJson => text().nullable()();
   IntColumn get producedManaMask => integer().withDefault(const Constant(0))();
+  
+  TextColumn get power => text().nullable()();
+  TextColumn get toughness => text().nullable()();
+  TextColumn get loyalty => text().nullable()();
+  TextColumn get defense => text().nullable()();
+  RealColumn get cmc => real()();
 
   TextColumn get keywordsJson => text().nullable()();
   BoolColumn get hasCardFaces => boolean().withDefault(const Constant(false))();
@@ -143,6 +160,8 @@ class ScryfallCardFaces extends Table {
 
   TextColumn get name => text()();
   TextColumn get printedName => text().nullable()();
+  TextColumn get flavorName => text().nullable()();
+
   TextColumn get manaCost => text().nullable()();
   TextColumn get typeLine => text().nullable()();
   TextColumn get printedTypeLine => text().nullable()();
@@ -159,7 +178,7 @@ class ScryfallCardFaces extends Table {
   TextColumn get toughness => text().nullable()();
   TextColumn get loyalty => text().nullable()();
   TextColumn get defense => text().nullable()();
-  RealColumn get cmc => real().nullable()();
+  RealColumn get cmc => real()();
 
   TextColumn get artist => text().nullable()();
   TextColumn get artistId => text().nullable()();
@@ -178,7 +197,23 @@ class ScryfallCardFaces extends Table {
   Set<Column> get primaryKey => {cardId, faceIndex};
 }
 
-@DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces])
+class ScryfallTags extends Table {
+  TextColumn get scryfallId => text()();
+  TextColumn get label => text()();
+  TextColumn get slug => text()();
+  TextColumn get description => text()();
+  TextColumn get type => text()();
+
+  TextColumn get parentIdsJson => text().map(const StringListConverter())();
+  TextColumn get childIdsJson => text().map(const StringListConverter())();
+  TextColumn get aliasesJson => text().map(const StringListConverter())();
+  TextColumn get taggedJson => text().map(const StringListConverter())();
+
+  @override
+  Set<Column> get primaryKey => {scryfallId};
+}
+
+@DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -199,6 +234,7 @@ class AppDatabase extends _$AppDatabase {
         onUpgrade: (m, from, to) async {
           await m.deleteTable('scryfall_card_faces');
           await m.deleteTable('scryfall_cards');
+          await m.deleteTable('scryfall_tags');
           await m.createAll();
         },
         beforeOpen: (details) async {
@@ -219,14 +255,6 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  Future<List<ScryfallCard>> getAllCards() async {
-    return select(scryfallCards).get();
-  }
-
-  Future<List<ScryfallCard>> getCardsByIds(List<String> ids) async {
-    return (select(scryfallCards)..where((tbl) => tbl.scryfallId.isIn(ids))).get();
-  }
-
   Future<List<ScryfallCardFace>> getCardFacesByCardId(String cardId) async {
     return (select(scryfallCardFaces)
           ..where((tbl) => tbl.cardId.equals(cardId))
@@ -237,7 +265,8 @@ class AppDatabase extends _$AppDatabase {
   Future<List<ScryfallCard>> getCardsByScryfallSyntax(String syntax, String searchScope, String orderBy, String orderDir) async {
     final tokens = tokenizeScryfallSyntax(syntax);
     final hasLangFilter = containsLangFilter(tokens);
-    final hasTokenFilter = containsTokenFilter(tokens);
+    final hasTypeFilter = containsTypeFilter(tokens);
+    final hasSetFilter = containsSetFilter(tokens);
 
     final query = select(scryfallCards)
       ..where((t) {
@@ -245,10 +274,17 @@ class AppDatabase extends _$AppDatabase {
         if (tokens.isNotEmpty) {
           expr = tokens.map((tok) => compileQueryToken(t, tok)).reduce((a, b) => a & b);
         }
-        if (!hasTokenFilter) {
-          expr = expr & t.layout.isNotIn(['token', 'double_faced_token']);
+        if (!hasTypeFilter) {
+          expr = expr & t.layout.isNotIn(['token', 'double_faced_token', 'emblem', 'host', 'art_series', 'planar', 'scheme', 'vanguard']);
+          expr = expr & t.typeLine.equals('Card').not();
         }
-        return hasLangFilter ? expr : (expr & t.lang.equals('en'));
+        if (!hasLangFilter) {
+          expr = expr & t.lang.equals('en');
+        }
+        if (!hasSetFilter) {
+          expr = expr & t.setType.isNotIn(['memorabilia', 'promo', 'funny']);
+        }
+        return expr;
       });
 
     query.orderBy([(t) => OrderingTerm(expression: t.releasedAt, mode: OrderingMode.desc)]);
