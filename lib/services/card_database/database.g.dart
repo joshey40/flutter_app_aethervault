@@ -230,6 +230,18 @@ class $ScryfallCardsTable extends ScryfallCards
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _releasedAtYearMeta = const VerificationMeta(
+    'releasedAtYear',
+  );
+  @override
+  late final GeneratedColumn<int> releasedAtYear = GeneratedColumn<int>(
+    'released_at_year',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   static const VerificationMeta _scryfallUriMeta = const VerificationMeta(
     'scryfallUri',
   );
@@ -1343,6 +1355,7 @@ class $ScryfallCardsTable extends ScryfallCards
     rarity,
     rarityValue,
     releasedAt,
+    releasedAtYear,
     scryfallUri,
     uri,
     rulingsUri,
@@ -1627,6 +1640,15 @@ class $ScryfallCardsTable extends ScryfallCards
       );
     } else if (isInserting) {
       context.missing(_releasedAtMeta);
+    }
+    if (data.containsKey('released_at_year')) {
+      context.handle(
+        _releasedAtYearMeta,
+        releasedAtYear.isAcceptableOrUnknown(
+          data['released_at_year']!,
+          _releasedAtYearMeta,
+        ),
+      );
     }
     if (data.containsKey('scryfall_uri')) {
       context.handle(
@@ -2459,6 +2481,10 @@ class $ScryfallCardsTable extends ScryfallCards
         DriftSqlType.string,
         data['${effectivePrefix}released_at'],
       )!,
+      releasedAtYear: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}released_at_year'],
+      )!,
       scryfallUri: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}scryfall_uri'],
@@ -2866,6 +2892,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
   final String rarity;
   final int rarityValue;
   final String releasedAt;
+  final int releasedAtYear;
   final String scryfallUri;
   final String uri;
   final String rulingsUri;
@@ -2982,6 +3009,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     required this.rarity,
     required this.rarityValue,
     required this.releasedAt,
+    required this.releasedAtYear,
     required this.scryfallUri,
     required this.uri,
     required this.rulingsUri,
@@ -3113,6 +3141,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     map['rarity'] = Variable<String>(rarity);
     map['rarity_value'] = Variable<int>(rarityValue);
     map['released_at'] = Variable<String>(releasedAt);
+    map['released_at_year'] = Variable<int>(releasedAtYear);
     map['scryfall_uri'] = Variable<String>(scryfallUri);
     map['uri'] = Variable<String>(uri);
     map['rulings_uri'] = Variable<String>(rulingsUri);
@@ -3385,6 +3414,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       rarity: Value(rarity),
       rarityValue: Value(rarityValue),
       releasedAt: Value(releasedAt),
+      releasedAtYear: Value(releasedAtYear),
       scryfallUri: Value(scryfallUri),
       uri: Value(uri),
       rulingsUri: Value(rulingsUri),
@@ -3647,6 +3677,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       rarity: serializer.fromJson<String>(json['rarity']),
       rarityValue: serializer.fromJson<int>(json['rarityValue']),
       releasedAt: serializer.fromJson<String>(json['releasedAt']),
+      releasedAtYear: serializer.fromJson<int>(json['releasedAtYear']),
       scryfallUri: serializer.fromJson<String>(json['scryfallUri']),
       uri: serializer.fromJson<String>(json['uri']),
       rulingsUri: serializer.fromJson<String>(json['rulingsUri']),
@@ -3788,6 +3819,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       'rarity': serializer.toJson<String>(rarity),
       'rarityValue': serializer.toJson<int>(rarityValue),
       'releasedAt': serializer.toJson<String>(releasedAt),
+      'releasedAtYear': serializer.toJson<int>(releasedAtYear),
       'scryfallUri': serializer.toJson<String>(scryfallUri),
       'uri': serializer.toJson<String>(uri),
       'rulingsUri': serializer.toJson<String>(rulingsUri),
@@ -3917,6 +3949,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     String? rarity,
     int? rarityValue,
     String? releasedAt,
+    int? releasedAtYear,
     String? scryfallUri,
     String? uri,
     String? rulingsUri,
@@ -4035,6 +4068,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     rarity: rarity ?? this.rarity,
     rarityValue: rarityValue ?? this.rarityValue,
     releasedAt: releasedAt ?? this.releasedAt,
+    releasedAtYear: releasedAtYear ?? this.releasedAtYear,
     scryfallUri: scryfallUri ?? this.scryfallUri,
     uri: uri ?? this.uri,
     rulingsUri: rulingsUri ?? this.rulingsUri,
@@ -4236,6 +4270,9 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
       releasedAt: data.releasedAt.present
           ? data.releasedAt.value
           : this.releasedAt,
+      releasedAtYear: data.releasedAtYear.present
+          ? data.releasedAtYear.value
+          : this.releasedAtYear,
       scryfallUri: data.scryfallUri.present
           ? data.scryfallUri.value
           : this.scryfallUri,
@@ -4485,6 +4522,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           ..write('rarity: $rarity, ')
           ..write('rarityValue: $rarityValue, ')
           ..write('releasedAt: $releasedAt, ')
+          ..write('releasedAtYear: $releasedAtYear, ')
           ..write('scryfallUri: $scryfallUri, ')
           ..write('uri: $uri, ')
           ..write('rulingsUri: $rulingsUri, ')
@@ -4610,6 +4648,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
     rarity,
     rarityValue,
     releasedAt,
+    releasedAtYear,
     scryfallUri,
     uri,
     rulingsUri,
@@ -4730,6 +4769,7 @@ class ScryfallCard extends DataClass implements Insertable<ScryfallCard> {
           other.rarity == this.rarity &&
           other.rarityValue == this.rarityValue &&
           other.releasedAt == this.releasedAt &&
+          other.releasedAtYear == this.releasedAtYear &&
           other.scryfallUri == this.scryfallUri &&
           other.uri == this.uri &&
           other.rulingsUri == this.rulingsUri &&
@@ -4850,6 +4890,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
   final Value<String> rarity;
   final Value<int> rarityValue;
   final Value<String> releasedAt;
+  final Value<int> releasedAtYear;
   final Value<String> scryfallUri;
   final Value<String> uri;
   final Value<String> rulingsUri;
@@ -4967,6 +5008,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     this.rarity = const Value.absent(),
     this.rarityValue = const Value.absent(),
     this.releasedAt = const Value.absent(),
+    this.releasedAtYear = const Value.absent(),
     this.scryfallUri = const Value.absent(),
     this.uri = const Value.absent(),
     this.rulingsUri = const Value.absent(),
@@ -5085,6 +5127,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     required String rarity,
     this.rarityValue = const Value.absent(),
     required String releasedAt,
+    this.releasedAtYear = const Value.absent(),
     required String scryfallUri,
     required String uri,
     required String rulingsUri,
@@ -5222,6 +5265,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Expression<String>? rarity,
     Expression<int>? rarityValue,
     Expression<String>? releasedAt,
+    Expression<int>? releasedAtYear,
     Expression<String>? scryfallUri,
     Expression<String>? uri,
     Expression<String>? rulingsUri,
@@ -5340,6 +5384,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       if (rarity != null) 'rarity': rarity,
       if (rarityValue != null) 'rarity_value': rarityValue,
       if (releasedAt != null) 'released_at': releasedAt,
+      if (releasedAtYear != null) 'released_at_year': releasedAtYear,
       if (scryfallUri != null) 'scryfall_uri': scryfallUri,
       if (uri != null) 'uri': uri,
       if (rulingsUri != null) 'rulings_uri': rulingsUri,
@@ -5471,6 +5516,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     Value<String>? rarity,
     Value<int>? rarityValue,
     Value<String>? releasedAt,
+    Value<int>? releasedAtYear,
     Value<String>? scryfallUri,
     Value<String>? uri,
     Value<String>? rulingsUri,
@@ -5589,6 +5635,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
       rarity: rarity ?? this.rarity,
       rarityValue: rarityValue ?? this.rarityValue,
       releasedAt: releasedAt ?? this.releasedAt,
+      releasedAtYear: releasedAtYear ?? this.releasedAtYear,
       scryfallUri: scryfallUri ?? this.scryfallUri,
       uri: uri ?? this.uri,
       rulingsUri: rulingsUri ?? this.rulingsUri,
@@ -5759,6 +5806,9 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
     }
     if (releasedAt.present) {
       map['released_at'] = Variable<String>(releasedAt.value);
+    }
+    if (releasedAtYear.present) {
+      map['released_at_year'] = Variable<int>(releasedAtYear.value);
     }
     if (scryfallUri.present) {
       map['scryfall_uri'] = Variable<String>(scryfallUri.value);
@@ -6086,6 +6136,7 @@ class ScryfallCardsCompanion extends UpdateCompanion<ScryfallCard> {
           ..write('rarity: $rarity, ')
           ..write('rarityValue: $rarityValue, ')
           ..write('releasedAt: $releasedAt, ')
+          ..write('releasedAtYear: $releasedAtYear, ')
           ..write('scryfallUri: $scryfallUri, ')
           ..write('uri: $uri, ')
           ..write('rulingsUri: $rulingsUri, ')
@@ -8569,6 +8620,7 @@ typedef $$ScryfallCardsTableCreateCompanionBuilder =
       required String rarity,
       Value<int> rarityValue,
       required String releasedAt,
+      Value<int> releasedAtYear,
       required String scryfallUri,
       required String uri,
       required String rulingsUri,
@@ -8688,6 +8740,7 @@ typedef $$ScryfallCardsTableUpdateCompanionBuilder =
       Value<String> rarity,
       Value<int> rarityValue,
       Value<String> releasedAt,
+      Value<int> releasedAtYear,
       Value<String> scryfallUri,
       Value<String> uri,
       Value<String> rulingsUri,
@@ -8931,6 +8984,11 @@ class $$ScryfallCardsTableFilterComposer
 
   ColumnFilters<String> get releasedAt => $composableBuilder(
     column: $table.releasedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get releasedAtYear => $composableBuilder(
+    column: $table.releasedAtYear,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9546,6 +9604,11 @@ class $$ScryfallCardsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get releasedAtYear => $composableBuilder(
+    column: $table.releasedAtYear,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get scryfallUri => $composableBuilder(
     column: $table.scryfallUri,
     builder: (column) => ColumnOrderings(column),
@@ -10113,6 +10176,11 @@ class $$ScryfallCardsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get releasedAtYear => $composableBuilder(
+    column: $table.releasedAtYear,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get scryfallUri => $composableBuilder(
     column: $table.scryfallUri,
     builder: (column) => column,
@@ -10599,6 +10667,7 @@ class $$ScryfallCardsTableTableManager
                 Value<String> rarity = const Value.absent(),
                 Value<int> rarityValue = const Value.absent(),
                 Value<String> releasedAt = const Value.absent(),
+                Value<int> releasedAtYear = const Value.absent(),
                 Value<String> scryfallUri = const Value.absent(),
                 Value<String> uri = const Value.absent(),
                 Value<String> rulingsUri = const Value.absent(),
@@ -10718,6 +10787,7 @@ class $$ScryfallCardsTableTableManager
                 rarity: rarity,
                 rarityValue: rarityValue,
                 releasedAt: releasedAt,
+                releasedAtYear: releasedAtYear,
                 scryfallUri: scryfallUri,
                 uri: uri,
                 rulingsUri: rulingsUri,
@@ -10839,6 +10909,7 @@ class $$ScryfallCardsTableTableManager
                 required String rarity,
                 Value<int> rarityValue = const Value.absent(),
                 required String releasedAt,
+                Value<int> releasedAtYear = const Value.absent(),
                 required String scryfallUri,
                 required String uri,
                 required String rulingsUri,
@@ -10958,6 +11029,7 @@ class $$ScryfallCardsTableTableManager
                 rarity: rarity,
                 rarityValue: rarityValue,
                 releasedAt: releasedAt,
+                releasedAtYear: releasedAtYear,
                 scryfallUri: scryfallUri,
                 uri: uri,
                 rulingsUri: rulingsUri,

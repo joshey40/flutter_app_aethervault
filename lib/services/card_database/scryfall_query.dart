@@ -74,9 +74,13 @@ List<String> _splitTokens(String input) {
         i++;
       }
     } else if (c == '(') {
-      flush();
-      buf.write(c);
-      flush();
+      if (buf.toString() == '-') {
+        buf.clear();
+        tokens.add('-(');
+      } else {
+        flush();
+        tokens.add('(');
+      }
       i++;
     } else if (c == ')') {
       flush();
@@ -127,6 +131,45 @@ bool containsSetFilter(List<QueryToken> tokens) {
   return tokens.any(check);
 }
 
+const Map<String, String> _isValueToOracleTagSlug = {
+  'frenchvanilla': 'french-vanilla',
+  'manland': 'creatureland',
+  'creatureland': 'creatureland',
+  'storageland': 'storage-land',
+};
+
+Set<String> collectOracleTagLookups(List<QueryToken> tokens) {
+  final result = <String>{};
+  void visit(QueryToken t) {
+    if (t is FilterToken) {
+      if (t.key == 'function' || t.key == 'tag' || t.key == 'oracletag' || t.key == 'otag') {
+        result.add(t.value.toLowerCase());
+      }
+      final mappedSlug = _isValueToOracleTagSlug[t.value.toLowerCase()];
+      if ((t.key == 'is' || t.key == 'not') && mappedSlug != null) {
+        result.add(mappedSlug);
+      }
+    } else if (t is ListToken) {
+      t.tokens.forEach(visit);
+    }
+  }
+  tokens.forEach(visit);
+  return result;
+}
+
+Set<String> collectIllustrationTagLookups(List<QueryToken> tokens) {
+  final result = <String>{};
+  void visit(QueryToken t) {
+    if (t is FilterToken && (t.key == 'art' || t.key == 'atag' || t.key == 'arttag')) {
+      result.add(t.value.toLowerCase());
+    } else if (t is ListToken) {
+      t.tokens.forEach(visit);
+    }
+  }
+  tokens.forEach(visit);
+  return result;
+}
+
 void scopeCards(List<ScryfallCard> cards, String searchScope) {
   if (searchScope == 'one_card') {
     final seen = <String, ScryfallCard>{};
@@ -143,6 +186,10 @@ void scopeCards(List<ScryfallCard> cards, String searchScope) {
 
 void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir) {
   int cmp(ScryfallCard a, ScryfallCard b) {
+    final powerA = double.tryParse(a.power ?? '') ?? 0.0;
+    final powerB = double.tryParse(b.power ?? '') ?? 0.0;
+    final toughA = double.tryParse(a.toughness ?? '') ?? 0.0;
+    final toughB = double.tryParse(b.toughness ?? '') ?? 0.0;
     final result = switch (orderBy) {
       'name' => a.name.compareTo(b.name),
       'released_at' => a.releasedAt.compareTo(b.releasedAt),
@@ -150,6 +197,8 @@ void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir) {
       'rarity' => a.rarityValue.compareTo(b.rarityValue),
       'color' => a.colorMask.compareTo(b.colorMask),
       'cmc' => a.cmc.compareTo(b.cmc),
+      'power' => powerA.compareTo(powerB),
+      'toughness' => toughA.compareTo(toughB),
       _ => a.name.compareTo(b.name),
     };
     return orderDir == 'desc' ? -result : result;
@@ -361,7 +410,7 @@ Expression<bool> _rarityCompareExpression(Expression<int> col, FilterOp op, Stri
   final v = rawValue.toLowerCase();
   final rarityOrder = ['common', 'uncommon', 'rare', 'mythic'];
   final index = rarityOrder.indexOf(v) + 1;
-  if (index < 0 || index > 4) throw FormatException('Ungültige Seltenheit: $rawValue');
+  if (index < 1 || index > 4) throw FormatException('Ungültige Seltenheit: $rawValue');
   return _numericExpression(col.cast<double>(), op, index.toString());
 }
 
@@ -424,9 +473,267 @@ Expression<String> _tildeToNamePattern(Expression<String> nameCol, String rawVal
   return pattern + const Variable<String>('%');
 }
 
-Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
+Expression<bool> _powerToughnessCompareExpression(Expression<String> col, FilterOp op, Expression<String> otherCol) {
+  final colNum = col.cast<double>();
+  final otherColNum = otherCol.cast<double>();
+  return switch (op) {
+    FilterOp.contains || FilterOp.eq => colNum.equalsExp(otherColNum),
+    FilterOp.ne => colNum.equalsExp(otherColNum).not(),
+    FilterOp.gt => colNum.isBiggerThan(otherColNum),
+    FilterOp.gte => colNum.isBiggerOrEqual(otherColNum),
+    FilterOp.lt => colNum.isSmallerThan(otherColNum),
+    FilterOp.lte => colNum.isSmallerOrEqual(otherColNum),
+  };
+}
+
+Expression<bool> _dateCompareExpression(Expression<String> col, FilterOp op, DateTime date) {
+  final colDate = col.cast<DateTime>();
+  return switch (op) {
+    FilterOp.contains || FilterOp.eq => colDate.equals(date),
+    FilterOp.ne => colDate.equals(date).not(),
+    FilterOp.gt => colDate.isBiggerThanValue(date),
+    FilterOp.gte => colDate.isBiggerOrEqualValue(date),
+    FilterOp.lt => colDate.isSmallerThanValue(date),
+    FilterOp.lte => colDate.isSmallerOrEqualValue(date),
+  };
+}
+
+List<String> _parseManaSymbols(String value) {
+  if (value.contains('{')) {
+    final matches = RegExp(r'\{([^}]+)\}').allMatches(value);
+    return matches.map((m) => '{${m.group(1)!.toUpperCase()}}').toList();
+  }
+  final upper = value.toUpperCase();
+  const validChars = 'WUBRGCSXYZP';
+  final symbols = <String>[];
+  final digitBuf = StringBuffer();
+
+  void flushDigits() {
+    if (digitBuf.isNotEmpty) {
+      symbols.add('{${digitBuf.toString()}}');
+      digitBuf.clear();
+    }
+  }
+
+  for (final c in upper.split('')) {
+    if (int.tryParse(c) != null) {
+      digitBuf.write(c);
+    } else if (validChars.contains(c)) {
+      flushDigits();
+      symbols.add('{$c}');
+    } else {
+      throw FormatException('Ungültiges Manakosten-Symbol: $value');
+    }
+  }
+  flushDigits();
+  return symbols;
+}
+
+Expression<String> _stripSymbols(Expression<String> col, Iterable<String> symbols) {
+  var expr = col;
+  for (final s in symbols) {
+    expr = FunctionCallExpression<String>('REPLACE', [expr, Constant(s), const Constant('')]);
+  }
+  return expr;
+}
+
+Expression<bool> _manaCostExpression(Expression<String> col, FilterOp op, String rawValue) {
+  // TODO: Handle deduplicated mana cost
+  final symbols = _parseManaSymbols(rawValue).toSet().toList();
+  final hasAll = symbols.map((s) => col.like('%$s%')).reduce((a, b) => a & b);
+  final isSubset = _stripSymbols(col, symbols).equals('');
+  final isEqual = hasAll & isSubset;
+
+  return switch (op) {
+    FilterOp.contains => hasAll,
+    FilterOp.eq => isEqual,
+    FilterOp.ne => isEqual.not(),
+    FilterOp.gte => hasAll,
+    FilterOp.gt => hasAll & isEqual.not(),
+    FilterOp.lte => isSubset,
+    FilterOp.lt => isSubset & isEqual.not(),
+  };
+}
+
+Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, List<String>> oracleTagIds) {
+  switch (value.toLowerCase()) {
+    // Mana Costs
+    case 'hybrid':
+      return t.manaCost.like('%W/U%') | t.manaCost.like('%W/B%') | t.manaCost.like('%B/R%') | t.manaCost.like('%B/G%') | t.manaCost.like('%U/B%') | t.manaCost.like('%U/R%') | t.manaCost.like('%R/G%') | t.manaCost.like('%R/W%') | t.manaCost.like('%G/W%') | t.manaCost.like('%G/U%');
+    case 'phyrexian':
+      return t.manaCost.like('%/P}%');
+    // Multi-faced Cards
+    case 'split' || 'flip' || 'transform' || 'meld' || 'leveler' || 'mdfc':
+      return t.layout.equals(value.toLowerCase().replaceAll('mdfc', 'modal_dfc'));
+    case 'dfc':
+      return t.layout.equals('transform') | t.layout.equals('modal_dfc');
+    case 'meldpart':
+      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%melds into%'));
+    case 'meldresult':
+      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%melds into%')).not();
+    // Spells, Permanents, and Effects
+    case 'spell':
+      return t.typeLine.like('%Instant%') | t.typeLine.like('%Sorcery%');
+    case 'permanent':
+      return t.typeLine.like('%Creature%') | t.typeLine.like('%Artifact%') | t.typeLine.like('%Enchantment%') | t.typeLine.like('%Planeswalker%') | t.typeLine.like('%Land%') | t.typeLine.like('%Battle%') | t.typeLine.like('%Conspiracy%') | t.typeLine.like('%Phenomenon%') | t.typeLine.like('%Plane%') | t.typeLine.like('%Scheme%');
+    case 'historic':
+      return t.typeLine.like('%Artifact%') | t.typeLine.like('%Legendary%') | t.typeLine.like('%Saga%');
+    case 'party':
+      return t.typeLine.like('%Cleric%') | t.typeLine.like('%Rogue%') | t.typeLine.like('%Warrior%') | t.typeLine.like('%Wizard%') | t.oracleText.like('%changeling%');
+    case 'outlaw':
+      return t.typeLine.like('%Rogue%') | t.typeLine.like('%Warlock%') | t.typeLine.like('%Assassin%') | t.typeLine.like('%Pirate%') | t.typeLine.like('%Mercenary%') | t.oracleText.like('%changeling%');
+    case 'modal':
+      return t.oracleText.like('%choose%') & t.oracleText.like('%—%');
+    case 'vanilla':
+      return t.oracleText.isNull() | t.oracleText.equals('');
+    case 'frenchvanilla':
+      return _tagExpression(t, 'french-vanilla', true, oracleTagIds, const {});
+    case 'bear':
+      return t.power.equals('2') & t.toughness.equals('2') & t.cmc.equals(2);
+    // Extra Cards and Funny Cards
+    case 'funny':
+      return t.setType.equals('funny');
+    // Rarity
+    case 'newinpauper':
+      return const Constant(true); // TODO: Implement
+    // Sets and Blocks
+    case 'booster':
+      return t.booster.equals(true);
+    case 'promo': 
+      return t.promo.equals(true);
+    case 'datestamped':
+      return t.securityStamp.equals('date');
+    // Format Legality
+    case 'commander':
+      return _legalityColumn(t, 'commander').equals('legal') & (
+        t.oracleText.like('%can be your commander%') |
+        ((t.typeLine.like('%creature%') | t.typeLine.like('%vehicle%')) & t.typeLine.like('%legendary%')) |
+        (t.typeLine.like('Legendary Artifact — Spacecraft') & t.power.isNotNull()) |
+        t.typeLine.like('%background%') |
+        t.name.equals('Grist, the Hunger Tide'));
+    case 'brawler':
+      return _legalityColumn(t, 'brawl').equals('legal') & (
+        ((t.typeLine.like('%creature%') | t.typeLine.like('%vehicle%') | t.typeLine.like('%planeswalker%')) & t.typeLine.like('%legendary%')) |
+        (t.typeLine.like('Legendary Artifact — Spacecraft') & t.power.isNotNull()));
+    case 'companion':
+      return t.oracleText.like('%Companion — %');
+    case 'duelcommander':
+      return _legalityColumn(t, 'duel').equals('legal') & (
+        t.oracleText.like('%can be your commander%') |
+        (t.typeLine.like('%creature%') & t.typeLine.like('%legendary%')) |
+        t.name.equals('Grist, the Hunger Tide'));
+    case 'oathbreaker':
+      return _legalityColumn(t, 'oathbreaker').equals('legal') &
+        t.typeLine.like('%planeswalker%') &
+        t.typeLine.like('%creature%').not() &
+        t.typeLine.like('%battle%').not() &
+        t.layout.equals('meld').not();
+    case 'partner':
+      return t.oracleText.like('%Partner%');
+    case 'gamechanger':
+      return t.gameChanger.equals(true);
+    case 'reserved':
+      return t.reserved.equals(true);
+    // Border, Frame, Foil & Resolution
+    case 'full':
+      return t.fullArt.equals(true);
+    case 'nonfoil':
+      return t.foil.equals(false);
+    case 'foil':
+      return t.foil.equals(true);
+    case 'etched':
+      return t.etched.equals(true);
+    case 'glossy':
+      return t.glossy.equals(true);
+    case 'hires':
+      return t.highresImage.equals(true);
+    // Reprints
+    case 'reprint':
+      return t.reprint.equals(true);
+    case 'unique':
+      return const Constant(true); // TODO: Implement (only a single set)
+    // Shortcuts and Nicknames
+    case 'bikeland':
+    case 'cycleland':
+    case 'bicycleland':
+      return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.\)\\nThis land enters tapped\.\\nCycling \{2\} \(\{2\}, Discard this card: Draw a card\.\)');
+    case 'bondland':
+    case 'crowdland':
+    case 'bbdland':
+    case 'battlebondland':
+      return t.oracleText.regexp(r'This land enters tapped unless you have two or more opponents\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
+    case 'bounceland':
+    case 'karoo':
+      return t.oracleText.regexp(r'When this land enters, return a land you control to its owner’s hand\.') |
+        t.oracleText.regexp(r'When this land enters, sacrifice it unless you return an untapped (Plains|Island|Swamp|Mountain|Forest) you control to its owner’s hand\.');
+    case 'canopyland':
+    case 'canland':
+      return t.oracleText.regexp(r'\{T\}, Pay 1 life: Add \{[WUBRG]\} or \{[WUBRG]\}\.\\n\{1\}, \{T\}, Sacrifice this land: Draw a card\.');
+    case 'checkland':
+      return t.oracleText.regexp(r'This land enters tapped unless you control (an|a) (Plains|Island|Swamp|Mountain|Forest) or (an|a) (Plains|Island|Swamp|Mountain|Forest)\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
+    case 'creatureland':
+    case 'manland':
+      return _tagExpression(t, 'creatureland', true, oracleTagIds, const {});
+    case 'dual':
+      return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.\)') & t.typeLine.regexp(r'Land — (Plains|Island|Swamp|Mountain|Forest)');
+    case 'fastland':
+      return t.oracleText.regexp(r'This land enters tapped unless you control two or fewer other lands\.\\n\{T\}: Add \{[WUBRG]\}\ or \{[WUBRG]\}\.');
+    case 'fetchland':
+      return t.oracleText.regexp(r'\{T\}, Pay 1 life, Sacrifice this land: Search your library for (an|a) (Plains|Island|Swamp|Mountain|Forest) or (Plains|Island|Swamp|Mountain|Forest) card, put it onto the battlefield, then shuffle\.');
+    case 'filterland':
+      return t.oracleText.regexp(r'\{T\}: Add \{C\}\.\\n\{[WUBRG]/[WUBRG]\}, \{T\}: Add \{[WUBRG]\}\{[WUBRG]\}, \{[WUBRG]\}\{[WUBRG]\}, or \{[WUBRG]\}\{[WUBRG]\}\.') |
+        t.oracleText.regexp(r'\{1\}, \{T\}: Add \{[WUBRG]\}\{[WUBRG]\}\.') |
+        t.name.like('%Cascading Cataracts%') | t.name.like('%Crystal Quarry%');
+    case 'gainland':
+      return t.oracleText.regexp(r'This land enters tapped\.\\nWhen this land enters, you gain 1 life\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
+    case 'painland':
+      return t.oracleText.regexp(r'\{T\}: Add \{C\}\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\. This land deals 1 damage to you\.');
+    case 'pathway':
+      return t.typeLine.equals('Land // Land');
+    case 'scryland':
+      return t.oracleText.regexp(r'This land enters tapped\.\\nWhen this land enters, scry 1\. \(Look at the top card of your library\. You may put that card on the bottom\.\)\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
+    case 'surveilland':
+      return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.\)\\nThis land enters tapped\.\\nWhen this land enters, surveil 1\. \(Look at the top card of your library\. You may put it into your graveyard\.\)');
+    case 'shadowland':
+    case 'snarl':
+      return t.oracleText.regexp(r'As this land enters, you may reveal (an|a) (Plains|Island|Swamp|Mountain|Forest) or (Plains|Island|Swamp|Mountain|Forest) card from your hand\. If you don\’t, this land enters tapped\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
+    case 'shockland':
+      return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\}\.\)\\nAs this land enters, you may pay 2 life\. If you don’t, it enters tapped\.');
+    case 'slowland':
+      return t.oracleText.regexp(r'This land enters tapped unless you control two or more other lands\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
+    case 'storageland':
+      return _tagExpression(t, 'storage-land', true, oracleTagIds, const {});
+    case 'tangoland':
+    case 'battleland':
+      return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\}\.\)\\nThis land enters tapped unless you control two or more basic lands\.');
+    case 'tricycleland':
+    case 'trikeland':
+    case 'triome':
+      return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\}, \{[WUBRG]\}, or \{[WUBRG]\}\.\)\\nThis land enters tapped\.\\nCycling \{3\} \(\{3\}, Discard this card: Draw a card\.\)');
+    case 'triland':
+      return t.oracleText.regexp(r'This land enters tapped\.\\n\{T\}: Add \{[WUBRG]\}, \{[WUBRG]\}, or \{[WUBRG]\}\.');
+    case 'masterpiece':
+      return t.setType.equals('masterpiece');
+    // Default
+    default:
+      throw FormatException('Unbekanntes is: $value');
+  }
+}
+
+Expression<bool> _tagExpression($ScryfallCardsTable t, String tag, bool isOracleTag, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds) {
+  final lookup = isOracleTag ? oracleTagIds : illustrationTagIds;
+  final ids = lookup[tag.toLowerCase()] ?? const <String>[];
+  if (ids.isEmpty) return const Constant(false);
+  return isOracleTag ? t.oracleId.isIn(ids) : t.illustrationId.isIn(ids);
+}
+
+Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds) {
   // TODO: Handle faces
-  // TODO: Unsupported filters: edhrecrank, cube, game
+  // Unsupported filters (from the original scryfall syntax):
+  // - edhrecrank (not included in scryfall data)
+  // - cube (not included in scryfall data)
+  // - game (paper only)
+  // - new (way to complicated to be worth it)
   switch (f.key) {
     case 'name':
       return t.name.like('%${f.value}%') | t.printedName.like('%${f.value}%') | t.flavorName.like('%${f.value}%');
@@ -458,24 +765,27 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     // Mana Costs
     case 'm':
     case 'mana':
-      return const Constant(true); // TODO: Implement
+      return _manaCostExpression(t.manaCost, f.op, f.value);
     
     case 'cmc':
     case 'mv':
       return _numericExpression(t.cmc, f.op, f.value);
+    
+    case 'produces':
+      return _colorMaskExpression(t.producedManaMask, f.op, f.value, false);
 
     // Power, Toughness, and Loyalty
     case 'pow':
     case 'power':
       if (f.value == 'tou' || f.value == 'toughness') {
-        return const Constant(true); // TODO: Implement (power vs toughness comparison)
+        return _powerToughnessCompareExpression(t.power, f.op, t.toughness);
       }
       return _numericStringExpression(t.power, f.op, f.value);
     
     case 'tou':
     case 'toughness':
       if (f.value == 'pow' || f.value == 'power') {
-        return const Constant(true); // TODO: Implement (toughness vs power comparison)
+        return _powerToughnessCompareExpression(t.toughness, f.op, t.power);
       }
       return _numericStringExpression(t.toughness, f.op, f.value);
     
@@ -494,6 +804,10 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     case 'set':
     case 'edition':
       return t.setCode.equals(f.value.toLowerCase());
+    
+    case 'cn':
+    case 'number':
+      return t.collectorNumber.equals(f.value.toLowerCase());
 
     case 'b':
     case 'block':
@@ -505,7 +819,7 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     
     case 'st':
     case 'set_type':
-      return const Constant(true); // TODO: Implement (sets not yet in database)
+      return t.setType.equals(f.value.toLowerCase());
 
     // Format Legality
     case 'f':
@@ -542,39 +856,37 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
     case 'wm':
     case 'watermark':
       return t.watermark.like('%${f.value}%');
-    
-    case 'new':
-      return const Constant(true); // TODO: Implement
       
     // Border, Frame, Foil & Resolution
     case 'border':
-      return const Constant(true); // TODO: Implement
+      return t.borderColor.equals(f.value.toLowerCase());
 
     case 'frame':
-      return const Constant(true); // TODO: Implement
+      return t.frame.equals(f.value.toLowerCase());
     
     case 'stamp':
-      return const Constant(true); // TODO: Implement
+      return t.securityStamp.equals(f.value.toLowerCase());
 
     // Year
     case 'year':
       int year = (f.value == 'now' || f.value == 'today') ? DateTime.now().year : int.tryParse(f.value) ?? 0;
-      return const Constant(true); // TODO: Implement (year comparison)
+      return _numericExpression(t.releasedAtYear.cast<double>(), f.op, year.toString());
     
     case 'date':
       DateTime date = (f.value == 'now' || f.value == 'today') ? DateTime.now() : DateTime.tryParse(f.value) ?? DateTime(0);
-      return const Constant(true); // TODO: Implement (date comparison)
+      return _dateCompareExpression(t.releasedAt, f.op, date);
 
     // Tagger Tags
     case 'art':
     case 'atag':
     case 'arttag':
-      return const Constant(true); // TODO: Implement
-    
+      return _tagExpression(t, f.value, false, oracleTagIds, illustrationTagIds);
+
     case 'function':
+    case 'tag':
     case 'otag':
     case 'oracletag':
-      return const Constant(true); // TODO: Implement
+      return _tagExpression(t, f.value, true, oracleTagIds, illustrationTagIds);
 
     // Languages
     case 'lang':
@@ -584,23 +896,23 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f) {
 
     // Is and Not
     case 'is':
-      return const Constant(true); // TODO: Implement
+      return _isExpression(t, f.value, oracleTagIds);
     case 'not':
-      return const Constant(true); // TODO: Implement
+      return _isExpression(t, f.value, oracleTagIds).not();
 
     default:
-      return const Constant(true);
+      return throw FormatException('Unbekannter key: $t.key');
   }
 }
 
-Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token) {
+Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds) {
   if (token is ListToken) {
     if (token.tokens.isEmpty) return const Constant(true);
-    final compiled = token.tokens.map((tok) => compileQueryToken(t, tok)).toList();
+    final compiled = token.tokens.map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds)).toList();
     final combined = compiled.reduce((a, b) => token.isOR ? (a | b) : (a & b));
     return token.isNegated ? combined.not() : combined;
   }
   final f = token as FilterToken;
-  final expr = _compileFilter(t, f);
+  final expr = _compileFilter(t, f, oracleTagIds, illustrationTagIds);
   return f.isNegated ? expr.not() : expr;
 }

@@ -43,6 +43,7 @@ class ScryfallCards extends Table {
   TextColumn get rarity => text()();
   IntColumn get rarityValue => integer().withDefault(const Constant(0))();
   TextColumn get releasedAt => text()();
+  IntColumn get releasedAtYear => integer().withDefault(const Constant(0))();
 
   TextColumn get scryfallUri => text()();
   TextColumn get uri => text()();
@@ -268,11 +269,18 @@ class AppDatabase extends _$AppDatabase {
     final hasTypeFilter = containsTypeFilter(tokens);
     final hasSetFilter = containsSetFilter(tokens);
 
+    final oracleTagSlugs = collectOracleTagLookups(tokens);
+    final illustrationTagSlugs = collectIllustrationTagLookups(tokens);
+    final oracleTagIds = await _resolveTagLookups(oracleTagSlugs, 'oracle');
+    final illustrationTagIds = await _resolveTagLookups(illustrationTagSlugs, 'illustration');
+
     final query = select(scryfallCards)
       ..where((t) {
         Expression<bool> expr = const Constant(true);
         if (tokens.isNotEmpty) {
-          expr = tokens.map((tok) => compileQueryToken(t, tok)).reduce((a, b) => a & b);
+          expr = tokens
+              .map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds))
+              .reduce((a, b) => a & b);
         }
         if (!hasTypeFilter) {
           expr = expr & t.layout.isNotIn(['token', 'double_faced_token', 'emblem', 'host', 'art_series', 'planar', 'scheme', 'vanguard']);
@@ -292,5 +300,34 @@ class AppDatabase extends _$AppDatabase {
     scopeCards(rows, searchScope);
     sortCards(rows, orderBy, orderDir);
     return rows;
+  }
+
+  Future<Map<String, List<String>>> _resolveTagLookups(Set<String> slugs, String tagType) async {
+    if (slugs.isEmpty) return {};
+
+    final allTags = await (select(scryfallTags)..where((t) => t.type.equals(tagType))).get();
+    final byId = {for (final tag in allTags) tag.scryfallId: tag};
+
+    final result = <String, List<String>>{};
+    for (final slug in slugs) {
+      final roots = allTags.where((t) => t.slug == slug || t.aliasesJson.contains(slug));
+      if (roots.isEmpty) continue;
+
+      final ids = <String>{};
+      final visited = <String>{};
+      final queue = [for (final r in roots) r.scryfallId];
+
+      while (queue.isNotEmpty) {
+        final currentId = queue.removeLast();
+        if (!visited.add(currentId)) continue;
+        final row = byId[currentId];
+        if (row == null) continue;
+        ids.addAll(row.taggedJson);
+        queue.addAll(row.childIdsJson);
+      }
+
+      if (ids.isNotEmpty) result[slug] = ids.toList();
+    }
+    return result;
   }
 }

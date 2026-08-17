@@ -6,7 +6,6 @@ import 'package:drift/drift.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 
 import 'database.dart';
 import 'scryfall_download.dart';
@@ -229,7 +228,8 @@ class ScryfallDataParser {
       rarity: _stringValue(card, 'rarity'),
       rarityValue: Value(_rarityValue(_stringValue(card, 'rarity'))),
       releasedAt: _stringValue(card, 'released_at'),
-      
+      releasedAtYear: Value(_doubleValue(card, 'released_at_year').toInt()),
+
       scryfallUri: _stringValue(card, 'scryfall_uri'),
       uri: _stringValue(card, 'uri'),
       rulingsUri: _stringValue(card, 'rulings_uri'),
@@ -455,12 +455,24 @@ class ScryfallDataParser {
       slug: _stringValue(tag, 'slug'),
       description: _stringField(tag, 'description') ?? '',
       type: _stringValue(tag, 'type'),
-      
       parentIdsJson: _stringListField(tag, 'parent_ids'),
       childIdsJson: _stringListField(tag, 'child_ids'),
       aliasesJson: _stringListField(tag, 'aliases'),
-      taggedJson: _stringListField(tag, 'tagged')
+      taggedJson: _taggedIdsField(tag),
     );
+  }
+
+  static List<String> _taggedIdsField(Map<String, dynamic> tag) {
+    final taggings = _listField(tag, 'taggings');
+    final ids = <String>[];
+    for (final entry in taggings) {
+      if (entry is Map) {
+        final map = entry.cast<String, dynamic>();
+        final id = map['oracle_id'] ?? map['illustration_id'];
+        if (id != null) ids.add(id.toString());
+      }
+    }
+    return ids;
   }
 
   // Helper functions
