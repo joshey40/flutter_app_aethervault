@@ -1,27 +1,38 @@
 {
   "app": {
-    "name": "Aethervault",
-    "subtitle": "Decks tracken, die Vault aufbauen und die Kollektion organisieren."
-  },
-  "auth": {
-    "createAccountTitle": "Erstelle deine Vault",
-    "createAccountSubtitle": "Erstelle dein Firebase-Konto für Aethervault.",
-    "displayName": "Anzeigename",
-    "email": "E-Mail",
-    "password": "Passwort",
-    "confirmPassword": "Passwort bestätigen",
-    "signInAction": "Anmelden",
-    "signUpAction": "Konto erstellen",
-    "switchToSignUp": "Noch kein Konto? Konto erstellen",
-    "switchToSignIn": "Schon ein Konto? Anmelden"
+    "name": "Aethervault"
   },
   "nav": {
     "overview": "Übersicht",
-    "decks": "Decks",
     "search": "Suche",
     "collection": "Kollektion",
-    "settings": "Einstellungen",
-    "play": "Spielen"
+    "decks": "Decks",
+    "play": "Spielen",
+    "settings": "Einstellungen"
+  },
+  "search": {
+    "search_error": "Suchfehler: ",
+    "bar_hint": "Suche",
+    "hint": "Suche nach einer Karte über Scryfall Syntax",
+    "flip_card": "Karte umdrehen",
+    "results": "Ergebnisse",
+    "no_results": "Keine Ergebnisse gefunden.",
+    "scope": {
+      "one_card": "Eine Karte",
+      "all_prints": "Alle Drucke"
+    },
+    "order": {
+      "asc": "Aufsteigend",
+      "desc": "Absteigend",
+      "name": "Name",
+      "released_at": "Erscheinung",
+      "set": "Set",
+      "rarity": "Seltenheit",
+      "color": "Farbe",
+      "cmc": "CMC",
+      "power": "Stärke",
+      "toughness": "Widerstand"
+    }
   },
   "lifecounter": {
     "title": "Lebenszähler",
@@ -36,6 +47,8 @@
     "random": {
       "title": "Münze / Würfel",
       "coin": "Münze",
+      "heads": "Kopf",
+      "tails": "Zahl",
       "player": "Spieler",
       "rollAgain": "Nochmal würfeln"
     },
@@ -47,15 +60,16 @@
   },
   "settings": {
     "title": "Einstellungen",
-    "accountSection": "Konto",
     "preferencesSection": "Präferenzen",
-    "signOut": "Abmelden",
     "darkMode": "Dunkler Modus",
     "language": "Sprache",
     "english": "Englisch",
     "german": "Deutsch",
     "englishShort": "EN",
-    "germanShort": "DE"
+    "germanShort": "DE",
+    "downloadSection": "Download",
+    "downloadData": "Daten herunterladen",
+    "downloadDataDescription": "Lade die neuesten Kartendaten von Scryfall herunter."
   },
   "download": {
     "loading": "Bulk-Daten werden geladen",
@@ -65,22 +79,21 @@
     "waiting": "Bitte warten, während die Daten heruntergeladen werden.",
     "retry": "Erneut versuchen"
   },
+  "parser": {
+    "loading": "Daten werden geparst",
+    "complete": "Parsing abgeschlossen",
+    "failed": "Das Parsing ist fehlgeschlagen.",
+    "current": "Aktuelles Parsing: ",
+    "waiting": "Bitte warten, während die Daten geparst werden.",
+    "retry": "Erneut versuchen",
+    "progress": "Fortschritt: "
+  },
   "ok": "OK",
   "cancel": "Abbrechen",
   "close": "Schließen",
   "confirm": "Bestätigen",
   "back": "Zurück",
   "errors": {
-    "emptyFields": "Bitte fülle alle Pflichtfelder aus.",
-    "passwordMismatch": "Die Passwörter stimmen nicht überein.",
-    "accountExists": "Zu dieser E-Mail existiert bereits ein Konto.",
-    "accountMissing": "Für diese E-Mail existiert noch kein Konto.",
-    "invalidCredentials": "E-Mail oder Passwort ist falsch.",
-    "weakPassword": "Das Passwort ist zu schwach.",
-    "reauthRequired": "Bitte melde dich erneut an, um fortzufahren."
-  },
-  "coin": {
-    "heads": "Kopf",
-    "tails": "Zahl"
+    
   }
 }

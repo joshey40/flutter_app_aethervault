@@ -60,7 +60,7 @@ class _SearchPageState extends State<SearchPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = '${appLocalizations.translate('search_error')}: $e';
+        _errorMessage = '${appLocalizations.translate('search.search_error')}: $e';
         _isLoading = false;
       });
     }
@@ -86,7 +86,7 @@ class _SearchPageState extends State<SearchPage> {
                 child: TextField(
                   controller: _controller,
                   decoration: InputDecoration(
-                    hintText: appLocalizations.translate('search_bar_hint'),
+                    hintText: appLocalizations.translate('search.bar_hint'),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
@@ -127,7 +127,7 @@ class _SearchPageState extends State<SearchPage> {
                 items: ['one_card', 'all_prints']
                     .map((value) => DropdownMenuItem<String>(
                           value: value,
-                          child: Text(appLocalizations.translate(value)),
+                          child: Text(appLocalizations.translate('search.scope.$value')),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -144,7 +144,7 @@ class _SearchPageState extends State<SearchPage> {
                 items: ['name', 'released_at', 'set', 'rarity', 'color', 'cmc', 'power', 'toughness']
                     .map((value) => DropdownMenuItem<String>(
                           value: value,
-                          child: Text(appLocalizations.translate(value)),
+                          child: Text(appLocalizations.translate('search.order.$value')),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -161,7 +161,7 @@ class _SearchPageState extends State<SearchPage> {
                 items: ['asc', 'desc']
                     .map((value) => DropdownMenuItem<String>(
                           value: value,
-                          child: Text(appLocalizations.translate(value)),
+                          child: Text(appLocalizations.translate('search.order.$value')),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -181,7 +181,7 @@ class _SearchPageState extends State<SearchPage> {
           child: Row(
             children: [
               Text(
-                '${appLocalizations.translate('search_results')}: ${_results.length}',
+                '${appLocalizations.translate('search.results')}: ${_results.length}',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 16.0),
@@ -207,8 +207,8 @@ class _SearchPageState extends State<SearchPage> {
               ? Center(
                   child: Text(
                     _controller.text.isEmpty
-                        ? appLocalizations.translate('search_hint')
-                        : (_isLoading ? '' : appLocalizations.translate('no_results')),
+                        ? appLocalizations.translate('search.hint')
+                        : (_isLoading ? '' : appLocalizations.translate('search.no_results')),
                   ),
                 )
               : GridView.builder(
@@ -342,7 +342,7 @@ class _CardTileState extends State<_CardTile> {
                   padding: const EdgeInsets.all(6),
                   constraints: const BoxConstraints(),
                   onPressed: _flip,
-                  tooltip: appLocalizations.translate('flip_card'),
+                  tooltip: appLocalizations.translate('search.flip_card'),
                 ),
               ),
             ),
