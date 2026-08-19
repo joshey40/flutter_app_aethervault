@@ -1,9 +1,9 @@
-
+import 'dart:convert';
 import 'dart:isolate';
 
 import 'package:drift/drift.dart';
 
-import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:async';
 
@@ -55,13 +55,15 @@ class ScryfallDataParser {
   Future<void> parseAllCardData() async {
     // By default, parse only "all_cards", which contains all card data.
     // For testing only parse german and english cards (add Setting later)
-    _progressController.add(ParserProgress(current: 0, total: 3, isRunning: true));
+    _progressController.add(ParserProgress(current: 0, total: 4, isRunning: true));
     await parseBulkData('all_cards', ['en','de']);
-    _progressController.add(ParserProgress(current: 1, total: 3, isRunning: true));
+    _progressController.add(ParserProgress(current: 1, total: 4, isRunning: true));
     await parseTagsBulkData('art_tags');
-    _progressController.add(ParserProgress(current: 2, total: 3, isRunning: true));
+    _progressController.add(ParserProgress(current: 2, total: 4, isRunning: true));
     await parseTagsBulkData('oracle_tags');
-    _progressController.add(ParserProgress(current: 3, total: 3, isRunning: false));
+    _progressController.add(ParserProgress(current: 3, total: 4, isRunning: true));
+    await parseSetsData();
+    _progressController.add(ParserProgress(current: 4, total: 4, isRunning: false));
   }
 
   // Parsing for card bulk data
@@ -414,6 +416,8 @@ class ScryfallDataParser {
       throw StateError('Bulk data file not found: $bulkDataFilePath');
     }
 
+    final tagType = bulkDataType == 'art_tags' ? 'illustration' : 'oracle';
+
     final streamRead = bulkDataFile.openRead();
     var stream = streamRead.transform(utf8.decoder).transform(const LineSplitter());
     if (bulkDataFile.path.endsWith('.gz')) {
@@ -437,7 +441,9 @@ class ScryfallDataParser {
     }
 
     await _database.transaction(() async {
-      await _database.delete(_database.scryfallTags).go();
+      await (_database.delete(_database.scryfallTags)
+            ..where((t) => t.type.equals(tagType)))
+          .go();
       await _database.batch((batch) {
         for (final tag in tags) {
           batch.insert(_database.scryfallTags, tag, mode: InsertMode.insert);
@@ -473,6 +479,54 @@ class ScryfallDataParser {
       }
     }
     return ids;
+  }
+
+  // Parsing sets
+
+  Future<void> parseSetsData() async {
+    final client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse('https://api.scryfall.com/sets'));
+      request.headers.addAll({
+        'User-Agent': 'AetherVault/1.0',
+        'Accept': 'application/json;q=0.9,*/*;q=0.8',
+      });
+
+      final response = await client.send(request);
+      if (response.statusCode != 200) {
+        throw Exception('Failed to fetch sets data: ${response.statusCode}');
+      }
+
+      final responseBody = await response.stream.bytesToString();
+      final decoded = json.decode(responseBody);
+      if (decoded is! Map || !decoded.containsKey('data')) {
+        throw FormatException('Invalid sets data format');
+      }
+
+      for (final setData in decoded['data']) {
+        if (setData is Map) {
+          final setRecord = setData.cast<String, dynamic>();
+          final setCompanion = ScryfallSetsCompanion.insert(
+            scryfallId: _stringValue(setRecord, 'id'),
+            code: _stringValue(setRecord, 'code'),
+            name: _stringValue(setRecord, 'name'),
+            releasedAt: _stringValue(setRecord, 'released_at'),
+            setType: _stringValue(setRecord, 'set_type'),
+            cardCount: _doubleValue(setRecord, 'card_count').toInt(),
+            parentSetCode: Value(_stringField(setRecord, 'parent_set_code')),
+            blockCode: Value(_stringField(setRecord, 'block_code')),
+            blockName: Value(_stringField(setRecord, 'block_name')),
+            nonfoilOnly: _boolValue(setRecord, 'nonfoil_only'),
+            foilOnly: _boolValue(setRecord, 'foil_only'),
+            iconSvgUri: _stringValue(setRecord, 'icon_svg_uri')
+          );
+
+          await _database.into(_database.scryfallSets).insert(setCompanion);
+        }
+      }
+    } finally {
+      client.close();
+    }
   }
 
   // Helper functions

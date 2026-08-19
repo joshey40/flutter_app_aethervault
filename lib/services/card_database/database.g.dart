@@ -8579,6 +8579,741 @@ class ScryfallTagsCompanion extends UpdateCompanion<ScryfallTag> {
   }
 }
 
+class $ScryfallSetsTable extends ScryfallSets
+    with TableInfo<$ScryfallSetsTable, ScryfallSet> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ScryfallSetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _scryfallIdMeta = const VerificationMeta(
+    'scryfallId',
+  );
+  @override
+  late final GeneratedColumn<String> scryfallId = GeneratedColumn<String>(
+    'scryfall_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _releasedAtMeta = const VerificationMeta(
+    'releasedAt',
+  );
+  @override
+  late final GeneratedColumn<String> releasedAt = GeneratedColumn<String>(
+    'released_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _setTypeMeta = const VerificationMeta(
+    'setType',
+  );
+  @override
+  late final GeneratedColumn<String> setType = GeneratedColumn<String>(
+    'set_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cardCountMeta = const VerificationMeta(
+    'cardCount',
+  );
+  @override
+  late final GeneratedColumn<int> cardCount = GeneratedColumn<int>(
+    'card_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _parentSetCodeMeta = const VerificationMeta(
+    'parentSetCode',
+  );
+  @override
+  late final GeneratedColumn<String> parentSetCode = GeneratedColumn<String>(
+    'parent_set_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nonfoilOnlyMeta = const VerificationMeta(
+    'nonfoilOnly',
+  );
+  @override
+  late final GeneratedColumn<bool> nonfoilOnly = GeneratedColumn<bool>(
+    'nonfoil_only',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("nonfoil_only" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _foilOnlyMeta = const VerificationMeta(
+    'foilOnly',
+  );
+  @override
+  late final GeneratedColumn<bool> foilOnly = GeneratedColumn<bool>(
+    'foil_only',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("foil_only" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _blockCodeMeta = const VerificationMeta(
+    'blockCode',
+  );
+  @override
+  late final GeneratedColumn<String> blockCode = GeneratedColumn<String>(
+    'block_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _blockNameMeta = const VerificationMeta(
+    'blockName',
+  );
+  @override
+  late final GeneratedColumn<String> blockName = GeneratedColumn<String>(
+    'block_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _iconSvgUriMeta = const VerificationMeta(
+    'iconSvgUri',
+  );
+  @override
+  late final GeneratedColumn<String> iconSvgUri = GeneratedColumn<String>(
+    'icon_svg_uri',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    scryfallId,
+    code,
+    name,
+    releasedAt,
+    setType,
+    cardCount,
+    parentSetCode,
+    nonfoilOnly,
+    foilOnly,
+    blockCode,
+    blockName,
+    iconSvgUri,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'scryfall_sets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ScryfallSet> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('scryfall_id')) {
+      context.handle(
+        _scryfallIdMeta,
+        scryfallId.isAcceptableOrUnknown(data['scryfall_id']!, _scryfallIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scryfallIdMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('released_at')) {
+      context.handle(
+        _releasedAtMeta,
+        releasedAt.isAcceptableOrUnknown(data['released_at']!, _releasedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_releasedAtMeta);
+    }
+    if (data.containsKey('set_type')) {
+      context.handle(
+        _setTypeMeta,
+        setType.isAcceptableOrUnknown(data['set_type']!, _setTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_setTypeMeta);
+    }
+    if (data.containsKey('card_count')) {
+      context.handle(
+        _cardCountMeta,
+        cardCount.isAcceptableOrUnknown(data['card_count']!, _cardCountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cardCountMeta);
+    }
+    if (data.containsKey('parent_set_code')) {
+      context.handle(
+        _parentSetCodeMeta,
+        parentSetCode.isAcceptableOrUnknown(
+          data['parent_set_code']!,
+          _parentSetCodeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('nonfoil_only')) {
+      context.handle(
+        _nonfoilOnlyMeta,
+        nonfoilOnly.isAcceptableOrUnknown(
+          data['nonfoil_only']!,
+          _nonfoilOnlyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_nonfoilOnlyMeta);
+    }
+    if (data.containsKey('foil_only')) {
+      context.handle(
+        _foilOnlyMeta,
+        foilOnly.isAcceptableOrUnknown(data['foil_only']!, _foilOnlyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_foilOnlyMeta);
+    }
+    if (data.containsKey('block_code')) {
+      context.handle(
+        _blockCodeMeta,
+        blockCode.isAcceptableOrUnknown(data['block_code']!, _blockCodeMeta),
+      );
+    }
+    if (data.containsKey('block_name')) {
+      context.handle(
+        _blockNameMeta,
+        blockName.isAcceptableOrUnknown(data['block_name']!, _blockNameMeta),
+      );
+    }
+    if (data.containsKey('icon_svg_uri')) {
+      context.handle(
+        _iconSvgUriMeta,
+        iconSvgUri.isAcceptableOrUnknown(
+          data['icon_svg_uri']!,
+          _iconSvgUriMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_iconSvgUriMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {scryfallId};
+  @override
+  ScryfallSet map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ScryfallSet(
+      scryfallId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scryfall_id'],
+      )!,
+      code: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}code'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      releasedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}released_at'],
+      )!,
+      setType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}set_type'],
+      )!,
+      cardCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}card_count'],
+      )!,
+      parentSetCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_set_code'],
+      ),
+      nonfoilOnly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}nonfoil_only'],
+      )!,
+      foilOnly: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}foil_only'],
+      )!,
+      blockCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}block_code'],
+      ),
+      blockName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}block_name'],
+      ),
+      iconSvgUri: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon_svg_uri'],
+      )!,
+    );
+  }
+
+  @override
+  $ScryfallSetsTable createAlias(String alias) {
+    return $ScryfallSetsTable(attachedDatabase, alias);
+  }
+}
+
+class ScryfallSet extends DataClass implements Insertable<ScryfallSet> {
+  final String scryfallId;
+  final String code;
+  final String name;
+  final String releasedAt;
+  final String setType;
+  final int cardCount;
+  final String? parentSetCode;
+  final bool nonfoilOnly;
+  final bool foilOnly;
+  final String? blockCode;
+  final String? blockName;
+  final String iconSvgUri;
+  const ScryfallSet({
+    required this.scryfallId,
+    required this.code,
+    required this.name,
+    required this.releasedAt,
+    required this.setType,
+    required this.cardCount,
+    this.parentSetCode,
+    required this.nonfoilOnly,
+    required this.foilOnly,
+    this.blockCode,
+    this.blockName,
+    required this.iconSvgUri,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['scryfall_id'] = Variable<String>(scryfallId);
+    map['code'] = Variable<String>(code);
+    map['name'] = Variable<String>(name);
+    map['released_at'] = Variable<String>(releasedAt);
+    map['set_type'] = Variable<String>(setType);
+    map['card_count'] = Variable<int>(cardCount);
+    if (!nullToAbsent || parentSetCode != null) {
+      map['parent_set_code'] = Variable<String>(parentSetCode);
+    }
+    map['nonfoil_only'] = Variable<bool>(nonfoilOnly);
+    map['foil_only'] = Variable<bool>(foilOnly);
+    if (!nullToAbsent || blockCode != null) {
+      map['block_code'] = Variable<String>(blockCode);
+    }
+    if (!nullToAbsent || blockName != null) {
+      map['block_name'] = Variable<String>(blockName);
+    }
+    map['icon_svg_uri'] = Variable<String>(iconSvgUri);
+    return map;
+  }
+
+  ScryfallSetsCompanion toCompanion(bool nullToAbsent) {
+    return ScryfallSetsCompanion(
+      scryfallId: Value(scryfallId),
+      code: Value(code),
+      name: Value(name),
+      releasedAt: Value(releasedAt),
+      setType: Value(setType),
+      cardCount: Value(cardCount),
+      parentSetCode: parentSetCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentSetCode),
+      nonfoilOnly: Value(nonfoilOnly),
+      foilOnly: Value(foilOnly),
+      blockCode: blockCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(blockCode),
+      blockName: blockName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(blockName),
+      iconSvgUri: Value(iconSvgUri),
+    );
+  }
+
+  factory ScryfallSet.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ScryfallSet(
+      scryfallId: serializer.fromJson<String>(json['scryfallId']),
+      code: serializer.fromJson<String>(json['code']),
+      name: serializer.fromJson<String>(json['name']),
+      releasedAt: serializer.fromJson<String>(json['releasedAt']),
+      setType: serializer.fromJson<String>(json['setType']),
+      cardCount: serializer.fromJson<int>(json['cardCount']),
+      parentSetCode: serializer.fromJson<String?>(json['parentSetCode']),
+      nonfoilOnly: serializer.fromJson<bool>(json['nonfoilOnly']),
+      foilOnly: serializer.fromJson<bool>(json['foilOnly']),
+      blockCode: serializer.fromJson<String?>(json['blockCode']),
+      blockName: serializer.fromJson<String?>(json['blockName']),
+      iconSvgUri: serializer.fromJson<String>(json['iconSvgUri']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'scryfallId': serializer.toJson<String>(scryfallId),
+      'code': serializer.toJson<String>(code),
+      'name': serializer.toJson<String>(name),
+      'releasedAt': serializer.toJson<String>(releasedAt),
+      'setType': serializer.toJson<String>(setType),
+      'cardCount': serializer.toJson<int>(cardCount),
+      'parentSetCode': serializer.toJson<String?>(parentSetCode),
+      'nonfoilOnly': serializer.toJson<bool>(nonfoilOnly),
+      'foilOnly': serializer.toJson<bool>(foilOnly),
+      'blockCode': serializer.toJson<String?>(blockCode),
+      'blockName': serializer.toJson<String?>(blockName),
+      'iconSvgUri': serializer.toJson<String>(iconSvgUri),
+    };
+  }
+
+  ScryfallSet copyWith({
+    String? scryfallId,
+    String? code,
+    String? name,
+    String? releasedAt,
+    String? setType,
+    int? cardCount,
+    Value<String?> parentSetCode = const Value.absent(),
+    bool? nonfoilOnly,
+    bool? foilOnly,
+    Value<String?> blockCode = const Value.absent(),
+    Value<String?> blockName = const Value.absent(),
+    String? iconSvgUri,
+  }) => ScryfallSet(
+    scryfallId: scryfallId ?? this.scryfallId,
+    code: code ?? this.code,
+    name: name ?? this.name,
+    releasedAt: releasedAt ?? this.releasedAt,
+    setType: setType ?? this.setType,
+    cardCount: cardCount ?? this.cardCount,
+    parentSetCode: parentSetCode.present
+        ? parentSetCode.value
+        : this.parentSetCode,
+    nonfoilOnly: nonfoilOnly ?? this.nonfoilOnly,
+    foilOnly: foilOnly ?? this.foilOnly,
+    blockCode: blockCode.present ? blockCode.value : this.blockCode,
+    blockName: blockName.present ? blockName.value : this.blockName,
+    iconSvgUri: iconSvgUri ?? this.iconSvgUri,
+  );
+  ScryfallSet copyWithCompanion(ScryfallSetsCompanion data) {
+    return ScryfallSet(
+      scryfallId: data.scryfallId.present
+          ? data.scryfallId.value
+          : this.scryfallId,
+      code: data.code.present ? data.code.value : this.code,
+      name: data.name.present ? data.name.value : this.name,
+      releasedAt: data.releasedAt.present
+          ? data.releasedAt.value
+          : this.releasedAt,
+      setType: data.setType.present ? data.setType.value : this.setType,
+      cardCount: data.cardCount.present ? data.cardCount.value : this.cardCount,
+      parentSetCode: data.parentSetCode.present
+          ? data.parentSetCode.value
+          : this.parentSetCode,
+      nonfoilOnly: data.nonfoilOnly.present
+          ? data.nonfoilOnly.value
+          : this.nonfoilOnly,
+      foilOnly: data.foilOnly.present ? data.foilOnly.value : this.foilOnly,
+      blockCode: data.blockCode.present ? data.blockCode.value : this.blockCode,
+      blockName: data.blockName.present ? data.blockName.value : this.blockName,
+      iconSvgUri: data.iconSvgUri.present
+          ? data.iconSvgUri.value
+          : this.iconSvgUri,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScryfallSet(')
+          ..write('scryfallId: $scryfallId, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('releasedAt: $releasedAt, ')
+          ..write('setType: $setType, ')
+          ..write('cardCount: $cardCount, ')
+          ..write('parentSetCode: $parentSetCode, ')
+          ..write('nonfoilOnly: $nonfoilOnly, ')
+          ..write('foilOnly: $foilOnly, ')
+          ..write('blockCode: $blockCode, ')
+          ..write('blockName: $blockName, ')
+          ..write('iconSvgUri: $iconSvgUri')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    scryfallId,
+    code,
+    name,
+    releasedAt,
+    setType,
+    cardCount,
+    parentSetCode,
+    nonfoilOnly,
+    foilOnly,
+    blockCode,
+    blockName,
+    iconSvgUri,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ScryfallSet &&
+          other.scryfallId == this.scryfallId &&
+          other.code == this.code &&
+          other.name == this.name &&
+          other.releasedAt == this.releasedAt &&
+          other.setType == this.setType &&
+          other.cardCount == this.cardCount &&
+          other.parentSetCode == this.parentSetCode &&
+          other.nonfoilOnly == this.nonfoilOnly &&
+          other.foilOnly == this.foilOnly &&
+          other.blockCode == this.blockCode &&
+          other.blockName == this.blockName &&
+          other.iconSvgUri == this.iconSvgUri);
+}
+
+class ScryfallSetsCompanion extends UpdateCompanion<ScryfallSet> {
+  final Value<String> scryfallId;
+  final Value<String> code;
+  final Value<String> name;
+  final Value<String> releasedAt;
+  final Value<String> setType;
+  final Value<int> cardCount;
+  final Value<String?> parentSetCode;
+  final Value<bool> nonfoilOnly;
+  final Value<bool> foilOnly;
+  final Value<String?> blockCode;
+  final Value<String?> blockName;
+  final Value<String> iconSvgUri;
+  final Value<int> rowid;
+  const ScryfallSetsCompanion({
+    this.scryfallId = const Value.absent(),
+    this.code = const Value.absent(),
+    this.name = const Value.absent(),
+    this.releasedAt = const Value.absent(),
+    this.setType = const Value.absent(),
+    this.cardCount = const Value.absent(),
+    this.parentSetCode = const Value.absent(),
+    this.nonfoilOnly = const Value.absent(),
+    this.foilOnly = const Value.absent(),
+    this.blockCode = const Value.absent(),
+    this.blockName = const Value.absent(),
+    this.iconSvgUri = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ScryfallSetsCompanion.insert({
+    required String scryfallId,
+    required String code,
+    required String name,
+    required String releasedAt,
+    required String setType,
+    required int cardCount,
+    this.parentSetCode = const Value.absent(),
+    required bool nonfoilOnly,
+    required bool foilOnly,
+    this.blockCode = const Value.absent(),
+    this.blockName = const Value.absent(),
+    required String iconSvgUri,
+    this.rowid = const Value.absent(),
+  }) : scryfallId = Value(scryfallId),
+       code = Value(code),
+       name = Value(name),
+       releasedAt = Value(releasedAt),
+       setType = Value(setType),
+       cardCount = Value(cardCount),
+       nonfoilOnly = Value(nonfoilOnly),
+       foilOnly = Value(foilOnly),
+       iconSvgUri = Value(iconSvgUri);
+  static Insertable<ScryfallSet> custom({
+    Expression<String>? scryfallId,
+    Expression<String>? code,
+    Expression<String>? name,
+    Expression<String>? releasedAt,
+    Expression<String>? setType,
+    Expression<int>? cardCount,
+    Expression<String>? parentSetCode,
+    Expression<bool>? nonfoilOnly,
+    Expression<bool>? foilOnly,
+    Expression<String>? blockCode,
+    Expression<String>? blockName,
+    Expression<String>? iconSvgUri,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (scryfallId != null) 'scryfall_id': scryfallId,
+      if (code != null) 'code': code,
+      if (name != null) 'name': name,
+      if (releasedAt != null) 'released_at': releasedAt,
+      if (setType != null) 'set_type': setType,
+      if (cardCount != null) 'card_count': cardCount,
+      if (parentSetCode != null) 'parent_set_code': parentSetCode,
+      if (nonfoilOnly != null) 'nonfoil_only': nonfoilOnly,
+      if (foilOnly != null) 'foil_only': foilOnly,
+      if (blockCode != null) 'block_code': blockCode,
+      if (blockName != null) 'block_name': blockName,
+      if (iconSvgUri != null) 'icon_svg_uri': iconSvgUri,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ScryfallSetsCompanion copyWith({
+    Value<String>? scryfallId,
+    Value<String>? code,
+    Value<String>? name,
+    Value<String>? releasedAt,
+    Value<String>? setType,
+    Value<int>? cardCount,
+    Value<String?>? parentSetCode,
+    Value<bool>? nonfoilOnly,
+    Value<bool>? foilOnly,
+    Value<String?>? blockCode,
+    Value<String?>? blockName,
+    Value<String>? iconSvgUri,
+    Value<int>? rowid,
+  }) {
+    return ScryfallSetsCompanion(
+      scryfallId: scryfallId ?? this.scryfallId,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      releasedAt: releasedAt ?? this.releasedAt,
+      setType: setType ?? this.setType,
+      cardCount: cardCount ?? this.cardCount,
+      parentSetCode: parentSetCode ?? this.parentSetCode,
+      nonfoilOnly: nonfoilOnly ?? this.nonfoilOnly,
+      foilOnly: foilOnly ?? this.foilOnly,
+      blockCode: blockCode ?? this.blockCode,
+      blockName: blockName ?? this.blockName,
+      iconSvgUri: iconSvgUri ?? this.iconSvgUri,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (scryfallId.present) {
+      map['scryfall_id'] = Variable<String>(scryfallId.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (releasedAt.present) {
+      map['released_at'] = Variable<String>(releasedAt.value);
+    }
+    if (setType.present) {
+      map['set_type'] = Variable<String>(setType.value);
+    }
+    if (cardCount.present) {
+      map['card_count'] = Variable<int>(cardCount.value);
+    }
+    if (parentSetCode.present) {
+      map['parent_set_code'] = Variable<String>(parentSetCode.value);
+    }
+    if (nonfoilOnly.present) {
+      map['nonfoil_only'] = Variable<bool>(nonfoilOnly.value);
+    }
+    if (foilOnly.present) {
+      map['foil_only'] = Variable<bool>(foilOnly.value);
+    }
+    if (blockCode.present) {
+      map['block_code'] = Variable<String>(blockCode.value);
+    }
+    if (blockName.present) {
+      map['block_name'] = Variable<String>(blockName.value);
+    }
+    if (iconSvgUri.present) {
+      map['icon_svg_uri'] = Variable<String>(iconSvgUri.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ScryfallSetsCompanion(')
+          ..write('scryfallId: $scryfallId, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('releasedAt: $releasedAt, ')
+          ..write('setType: $setType, ')
+          ..write('cardCount: $cardCount, ')
+          ..write('parentSetCode: $parentSetCode, ')
+          ..write('nonfoilOnly: $nonfoilOnly, ')
+          ..write('foilOnly: $foilOnly, ')
+          ..write('blockCode: $blockCode, ')
+          ..write('blockName: $blockName, ')
+          ..write('iconSvgUri: $iconSvgUri, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -8586,6 +9321,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ScryfallCardFacesTable scryfallCardFaces =
       $ScryfallCardFacesTable(this);
   late final $ScryfallTagsTable scryfallTags = $ScryfallTagsTable(this);
+  late final $ScryfallSetsTable scryfallSets = $ScryfallSetsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -8594,6 +9330,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     scryfallCards,
     scryfallCardFaces,
     scryfallTags,
+    scryfallSets,
   ];
 }
 
@@ -12364,6 +13101,349 @@ typedef $$ScryfallTagsTableProcessedTableManager =
       ScryfallTag,
       PrefetchHooks Function()
     >;
+typedef $$ScryfallSetsTableCreateCompanionBuilder =
+    ScryfallSetsCompanion Function({
+      required String scryfallId,
+      required String code,
+      required String name,
+      required String releasedAt,
+      required String setType,
+      required int cardCount,
+      Value<String?> parentSetCode,
+      required bool nonfoilOnly,
+      required bool foilOnly,
+      Value<String?> blockCode,
+      Value<String?> blockName,
+      required String iconSvgUri,
+      Value<int> rowid,
+    });
+typedef $$ScryfallSetsTableUpdateCompanionBuilder =
+    ScryfallSetsCompanion Function({
+      Value<String> scryfallId,
+      Value<String> code,
+      Value<String> name,
+      Value<String> releasedAt,
+      Value<String> setType,
+      Value<int> cardCount,
+      Value<String?> parentSetCode,
+      Value<bool> nonfoilOnly,
+      Value<bool> foilOnly,
+      Value<String?> blockCode,
+      Value<String?> blockName,
+      Value<String> iconSvgUri,
+      Value<int> rowid,
+    });
+
+class $$ScryfallSetsTableFilterComposer
+    extends Composer<_$AppDatabase, $ScryfallSetsTable> {
+  $$ScryfallSetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get releasedAt => $composableBuilder(
+    column: $table.releasedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get setType => $composableBuilder(
+    column: $table.setType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get cardCount => $composableBuilder(
+    column: $table.cardCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parentSetCode => $composableBuilder(
+    column: $table.parentSetCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get nonfoilOnly => $composableBuilder(
+    column: $table.nonfoilOnly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get foilOnly => $composableBuilder(
+    column: $table.foilOnly,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get blockCode => $composableBuilder(
+    column: $table.blockCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get blockName => $composableBuilder(
+    column: $table.blockName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get iconSvgUri => $composableBuilder(
+    column: $table.iconSvgUri,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ScryfallSetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ScryfallSetsTable> {
+  $$ScryfallSetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get releasedAt => $composableBuilder(
+    column: $table.releasedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get setType => $composableBuilder(
+    column: $table.setType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get cardCount => $composableBuilder(
+    column: $table.cardCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parentSetCode => $composableBuilder(
+    column: $table.parentSetCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get nonfoilOnly => $composableBuilder(
+    column: $table.nonfoilOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get foilOnly => $composableBuilder(
+    column: $table.foilOnly,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get blockCode => $composableBuilder(
+    column: $table.blockCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get blockName => $composableBuilder(
+    column: $table.blockName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get iconSvgUri => $composableBuilder(
+    column: $table.iconSvgUri,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ScryfallSetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ScryfallSetsTable> {
+  $$ScryfallSetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get releasedAt => $composableBuilder(
+    column: $table.releasedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get setType =>
+      $composableBuilder(column: $table.setType, builder: (column) => column);
+
+  GeneratedColumn<int> get cardCount =>
+      $composableBuilder(column: $table.cardCount, builder: (column) => column);
+
+  GeneratedColumn<String> get parentSetCode => $composableBuilder(
+    column: $table.parentSetCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get nonfoilOnly => $composableBuilder(
+    column: $table.nonfoilOnly,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get foilOnly =>
+      $composableBuilder(column: $table.foilOnly, builder: (column) => column);
+
+  GeneratedColumn<String> get blockCode =>
+      $composableBuilder(column: $table.blockCode, builder: (column) => column);
+
+  GeneratedColumn<String> get blockName =>
+      $composableBuilder(column: $table.blockName, builder: (column) => column);
+
+  GeneratedColumn<String> get iconSvgUri => $composableBuilder(
+    column: $table.iconSvgUri,
+    builder: (column) => column,
+  );
+}
+
+class $$ScryfallSetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ScryfallSetsTable,
+          ScryfallSet,
+          $$ScryfallSetsTableFilterComposer,
+          $$ScryfallSetsTableOrderingComposer,
+          $$ScryfallSetsTableAnnotationComposer,
+          $$ScryfallSetsTableCreateCompanionBuilder,
+          $$ScryfallSetsTableUpdateCompanionBuilder,
+          (
+            ScryfallSet,
+            BaseReferences<_$AppDatabase, $ScryfallSetsTable, ScryfallSet>,
+          ),
+          ScryfallSet,
+          PrefetchHooks Function()
+        > {
+  $$ScryfallSetsTableTableManager(_$AppDatabase db, $ScryfallSetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ScryfallSetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ScryfallSetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ScryfallSetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> scryfallId = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> releasedAt = const Value.absent(),
+                Value<String> setType = const Value.absent(),
+                Value<int> cardCount = const Value.absent(),
+                Value<String?> parentSetCode = const Value.absent(),
+                Value<bool> nonfoilOnly = const Value.absent(),
+                Value<bool> foilOnly = const Value.absent(),
+                Value<String?> blockCode = const Value.absent(),
+                Value<String?> blockName = const Value.absent(),
+                Value<String> iconSvgUri = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ScryfallSetsCompanion(
+                scryfallId: scryfallId,
+                code: code,
+                name: name,
+                releasedAt: releasedAt,
+                setType: setType,
+                cardCount: cardCount,
+                parentSetCode: parentSetCode,
+                nonfoilOnly: nonfoilOnly,
+                foilOnly: foilOnly,
+                blockCode: blockCode,
+                blockName: blockName,
+                iconSvgUri: iconSvgUri,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String scryfallId,
+                required String code,
+                required String name,
+                required String releasedAt,
+                required String setType,
+                required int cardCount,
+                Value<String?> parentSetCode = const Value.absent(),
+                required bool nonfoilOnly,
+                required bool foilOnly,
+                Value<String?> blockCode = const Value.absent(),
+                Value<String?> blockName = const Value.absent(),
+                required String iconSvgUri,
+                Value<int> rowid = const Value.absent(),
+              }) => ScryfallSetsCompanion.insert(
+                scryfallId: scryfallId,
+                code: code,
+                name: name,
+                releasedAt: releasedAt,
+                setType: setType,
+                cardCount: cardCount,
+                parentSetCode: parentSetCode,
+                nonfoilOnly: nonfoilOnly,
+                foilOnly: foilOnly,
+                blockCode: blockCode,
+                blockName: blockName,
+                iconSvgUri: iconSvgUri,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ScryfallSetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ScryfallSetsTable,
+      ScryfallSet,
+      $$ScryfallSetsTableFilterComposer,
+      $$ScryfallSetsTableOrderingComposer,
+      $$ScryfallSetsTableAnnotationComposer,
+      $$ScryfallSetsTableCreateCompanionBuilder,
+      $$ScryfallSetsTableUpdateCompanionBuilder,
+      (
+        ScryfallSet,
+        BaseReferences<_$AppDatabase, $ScryfallSetsTable, ScryfallSet>,
+      ),
+      ScryfallSet,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -12374,4 +13454,6 @@ class $AppDatabaseManager {
       $$ScryfallCardFacesTableTableManager(_db, _db.scryfallCardFaces);
   $$ScryfallTagsTableTableManager get scryfallTags =>
       $$ScryfallTagsTableTableManager(_db, _db.scryfallTags);
+  $$ScryfallSetsTableTableManager get scryfallSets =>
+      $$ScryfallSetsTableTableManager(_db, _db.scryfallSets);
 }

@@ -214,7 +214,25 @@ class ScryfallTags extends Table {
   Set<Column> get primaryKey => {scryfallId};
 }
 
-@DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags])
+class ScryfallSets extends Table {
+  TextColumn get scryfallId => text()();
+  TextColumn get code => text()();
+  TextColumn get name => text()();
+  TextColumn get releasedAt => text()();
+  TextColumn get setType => text()();
+  IntColumn get cardCount => integer()();
+  TextColumn get parentSetCode => text().nullable()();
+  BoolColumn get nonfoilOnly => boolean()();
+  BoolColumn get foilOnly => boolean()();
+  TextColumn get blockCode => text().nullable()();
+  TextColumn get blockName => text().nullable()();
+  TextColumn get iconSvgUri => text()();
+  
+  @override
+  Set<Column> get primaryKey => {scryfallId};
+}
+
+@DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags, ScryfallSets])
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -236,6 +254,7 @@ class AppDatabase extends _$AppDatabase {
           await m.deleteTable('scryfall_card_faces');
           await m.deleteTable('scryfall_cards');
           await m.deleteTable('scryfall_tags');
+          await m.deleteTable('scryfall_sets');
           await m.createAll();
         },
         beforeOpen: (details) async {
@@ -273,13 +292,15 @@ class AppDatabase extends _$AppDatabase {
     final illustrationTagSlugs = collectIllustrationTagLookups(tokens);
     final oracleTagIds = await _resolveTagLookups(oracleTagSlugs, 'oracle');
     final illustrationTagIds = await _resolveTagLookups(illustrationTagSlugs, 'illustration');
+ 
+    final allSets = await select(scryfallSets).get();
 
     final query = select(scryfallCards)
       ..where((t) {
         Expression<bool> expr = const Constant(true);
         if (tokens.isNotEmpty) {
           expr = tokens
-              .map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds))
+              .map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets))
               .reduce((a, b) => a & b);
         }
         if (!hasTypeFilter) {
@@ -330,4 +351,5 @@ class AppDatabase extends _$AppDatabase {
     }
     return result;
   }
+
 }

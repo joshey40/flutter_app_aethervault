@@ -498,10 +498,32 @@ Expression<bool> _dateCompareExpression(Expression<String> col, FilterOp op, Dat
   };
 }
 
+const Map<String, String> _hybridCanonicalOrder = {
+  'UW': 'WU', 'BU': 'UB', 'RB': 'BR', 'GR': 'RG', 'WG': 'GW', // allied
+  'BW': 'WB', 'RU': 'UR', 'GB': 'BG', 'WR': 'RW', 'UG': 'GU', // enemy
+};
+
 List<String> _parseManaSymbols(String value) {
   if (value.contains('{')) {
     final matches = RegExp(r'\{([^}]+)\}').allMatches(value);
-    return matches.map((m) => '{${m.group(1)!.toUpperCase()}}').toList();
+    return matches.map((m) {
+      var symbol = m.group(1)!.toUpperCase();
+
+      String canonicalizeColorPair(String twoColors) {
+        return _hybridCanonicalOrder[twoColors] ?? twoColors;
+      }
+
+      final phyrexianHybrid = RegExp(r'^([WUBRG])/([WUBRG])/P$').firstMatch(symbol);
+      if (phyrexianHybrid != null) {
+        final pair = canonicalizeColorPair('${phyrexianHybrid.group(1)}${phyrexianHybrid.group(2)}');
+        symbol = '${pair[0]}/${pair[1]}/P';
+      } else if (RegExp(r'^[WUBRG]/[WUBRG]$').hasMatch(symbol)) {
+        final pair = canonicalizeColorPair(symbol.replaceAll('/', ''));
+        symbol = '${pair[0]}/${pair[1]}';
+      }
+
+      return '{$symbol}';
+    }).toList();
   }
   final upper = value.toUpperCase();
   const validChars = 'WUBRGCSXYZP';
@@ -538,11 +560,29 @@ Expression<String> _stripSymbols(Expression<String> col, Iterable<String> symbol
 }
 
 Expression<bool> _manaCostExpression(Expression<String> col, FilterOp op, String rawValue) {
-  // TODO: Handle deduplicated mana cost
-  final symbols = _parseManaSymbols(rawValue).toSet().toList();
-  final hasAll = symbols.map((s) => col.like('%$s%')).reduce((a, b) => a & b);
-  final isSubset = _stripSymbols(col, symbols).equals('');
-  final isEqual = hasAll & isSubset;
+  final symbols = _parseManaSymbols(rawValue);
+
+  final counts = <String, int>{};
+  for (final s in symbols) {
+    counts[s] = (counts[s] ?? 0) + 1;
+  }
+
+  Expression<int> occurrenceDiff(String symbol) {
+    final replaced = FunctionCallExpression<String>(
+      'REPLACE',
+      [col, Constant(symbol), const Constant('')],
+    );
+    return FunctionCallExpression<int>('LENGTH', [col]) -
+        FunctionCallExpression<int>('LENGTH', [replaced]);
+  }
+
+  final hasAll = counts.entries.map((e) => occurrenceDiff(e.key).isBiggerOrEqualValue(e.value * e.key.length)).reduce((a, b) => a & b);
+  final matchesExactCounts = counts.entries.map((e) => occurrenceDiff(e.key).equals(e.value * e.key.length)).reduce((a, b) => a & b);
+  final atMostCounts = counts.entries.map((e) => occurrenceDiff(e.key).isSmallerOrEqualValue(e.value * e.key.length)).reduce((a, b) => a & b);
+  final noOtherSymbols = _stripSymbols(col, counts.keys).equals('');
+
+  final isSubset = noOtherSymbols & atMostCounts;
+  final isEqual = matchesExactCounts & noOtherSymbols;
 
   return switch (op) {
     FilterOp.contains => hasAll,
@@ -556,6 +596,13 @@ Expression<bool> _manaCostExpression(Expression<String> col, FilterOp op, String
 }
 
 Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, List<String>> oracleTagIds) {
+  // Unsupported:
+  // - newinpauper
+  // - planeswalker_deck, league, buyabox, giftbox, intro_pack, gameday, prerelease, release, fnm, judge_gift, arena_league, player_rewards, media_insert, instore, convention, set_promo
+  // - universesbeyond, default, atypical, new
+  // - unique
+  // - digital, alchemy, rebalanced, spotlight, scryfallpreview
+  // - colorshifted
   switch (value.toLowerCase()) {
     // Mana Costs
     case 'hybrid':
@@ -568,9 +615,9 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
     case 'dfc':
       return t.layout.equals('transform') | t.layout.equals('modal_dfc');
     case 'meldpart':
-      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%melds into%'));
+      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%meld them into%'));
     case 'meldresult':
-      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%melds into%')).not();
+      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%meld them into%')).not();
     // Spells, Permanents, and Effects
     case 'spell':
       return t.typeLine.like('%Instant%') | t.typeLine.like('%Sorcery%');
@@ -593,9 +640,6 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
     // Extra Cards and Funny Cards
     case 'funny':
       return t.setType.equals('funny');
-    // Rarity
-    case 'newinpauper':
-      return const Constant(true); // TODO: Implement
     // Sets and Blocks
     case 'booster':
       return t.booster.equals(true);
@@ -650,8 +694,6 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
     // Reprints
     case 'reprint':
       return t.reprint.equals(true);
-    case 'unique':
-      return const Constant(true); // TODO: Implement (only a single set)
     // Shortcuts and Nicknames
     case 'bikeland':
     case 'cycleland':
@@ -727,7 +769,26 @@ Expression<bool> _tagExpression($ScryfallCardsTable t, String tag, bool isOracle
   return isOracleTag ? t.oracleId.isIn(ids) : t.illustrationId.isIn(ids);
 }
 
-Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds) {
+Expression<bool> _blockAndGroupExpression($ScryfallCardsTable t, String code, List<ScryfallSet> allSets, bool isBlock) {
+  List<String> sets;
+  if (isBlock) {
+    sets = allSets.where((s) => s.blockCode?.toLowerCase() == code.toLowerCase()).map((s) => s.code.toLowerCase()).toList();
+  } else {
+    greatestAncestorSetCode(String code) {
+      final set = allSets.firstWhere((s) => s.code.toLowerCase() == code.toLowerCase(), orElse: () => throw FormatException('Unbekannter Set-Code: $code'));
+      if (set.parentSetCode == null) return set.code.toLowerCase();
+      return greatestAncestorSetCode(set.parentSetCode!);
+    }
+    // Get all sets that have the same greatest ancestor set code
+    final ancestorCode = greatestAncestorSetCode(code);
+    if (ancestorCode == null) throw FormatException('Unbekannter Set-Code: $code');
+    sets = allSets.where((s) => greatestAncestorSetCode(s.code) == ancestorCode).map((s) => s.code.toLowerCase()).toList();
+  }
+  if (sets.isEmpty) throw FormatException('Unbekannter Set-Code: $code');
+  return t.setCode.isIn(sets);
+}
+
+Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets) {
   // TODO: Handle faces
   // Unsupported filters (from the original scryfall syntax):
   // - edhrecrank (not included in scryfall data)
@@ -804,18 +865,18 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
     case 'set':
     case 'edition':
       return t.setCode.equals(f.value.toLowerCase());
-    
+
     case 'cn':
     case 'number':
       return t.collectorNumber.equals(f.value.toLowerCase());
 
     case 'b':
     case 'block':
-      return const Constant(true); // TODO: Implement (sets not yet in database)
+      return _blockAndGroupExpression(t, f.value, allSets, true);
     
     case 'g':
     case 'group':
-      return const Constant(true); // TODO: Implement (sets not yet in database)
+      return _blockAndGroupExpression(t, f.value, allSets, false);
     
     case 'st':
     case 'set_type':
@@ -905,14 +966,14 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
   }
 }
 
-Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds) {
+Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets) {
   if (token is ListToken) {
     if (token.tokens.isEmpty) return const Constant(true);
-    final compiled = token.tokens.map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds)).toList();
+    final compiled = token.tokens.map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets)).toList();
     final combined = compiled.reduce((a, b) => token.isOR ? (a | b) : (a & b));
     return token.isNegated ? combined.not() : combined;
   }
   final f = token as FilterToken;
-  final expr = _compileFilter(t, f, oracleTagIds, illustrationTagIds);
+  final expr = _compileFilter(t, f, oracleTagIds, illustrationTagIds, allSets);
   return f.isNegated ? expr.not() : expr;
 }

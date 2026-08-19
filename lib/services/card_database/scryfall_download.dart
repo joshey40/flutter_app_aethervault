@@ -61,9 +61,7 @@ class ScryfallDownloadService {
   Future<void> downloadAllBulkData(bool forced) async {
     await fetchBulkDataItems();
 
-    _progressController.add(
-      DownloadProgress(current: 0, total: bulkDataTypes.length, isRunning: true),
-    );
+    _progressController.add(DownloadProgress(current: 0, total: bulkDataTypes.length, isRunning: true));
 
     final cacheDirectory = await getBulkDataDirectory();
     await cacheDirectory.create(recursive: true);
@@ -73,16 +71,7 @@ class ScryfallDownloadService {
 
     for (var i = 0; i < bulkDataTypes.length; i++) {
       if (!await typesToDownload.then((map) => map[bulkDataTypes[i]] ?? false) && !forced) {
-        _progressController.add(
-          DownloadProgress(
-            current: i + 1,
-            total: bulkDataTypes.length,
-            currentType: bulkDataTypes[i],
-            bytesDownloaded: 0,
-            bytesTotal: 0,
-            isRunning: true,
-          ),
-        );
+        _progressController.add(DownloadProgress(current: i + 1, total: bulkDataTypes.length, currentType: bulkDataTypes[i], bytesDownloaded: 0, bytesTotal: 0, isRunning: true));
         continue;
       }
       final type = bulkDataTypes[i];
@@ -91,16 +80,7 @@ class ScryfallDownloadService {
           ? bulkDataItem['compressed_size'] as int
           : int.tryParse(bulkDataItem['compressed_size']?.toString() ?? '0') ?? 0;
 
-      _progressController.add(
-        DownloadProgress(
-          current: i + 1,
-          total: bulkDataTypes.length,
-          currentType: type,
-          bytesDownloaded: 0,
-          bytesTotal: totalBytes,
-          isRunning: true,
-        ),
-      );
+      _progressController.add(DownloadProgress(current: i + 1, total: bulkDataTypes.length, currentType: type, bytesDownloaded: 0, bytesTotal: totalBytes, isRunning: true));
 
       await fetchAndStoreDataType(type, totalBytes, i + 1, bulkDataTypes.length);
     }
@@ -153,10 +133,7 @@ class ScryfallDownloadService {
     return bulkDataItem;
   }
 
-  Future<bool> shouldDownloadBulkData({
-    required String bulkDataType,
-    required Map<String, dynamic> bulkDataItem,
-  }) async {
+  Future<bool> shouldDownloadBulkData({required String bulkDataType, required Map<String, dynamic> bulkDataItem}) async {
     final file = File(await getBulkDataFilePath(bulkDataType));
     final remoteUpdatedAt = bulkDataItem['updated_at']?.toString();
     final cachedUpdatedAt = await _loadCachedUpdatedAt(bulkDataType);
@@ -169,12 +146,7 @@ class ScryfallDownloadService {
     );
   }
 
-  static bool shouldDownloadCacheEntry({
-    required bool cachedFileExists,
-    required bool metadataFileExists,
-    required String? cachedUpdatedAt,
-    required String? remoteUpdatedAt,
-  }) {
+  static bool shouldDownloadCacheEntry({required bool cachedFileExists, required bool metadataFileExists, required String? cachedUpdatedAt, required String? remoteUpdatedAt}) {
     if (!cachedFileExists || !metadataFileExists) {
       return true;
     }
@@ -189,12 +161,7 @@ class ScryfallDownloadService {
     return remote.difference(cached) >= const Duration(days: 28);
   }
 
-  Future<void> fetchAndStoreDataType(
-    String bulkDataType,
-    int totalBytes,
-    int currentIndex,
-    int totalFiles,
-  ) async {
+  Future<void> fetchAndStoreDataType(String bulkDataType, int totalBytes, int currentIndex, int totalFiles) async {
     final bulkDataItem = await getDataTypeItem(bulkDataType);
     final downloadUri = bulkDataItem['jsonl_download_uri'];
     if (downloadUri is! String || downloadUri.isEmpty) {
@@ -207,16 +174,7 @@ class ScryfallDownloadService {
     );
 
     if (!shouldDownload) {
-      _progressController.add(
-        DownloadProgress(
-          current: currentIndex,
-          total: totalFiles,
-          currentType: bulkDataType,
-          bytesDownloaded: totalBytes,
-          bytesTotal: totalBytes,
-          isRunning: true,
-        ),
-      );
+      _progressController.add(DownloadProgress(current: currentIndex, total: totalFiles, currentType: bulkDataType, bytesDownloaded: totalBytes, bytesTotal: totalBytes, isRunning: true));
       return;
     }
 
@@ -245,16 +203,7 @@ class ScryfallDownloadService {
         tempPath,
         onProgress: (bytesWritten) {
           downloadedBytes = bytesWritten;
-          _progressController.add(
-            DownloadProgress(
-              current: currentIndex,
-              total: totalFiles,
-              currentType: bulkDataType,
-              bytesDownloaded: downloadedBytes,
-              bytesTotal: totalBytes,
-              isRunning: true,
-            ),
-          );
+          _progressController.add(DownloadProgress(current: currentIndex, total: totalFiles, currentType: bulkDataType, bytesDownloaded: downloadedBytes, bytesTotal: totalBytes, isRunning: true));
         },
       );
 
@@ -273,11 +222,7 @@ class ScryfallDownloadService {
     }
   }
 
-  Future<void> _writeMetadataForBulkData(
-    String bulkDataType,
-    Map<String, dynamic> bulkDataItem,
-    String destinationPath,
-  ) async {
+  Future<void> _writeMetadataForBulkData(String bulkDataType, Map<String, dynamic> bulkDataItem, String destinationPath) async {
     final metadata = {
       'type': bulkDataType,
       'updated_at': bulkDataItem['updated_at']?.toString(),
@@ -339,11 +284,7 @@ class ScryfallDownloadService {
     }
   }
 
-  Future<void> writeStreamToFile(
-    Stream<List<int>> stream,
-    String destinationPath, {
-    required void Function(int bytesWritten) onProgress,
-  }) async {
+  Future<void> writeStreamToFile(Stream<List<int>> stream, String destinationPath, {required void Function(int bytesWritten) onProgress}) async {
     final sink = File(destinationPath).openWrite();
     try {
       var bytesWritten = 0;
