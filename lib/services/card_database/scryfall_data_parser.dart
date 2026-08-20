@@ -377,7 +377,7 @@ class ScryfallDataParser {
       manaCost: Value(_stringField(face, 'mana_cost')),
       typeLine: Value(_stringField(face, 'type_line')),
       printedTypeLine: Value<String?>(_stringField(face, 'printed_type_line')),
-      oracleText: Value(_stringValue(face, 'oracle_text')),
+      oracleText: Value(_stringField(face, 'oracle_text')),
       printedText: Value<String?>(_stringField(face, 'printed_text')),
       flavorText: Value(_stringField(face, 'flavor_text')),
       

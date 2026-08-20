@@ -319,7 +319,7 @@ class AppDatabase extends _$AppDatabase {
     query.orderBy([(t) => OrderingTerm(expression: t.releasedAt, mode: OrderingMode.desc)]);
     final rows = await query.get();
     scopeCards(rows, searchScope);
-    sortCards(rows, orderBy, orderDir);
+    sortCards(rows, orderBy, orderDir, allSets);
     return rows;
   }
 

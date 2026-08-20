@@ -134,8 +134,7 @@ bool containsSetFilter(List<QueryToken> tokens) {
 const Map<String, String> _isValueToOracleTagSlug = {
   'frenchvanilla': 'french-vanilla',
   'manland': 'creatureland',
-  'creatureland': 'creatureland',
-  'storageland': 'storage-land',
+  'creatureland': 'creatureland'
 };
 
 Set<String> collectOracleTagLookups(List<QueryToken> tokens) {
@@ -184,16 +183,18 @@ void scopeCards(List<ScryfallCard> cards, String searchScope) {
   }
 }
 
-void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir) {
+void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir, List<ScryfallSet> allSets) {
   int cmp(ScryfallCard a, ScryfallCard b) {
     final powerA = double.tryParse(a.power ?? '') ?? 0.0;
     final powerB = double.tryParse(b.power ?? '') ?? 0.0;
     final toughA = double.tryParse(a.toughness ?? '') ?? 0.0;
     final toughB = double.tryParse(b.toughness ?? '') ?? 0.0;
+    final setReleaseA = allSets.firstWhere((s) => s.code == a.setCode).releasedAt;
+    final setReleaseB = allSets.firstWhere((s) => s.code == b.setCode).releasedAt;
     final result = switch (orderBy) {
       'name' => a.name.compareTo(b.name),
       'released_at' => a.releasedAt.compareTo(b.releasedAt),
-      'set' => a.setCode.compareTo(b.setCode),
+      'set' => setReleaseA.compareTo(setReleaseB),
       'rarity' => a.rarityValue.compareTo(b.rarityValue),
       'color' => a.colorMask.compareTo(b.colorMask),
       'cmc' => a.cmc.compareTo(b.cmc),
@@ -744,7 +745,7 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
     case 'slowland':
       return t.oracleText.regexp(r'This land enters tapped unless you control two or more other lands\.\\n\{T\}: Add \{[WUBRG]\} or \{[WUBRG]\}\.');
     case 'storageland':
-      return _tagExpression(t, 'storage-land', true, oracleTagIds, const {});
+      return t.oracleText.like('%storage counter%') & t.typeLine.like('%Land%');
     case 'tangoland':
     case 'battleland':
       return t.oracleText.regexp(r'\(\{T\}: Add \{[WUBRG]\}\.\)\\nThis land enters tapped unless you control two or more basic lands\.');
