@@ -678,6 +678,16 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
         (t.typeLine.like('Legendary Artifact — Spacecraft') & t.power.isNotNull()) |
         t.typeLine.like('%background%') |
         t.name.equals('Grist, the Hunger Tide'));
+    case 'brawler':
+      return _legalityColumn(t, 'brawl').equals('legal') & (
+        ((t.typeLine.like('%creature%') | t.typeLine.like('%vehicle%') | t.typeLine.like('%planeswalker%')) & t.typeLine.like('%legendary%')) |
+        (t.typeLine.like('Legendary Artifact — Spacecraft') & t.power.isNotNull()));
+    case 'oathbreaker':
+      return _legalityColumn(t, 'oathbreaker').equals('legal') &
+        t.typeLine.like('%planeswalker%') &
+        t.typeLine.like('%creature%').not() &
+        t.typeLine.like('%battle%').not() &
+        t.layout.equals('meld').not();
     case 'companion':
       return _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%Companion — %'), db.scryfallCardFaces.oracleText.like('%Companion — %'));
     case 'duelcommander':
@@ -813,7 +823,6 @@ Expression<bool> _cardOrAnyFace(AppDatabase db, Expression<String> cardId, Expre
 }
 
 Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets, AppDatabase db) {
-  // TODO: Handle faces
   // Unsupported filters (from the original scryfall syntax):
   // - edhrecrank (not included in scryfall data)
   // - cube (not included in scryfall data)
