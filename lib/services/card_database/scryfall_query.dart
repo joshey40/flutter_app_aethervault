@@ -789,7 +789,14 @@ Expression<bool> _blockAndGroupExpression($ScryfallCardsTable t, String code, Li
   return t.setCode.isIn(sets);
 }
 
-Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets) {
+Expression<bool> _anyFaceMatches(AppDatabase db, Expression<String> cardId, Expression<bool> condition) {
+  final facesQuery = db.selectOnly(db.scryfallCardFaces)
+    ..addColumns([db.scryfallCardFaces.cardId])
+    ..where(db.scryfallCardFaces.cardId.equalsExp(cardId) & condition);
+  return existsQuery(facesQuery);
+}
+
+Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets, AppDatabase db) {
   // TODO: Handle faces
   // Unsupported filters (from the original scryfall syntax):
   // - edhrecrank (not included in scryfall data)
@@ -817,8 +824,11 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
     // Card Text
     case 'o':
     case 'oracle':
-      final pattern = _tildeToNamePattern(t.name, f.value);
-      return FunctionCallExpression<bool>('LIKE', [pattern, t.oracleText]) | FunctionCallExpression<bool>('LIKE', [pattern, t.printedText]);
+      final cardPattern = _tildeToNamePattern(t.name, f.value);
+      final cardMatch = FunctionCallExpression<bool>('LIKE', [cardPattern, t.oracleText]) | FunctionCallExpression<bool>('LIKE', [cardPattern, t.printedText]);
+      final facePattern = _tildeToNamePattern(db.scryfallCardFaces.name, f.value);
+      final faceMatch = FunctionCallExpression<bool>('LIKE', [facePattern, db.scryfallCardFaces.oracleText]) | FunctionCallExpression<bool>('LIKE', [facePattern, db.scryfallCardFaces.printedText]);
+      return cardMatch | _anyFaceMatches(db, t.scryfallId, faceMatch);
 
     case 'kw':
     case 'keyword':
@@ -967,14 +977,14 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
   }
 }
 
-Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets) {
+Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets, AppDatabase db) {
   if (token is ListToken) {
     if (token.tokens.isEmpty) return const Constant(true);
-    final compiled = token.tokens.map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets)).toList();
+    final compiled = token.tokens.map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets, db)).toList();
     final combined = compiled.reduce((a, b) => token.isOR ? (a | b) : (a & b));
     return token.isNegated ? combined.not() : combined;
   }
   final f = token as FilterToken;
-  final expr = _compileFilter(t, f, oracleTagIds, illustrationTagIds, allSets);
+  final expr = _compileFilter(t, f, oracleTagIds, illustrationTagIds, allSets, db);
   return f.isNegated ? expr.not() : expr;
 }

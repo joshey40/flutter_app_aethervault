@@ -300,7 +300,7 @@ class AppDatabase extends _$AppDatabase {
         Expression<bool> expr = const Constant(true);
         if (tokens.isNotEmpty) {
           expr = tokens
-              .map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets))
+              .map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets, this))
               .reduce((a, b) => a & b);
         }
         if (!hasTypeFilter) {
