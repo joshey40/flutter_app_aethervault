@@ -487,6 +487,11 @@ Expression<bool> _powerToughnessCompareExpression(Expression<String> col, Filter
   };
 }
 
+Expression<bool> _withFaceFallback($ScryfallCardsTable t, AppDatabase db, Expression<bool> cardMatch, Expression<bool> faceCondition) {
+  final needsFaceValues = t.layout.isIn(const ['transform', 'modal_dfc', 'meld']);
+  return (needsFaceValues & _anyFaceMatches(db, t.scryfallId, faceCondition)) | (needsFaceValues.not() & cardMatch);
+}
+
 Expression<bool> _dateCompareExpression(Expression<String> col, FilterOp op, DateTime date) {
   final colDate = col.cast<DateTime>();
   return switch (op) {
@@ -596,7 +601,11 @@ Expression<bool> _manaCostExpression(Expression<String> col, FilterOp op, String
   };
 }
 
-Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, List<String>> oracleTagIds) {
+Expression<bool> _hasHybridSymbol(Expression<String> manaCost) {
+  return manaCost.like('%W/U%') | manaCost.like('%W/B%') | manaCost.like('%B/R%') | manaCost.like('%B/G%') | manaCost.like('%U/B%') | manaCost.like('%U/R%') | manaCost.like('%R/G%') | manaCost.like('%R/W%') | manaCost.like('%G/W%') | manaCost.like('%G/U%');
+}
+
+Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, List<String>> oracleTagIds, AppDatabase db) {
   // Unsupported:
   // - newinpauper
   // - planeswalker_deck, league, buyabox, giftbox, intro_pack, gameday, prerelease, release, fnm, judge_gift, arena_league, player_rewards, media_insert, instore, convention, set_promo
@@ -607,18 +616,22 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
   switch (value.toLowerCase()) {
     // Mana Costs
     case 'hybrid':
-      return t.manaCost.like('%W/U%') | t.manaCost.like('%W/B%') | t.manaCost.like('%B/R%') | t.manaCost.like('%B/G%') | t.manaCost.like('%U/B%') | t.manaCost.like('%U/R%') | t.manaCost.like('%R/G%') | t.manaCost.like('%R/W%') | t.manaCost.like('%G/W%') | t.manaCost.like('%G/U%');
+      return _withFaceFallback(t, db, _hasHybridSymbol(t.manaCost), _hasHybridSymbol(db.scryfallCardFaces.manaCost));
     case 'phyrexian':
-      return t.manaCost.like('%/P}%');
+      return _withFaceFallback(t, db, t.manaCost.like('%/P}%'), db.scryfallCardFaces.manaCost.like('%/P}%'));
     // Multi-faced Cards
     case 'split' || 'flip' || 'transform' || 'meld' || 'leveler' || 'mdfc':
       return t.layout.equals(value.toLowerCase().replaceAll('mdfc', 'modal_dfc'));
     case 'dfc':
       return t.layout.equals('transform') | t.layout.equals('modal_dfc');
     case 'meldpart':
-      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%meld them into%'));
+      final cardMelds = t.oracleText.like('%melds with%') | t.oracleText.like('%meld them into%');
+      final faceMelds = db.scryfallCardFaces.oracleText.like('%melds with%') | db.scryfallCardFaces.oracleText.like('%meld them into%');
+      return t.layout.equals('meld') & (cardMelds | _anyFaceMatches(db, t.scryfallId, faceMelds));
     case 'meldresult':
-      return t.layout.equals('meld') & (t.oracleText.like('%melds with%') | t.oracleText.like('%meld them into%')).not();
+      final cardMelds = t.oracleText.like('%melds with%') | t.oracleText.like('%meld them into%');
+      final faceMelds = db.scryfallCardFaces.oracleText.like('%melds with%') | db.scryfallCardFaces.oracleText.like('%meld them into%');
+      return t.layout.equals('meld') & (cardMelds | _anyFaceMatches(db, t.scryfallId, faceMelds)).not();
     // Spells, Permanents, and Effects
     case 'spell':
       return t.typeLine.like('%Instant%') | t.typeLine.like('%Sorcery%');
@@ -627,17 +640,26 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
     case 'historic':
       return t.typeLine.like('%Artifact%') | t.typeLine.like('%Legendary%') | t.typeLine.like('%Saga%');
     case 'party':
-      return t.typeLine.like('%Cleric%') | t.typeLine.like('%Rogue%') | t.typeLine.like('%Warrior%') | t.typeLine.like('%Wizard%') | t.oracleText.like('%changeling%');
+      final typeMatch = t.typeLine.like('%Cleric%') | t.typeLine.like('%Rogue%') | t.typeLine.like('%Warrior%') | t.typeLine.like('%Wizard%');
+      return typeMatch | _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%changeling%'), db.scryfallCardFaces.oracleText.like('%changeling%'));
     case 'outlaw':
-      return t.typeLine.like('%Rogue%') | t.typeLine.like('%Warlock%') | t.typeLine.like('%Assassin%') | t.typeLine.like('%Pirate%') | t.typeLine.like('%Mercenary%') | t.oracleText.like('%changeling%');
+      final typeMatch = t.typeLine.like('%Rogue%') | t.typeLine.like('%Warlock%') | t.typeLine.like('%Assassin%') | t.typeLine.like('%Pirate%') | t.typeLine.like('%Mercenary%');
+      return typeMatch | _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%changeling%'), db.scryfallCardFaces.oracleText.like('%changeling%'));
     case 'modal':
-      return t.oracleText.like('%choose%') & t.oracleText.like('%—%');
+      final cardModal = t.oracleText.like('%choose%') & t.oracleText.like('%—%');
+      final faceModal = db.scryfallCardFaces.oracleText.like('%choose%') & db.scryfallCardFaces.oracleText.like('%—%');
+      return cardModal | _anyFaceMatches(db, t.scryfallId, faceModal);
     case 'vanilla':
-      return t.oracleText.isNull() | t.oracleText.equals('');
+      final cardVanilla = t.oracleText.isNull() | t.oracleText.equals('');
+      final anyFaceHasText = _anyFaceMatches(db, t.scryfallId, db.scryfallCardFaces.oracleText.isNotNull() & db.scryfallCardFaces.oracleText.equals('').not());
+      return (t.hasCardFaces.not() & cardVanilla) | (t.hasCardFaces & anyFaceHasText.not());
     case 'frenchvanilla':
       return _tagExpression(t, 'french-vanilla', true, oracleTagIds, const {});
     case 'bear':
-      return t.power.equals('2') & t.toughness.equals('2') & t.cmc.equals(2);
+      final ptMatch = _withFaceFallback(t, db,
+        t.power.equals('2') & t.toughness.equals('2'),
+        db.scryfallCardFaces.power.equals('2') & db.scryfallCardFaces.toughness.equals('2'));
+      return ptMatch & t.cmc.equals(2);
     // Extra Cards and Funny Cards
     case 'funny':
       return t.setType.equals('funny');
@@ -651,30 +673,20 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
     // Format Legality
     case 'commander':
       return _legalityColumn(t, 'commander').equals('legal') & (
-        t.oracleText.like('%can be your commander%') |
+        _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%can be your commander%'), db.scryfallCardFaces.oracleText.like('%can be your commander%')) |
         ((t.typeLine.like('%creature%') | t.typeLine.like('%vehicle%')) & t.typeLine.like('%legendary%')) |
         (t.typeLine.like('Legendary Artifact — Spacecraft') & t.power.isNotNull()) |
         t.typeLine.like('%background%') |
         t.name.equals('Grist, the Hunger Tide'));
-    case 'brawler':
-      return _legalityColumn(t, 'brawl').equals('legal') & (
-        ((t.typeLine.like('%creature%') | t.typeLine.like('%vehicle%') | t.typeLine.like('%planeswalker%')) & t.typeLine.like('%legendary%')) |
-        (t.typeLine.like('Legendary Artifact — Spacecraft') & t.power.isNotNull()));
     case 'companion':
-      return t.oracleText.like('%Companion — %');
+      return _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%Companion — %'), db.scryfallCardFaces.oracleText.like('%Companion — %'));
     case 'duelcommander':
       return _legalityColumn(t, 'duel').equals('legal') & (
-        t.oracleText.like('%can be your commander%') |
+        _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%can be your commander%'), db.scryfallCardFaces.oracleText.like('%can be your commander%')) |
         (t.typeLine.like('%creature%') & t.typeLine.like('%legendary%')) |
         t.name.equals('Grist, the Hunger Tide'));
-    case 'oathbreaker':
-      return _legalityColumn(t, 'oathbreaker').equals('legal') &
-        t.typeLine.like('%planeswalker%') &
-        t.typeLine.like('%creature%').not() &
-        t.typeLine.like('%battle%').not() &
-        t.layout.equals('meld').not();
     case 'partner':
-      return t.oracleText.like('%Partner%');
+      return _cardOrAnyFace(db, t.scryfallId, t.oracleText.like('%Partner%'), db.scryfallCardFaces.oracleText.like('%Partner%'));
     case 'gamechanger':
       return t.gameChanger.equals(true);
     case 'reserved':
@@ -796,6 +808,10 @@ Expression<bool> _anyFaceMatches(AppDatabase db, Expression<String> cardId, Expr
   return existsQuery(facesQuery);
 }
 
+Expression<bool> _cardOrAnyFace(AppDatabase db, Expression<String> cardId, Expression<bool> cardCondition, Expression<bool> faceCondition) {
+  return cardCondition | _anyFaceMatches(db, cardId, faceCondition);
+}
+
 Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets, AppDatabase db) {
   // TODO: Handle faces
   // Unsupported filters (from the original scryfall syntax):
@@ -810,7 +826,10 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
     // Colors and Color Identity
     case 'c':
     case 'color':
-      return _colorMaskExpression(t.colorMask, f.op, f.value, false);
+      final cardMatch = _colorMaskExpression(t.colorMask, f.op, f.value, false);
+      final faceMatch = _anyFaceMatches(db, t.scryfallId, _colorMaskExpression(db.scryfallCardFaces.colorMask, f.op, f.value, false));
+      final needsFaceColors = t.layout.isIn(const ['transform', 'modal_dfc', 'meld']);
+      return (needsFaceColors & faceMatch) | (needsFaceColors.not() & cardMatch);
 
     case 'id':
     case 'identity':
@@ -837,7 +856,9 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
     // Mana Costs
     case 'm':
     case 'mana':
-      return _manaCostExpression(t.manaCost, f.op, f.value);
+      final cardMatch = _manaCostExpression(t.manaCost, f.op, f.value);
+      final faceMatch = _anyFaceMatches(db, t.scryfallId, _manaCostExpression(db.scryfallCardFaces.manaCost, f.op, f.value));
+      return (t.hasCardFaces & faceMatch) | (t.hasCardFaces.not() & cardMatch);
     
     case 'cmc':
     case 'mv':
@@ -850,20 +871,30 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
     case 'pow':
     case 'power':
       if (f.value == 'tou' || f.value == 'toughness') {
-        return _powerToughnessCompareExpression(t.power, f.op, t.toughness);
+        return _withFaceFallback(t, db,
+          _powerToughnessCompareExpression(t.power, f.op, t.toughness),
+          _powerToughnessCompareExpression(db.scryfallCardFaces.power, f.op, db.scryfallCardFaces.toughness));
       }
-      return _numericStringExpression(t.power, f.op, f.value);
-    
+      return _withFaceFallback(t, db,
+        _numericStringExpression(t.power, f.op, f.value),
+        _numericStringExpression(db.scryfallCardFaces.power, f.op, f.value));
+
     case 'tou':
     case 'toughness':
       if (f.value == 'pow' || f.value == 'power') {
-        return _powerToughnessCompareExpression(t.toughness, f.op, t.power);
+        return _withFaceFallback(t, db,
+          _powerToughnessCompareExpression(t.toughness, f.op, t.power),
+          _powerToughnessCompareExpression(db.scryfallCardFaces.toughness, f.op, db.scryfallCardFaces.power));
       }
-      return _numericStringExpression(t.toughness, f.op, f.value);
-    
+      return _withFaceFallback(t, db,
+        _numericStringExpression(t.toughness, f.op, f.value),
+        _numericStringExpression(db.scryfallCardFaces.toughness, f.op, f.value));
+
     case 'loy':
     case 'loyalty':
-      return _numericStringExpression(t.loyalty, f.op, f.value);
+      return _withFaceFallback(t, db,
+        _numericStringExpression(t.loyalty, f.op, f.value),
+        _numericStringExpression(db.scryfallCardFaces.loyalty, f.op, f.value));
 
     // Rarity
     case 'r':
@@ -968,9 +999,9 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
 
     // Is and Not
     case 'is':
-      return _isExpression(t, f.value, oracleTagIds);
+      return _isExpression(t, f.value, oracleTagIds, db);
     case 'not':
-      return _isExpression(t, f.value, oracleTagIds).not();
+      return _isExpression(t, f.value, oracleTagIds, db).not();
 
     default:
       return throw FormatException('Unbekannter key: $t.key');
