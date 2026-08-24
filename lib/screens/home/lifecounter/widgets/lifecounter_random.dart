@@ -49,8 +49,8 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
 
   if (selection == 'coin') {
     String result = math.Random().nextBool()
-        ? appLocalizations.translate('coin.heads')
-        : appLocalizations.translate('coin.tails');
+        ? appLocalizations.translate('lifecounter.random.heads')
+        : appLocalizations.translate('lifecounter.random.tails');
     bool flash = false;
     await showDialog<void>(
       context: context,
@@ -62,8 +62,8 @@ Future<void> showRandomPicker(BuildContext context, {int? maxPlayers}) async {
               onPressed: () {
                 setState(() {
                   result = math.Random().nextBool()
-                      ? appLocalizations.translate('coin.heads')
-                      : appLocalizations.translate('coin.tails');
+                      ? appLocalizations.translate('lifecounter.random.heads')
+                      : appLocalizations.translate('lifecounter.random.tails');
                   flash = true;
                 });
                 Future.delayed(const Duration(milliseconds: 320), () {

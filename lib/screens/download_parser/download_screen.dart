@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../services/localization_service.dart';
-import '../../services/scryfall_download_service.dart';
-import '../home/home_shell.dart';
+import '../../services/card_database/scryfall_download.dart';
+import 'parser_screen.dart';
 
 class DownloadScreen extends StatefulWidget {
-  const DownloadScreen({super.key, required this.user, required this.themeMode, required this.onThemeModeChanged, required this.locale, required this.onLocaleChanged, required this.onSignOut, required this.forcedDownload});
+  const DownloadScreen({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+    required this.locale,
+    required this.onLocaleChanged,
+    required this.forcedDownload
+  });
 
-  final dynamic user;
   final ThemeMode themeMode;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final Locale locale;
   final Future<void> Function(Locale locale) onLocaleChanged;
-  final Future<void> Function() onSignOut;
   final bool forcedDownload;
 
   @override
@@ -20,7 +25,7 @@ class DownloadScreen extends StatefulWidget {
 }
 
 class _DownloadScreenState extends State<DownloadScreen> {
-  final _service = ScryfallDownloadService();
+  final _downloadService = ScryfallDownloadService();
   bool _isRunning = false;
   bool _isFinished = false;
   String? _error;
@@ -29,7 +34,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
   @override
   void initState() {
     super.initState();
-    _service.progressStream.listen((progress) {
+    _downloadService.progressStream.listen((progress) {
       if (!mounted) return;
       setState(() {
         _progress = progress;
@@ -41,7 +46,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
 
   @override
   void dispose() {
-    _service.dispose();
+    _downloadService.dispose();
     super.dispose();
   }
 
@@ -55,13 +60,13 @@ class _DownloadScreenState extends State<DownloadScreen> {
     });
 
     try {
-      await _service.downloadAllBulkData(widget.forcedDownload);
+      await _downloadService.downloadAllBulkData(widget.forcedDownload);
       if (!mounted) return;
       setState(() {
         _isFinished = true;
         _isRunning = false;
       });
-      _openHome();
+      _openParser();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -71,16 +76,14 @@ class _DownloadScreenState extends State<DownloadScreen> {
     }
   }
 
-  void _openHome() {
+  void _openParser() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => HomeShell(
-          user: widget.user,
+        builder: (_) => ParserScreen(
           themeMode: widget.themeMode,
           onThemeModeChanged: widget.onThemeModeChanged,
           locale: widget.locale,
           onLocaleChanged: widget.onLocaleChanged,
-          onSignOut: widget.onSignOut,
         ),
       ),
     );

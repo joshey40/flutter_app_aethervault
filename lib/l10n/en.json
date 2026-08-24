@@ -1,27 +1,38 @@
 {
   "app": {
-    "name": "Aethervault",
-    "subtitle": "Track decks, build the vault, and keep your collection organized."
-  },
-  "auth": {
-    "createAccountTitle": "Create your vault",
-    "createAccountSubtitle": "Create your Firebase account for Aethervault.",
-    "displayName": "Display name",
-    "email": "Email",
-    "password": "Password",
-    "confirmPassword": "Confirm password",
-    "signInAction": "Sign in",
-    "signUpAction": "Create account",
-    "switchToSignUp": "Need an account? Create one",
-    "switchToSignIn": "Already have an account? Sign in"
+    "name": "Aethervault"
   },
   "nav": {
     "overview": "Overview",
-    "decks": "Decks",
     "search": "Search",
     "collection": "Collection",
-    "settings": "Settings",
-    "play": "Play"
+    "decks": "Decks",
+    "play": "Play",
+    "settings": "Settings"
+  },
+  "search": {
+    "search_error": "Search error: ",
+    "bar_hint": "Search cards",
+    "hint": "Search for a card via Scryfall Syntax",
+    "flip_card": "Flip card",
+    "results": "Results",
+    "no_results": "No results found.",
+    "scope": {
+      "one_card": "One card",
+      "all_prints": "All prints"
+    },
+    "order": {
+      "asc": "Ascending",
+      "desc": "Descending",
+      "name": "Name",
+      "released_at": "Release date",
+      "set": "Set",
+      "rarity": "Rarity",
+      "color": "Color",
+      "cmc": "CMC",
+      "power": "Power",
+      "toughness": "Toughness"
+    }
   },
   "lifecounter": {
     "title": "Lifecounter",
@@ -36,6 +47,8 @@
     "random": {
       "title": "Coin / Dice",
       "coin": "Coin",
+      "heads": "Heads",
+      "tails": "Tails",
       "player": "Player",
       "rollAgain": "Roll again"
     },
@@ -47,15 +60,16 @@
   },
   "settings": {
     "title": "Settings",
-    "accountSection": "Account",
     "preferencesSection": "Preferences",
-    "signOut": "Sign out",
     "darkMode": "Dark mode",
     "language": "Language",
     "english": "English",
     "german": "German",
     "englishShort": "EN",
-    "germanShort": "DE"
+    "germanShort": "DE",
+    "downloadSection": "Download",
+    "downloadData": "Download data",
+    "downloadDataDescription": "Download the latest card data from Scryfall."
   },
   "download": {
     "loading": "Bulk data is being loaded",
@@ -65,22 +79,21 @@
     "waiting": "Please wait while the data is being downloaded.",
     "retry": "Try again"
   },
+  "parser": {
+    "loading": "Parsing data",
+    "complete": "Parsing complete",
+    "failed": "The parsing failed.",
+    "current": "Current parsing: ",
+    "waiting": "Please wait while the data is being parsed.",
+    "retry": "Try again",
+    "progress": "Progress: "
+  },
   "ok": "OK",
   "cancel": "Cancel",
   "close": "Close",
   "confirm": "Confirm",
   "back": "Back",
   "errors": {
-    "emptyFields": "Please fill in all required fields.",
-    "passwordMismatch": "Passwords do not match.",
-    "accountExists": "An account with this email already exists.",
-    "accountMissing": "No account exists for this email yet.",
-    "invalidCredentials": "The email or password is incorrect.",
-    "weakPassword": "The password is too weak.",
-    "reauthRequired": "Please sign in again to continue."
-  },
-  "coin": {
-    "heads": "Heads",
-    "tails": "Tails"
+    
   }
 }
