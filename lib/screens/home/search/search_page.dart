@@ -73,12 +73,83 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
+  Widget _buildFilterDropdown<T>({
+    required BuildContext context,
+    required T initialValue,
+    required List<T> values,
+    required String Function(T) labelBuilder,
+    required IconData icon,
+    required ValueChanged<T> onSelected,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Expanded(
+      child: DropdownMenu<T>(
+        initialSelection: initialValue,
+        expandedInsets: EdgeInsets.zero,
+        textStyle: textTheme.bodyMedium,
+        leadingIcon: Icon(icon, size: 18, color: colorScheme.primary),
+        trailingIcon: Icon(Icons.keyboard_arrow_down, size: 20, color: colorScheme.primary),
+        selectedTrailingIcon: Icon(Icons.keyboard_arrow_up, size: 20, color: colorScheme.primary),
+        inputDecorationTheme: InputDecorationTheme(
+          isDense: true,
+          filled: true,
+          fillColor: colorScheme.surface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+          prefixIconConstraints: const BoxConstraints(minWidth: 26, minHeight: 22),
+          suffixIconConstraints: const BoxConstraints(minWidth: 26, minHeight: 22),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14.0),
+            borderSide: BorderSide(color: colorScheme.outline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14.0),
+            borderSide: BorderSide(color: colorScheme.outline),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14.0),
+            borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+          ),
+        ),
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(colorScheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(2),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14.0),
+              side: BorderSide(color: colorScheme.outline),
+            ),
+          ),
+        ),
+        dropdownMenuEntries: values
+            .map(
+              (v) => DropdownMenuEntry<T>(
+                value: v,
+                label: labelBuilder(v),
+                style: MenuItemButton.styleFrom(textStyle: textTheme.bodyMedium),
+              ),
+            )
+            .toList(),
+        onSelected: (value) {
+          if (value != null) {
+            onSelected(value);
+            FocusManager.instance.primaryFocus?.unfocus();
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 2.0, top: 64.0),
+          padding: const EdgeInsets.only(left: 10.0, right: 10.0, bottom: 2.0, top: 64.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -87,13 +158,10 @@ class _SearchPageState extends State<SearchPage> {
                   controller: _controller,
                   decoration: InputDecoration(
                     hintText: appLocalizations.translate('search.bar_hint'),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    prefixIcon: Icon(Icons.search, size: 20, color: colorScheme.primary),
                     suffixIcon: _controller.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear),
+                            icon: Icon(Icons.clear, size: 20, color: colorScheme.primary),
                             onPressed: () {
                               _controller.clear();
                               _onSearchChanged('');
@@ -104,80 +172,74 @@ class _SearchPageState extends State<SearchPage> {
                   onChanged: _onSearchChanged,
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.info_outline),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ScryfallSyntaxPage(),
-                    ),
-                  );
-                },
+              const SizedBox(width: 8.0),
+              Container(
+                height: 52.0,
+                width: 52.0,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: BorderRadius.circular(14.0),
+                  border: Border.all(color: colorScheme.outline),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.info_outline, size: 20, color: colorScheme.primary),
+                  tooltip: appLocalizations.translate('search.syntax_help'),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ScryfallSyntaxPage(),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 2.0, top: 2.0),
+          padding: const EdgeInsets.only(left: 10.0, right: 10.0, bottom: 2.0, top: 10.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              DropdownButton<String>(
-                value: _searchScope,
-                items: ['one_card', 'all_prints']
-                    .map((value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(appLocalizations.translate('search.scope.$value')),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _searchScope = value;
-                    });
-                    _onSearchChanged(_controller.text);
-                  }
+              _buildFilterDropdown<String>(
+                context: context,
+                initialValue: _searchScope,
+                values: const ['one_card', 'all_prints'],
+                labelBuilder: (v) => appLocalizations.translate('search.scope.$v'),
+                icon: Icons.filter_alt_outlined,
+                onSelected: (value) {
+                  setState(() => _searchScope = value);
+                  _onSearchChanged(_controller.text);
                 },
               ),
-              DropdownButton<String>(
-                value: _orderBy,
-                items: ['name', 'released_at', 'set', 'rarity', 'color', 'cmc', 'power', 'toughness']
-                    .map((value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(appLocalizations.translate('search.order.$value')),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _orderBy = value;
-                    });
-                    _onSearchChanged(_controller.text);
-                  }
+              const SizedBox(width: 8.0),
+              _buildFilterDropdown<String>(
+                context: context,
+                initialValue: _orderBy,
+                values: const ['name', 'released_at', 'set', 'rarity', 'color', 'cmc', 'power', 'toughness'],
+                labelBuilder: (v) => appLocalizations.translate('search.order.$v'),
+                icon: Icons.sort_by_alpha,
+                onSelected: (value) {
+                  setState(() => _orderBy = value);
+                  _onSearchChanged(_controller.text);
                 },
               ),
-              DropdownButton<String>(
-                value: _orderDir,
-                items: ['asc', 'desc']
-                    .map((value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(appLocalizations.translate('search.order.$value')),
-                        ))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _orderDir = value;
-                    });
-                    _onSearchChanged(_controller.text);
-                  }
+              const SizedBox(width: 8.0),
+              _buildFilterDropdown<String>(
+                context: context,
+                initialValue: _orderDir,
+                values: const ['asc', 'desc'],
+                labelBuilder: (v) => appLocalizations.translate('search.order.$v'),
+                icon: Icons.swap_vert,
+                onSelected: (value) {
+                  setState(() => _orderDir = value);
+                  _onSearchChanged(_controller.text);
                 },
               ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 2.0, left: 16.0, right: 16.0, bottom: 2.0),
+          padding: const EdgeInsets.only(top: 8.0, left: 10.0, right: 10.0, bottom: 2.0),
           child: Row(
             children: [
               Text(
@@ -192,14 +254,14 @@ class _SearchPageState extends State<SearchPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
             ],
-          )
+          ),
         ),
         if (_errorMessage != null)
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
               _errorMessage!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(color: colorScheme.error),
             ),
           ),
         Expanded(

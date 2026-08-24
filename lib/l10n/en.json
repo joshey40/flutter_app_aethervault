@@ -12,7 +12,7 @@
   },
   "search": {
     "search_error": "Search error: ",
-    "bar_hint": "Search",
+    "bar_hint": "Search cards",
     "hint": "Search for a card via Scryfall Syntax",
     "flip_card": "Flip card",
     "results": "Results",

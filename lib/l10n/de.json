@@ -12,7 +12,7 @@
   },
   "search": {
     "search_error": "Suchfehler: ",
-    "bar_hint": "Suche",
+    "bar_hint": "Suche nach Karten",
     "hint": "Suche nach einer Karte über Scryfall Syntax",
     "flip_card": "Karte umdrehen",
     "results": "Ergebnisse",
