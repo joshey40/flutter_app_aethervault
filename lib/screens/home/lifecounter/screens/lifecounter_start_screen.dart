@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../services/localization_service.dart';
-import '../data/lifecounter_model.dart';
-import '../data/lifecounter_storage.dart';
+import '../../../../services/life_counter/lifecounter_model.dart';
+import '../../../../services/life_counter/lifecounter_storage.dart';
 import 'lifecounter_play_screen.dart';
 
 class LifecounterStartScreen extends StatefulWidget {

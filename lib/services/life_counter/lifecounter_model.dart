@@ -164,6 +164,9 @@ class LifecounterGame {
     while (commanderDamage.length < pc) {
       commanderDamage.add(List<List<int>>.generate(pc, (_) => [0]));
     }
+    if (commanderDamage.length > pc) {
+      commanderDamage.removeRange(pc, commanderDamage.length);
+    }
     for (var s = 0; s < pc; s++) {
       final row = commanderDamage[s];
       // Ensure row length equals playerCount

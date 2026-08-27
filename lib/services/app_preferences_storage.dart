@@ -16,11 +16,11 @@ class AppPreferencesStorage {
   Future<ThemeMode> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
     switch (prefs.getString(_themeModeKey)) {
-      case 'dark':
-        return ThemeMode.dark;
+      case 'light':
+        return ThemeMode.light;
       case 'system':
         return ThemeMode.system;
-      case 'light':
+      case 'dark':
       default:
         return ThemeMode.dark;
     }

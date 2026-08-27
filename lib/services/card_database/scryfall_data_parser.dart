@@ -28,11 +28,11 @@ class ParserProgress {
 }
 
 /// Contains the parsed cards and faces of a single data chunk.
-class _ParseChunkResult {
+class ParseChunkResult {
   final List<ScryfallCardsCompanion> cards;
   final List<ScryfallCardFacesCompanion> faces;
   final int parsedCount;
-  _ParseChunkResult(this.cards, this.faces, this.parsedCount);
+  ParseChunkResult(this.cards, this.faces, this.parsedCount);
 }
 
 /// Parses Scryfall bulk data and stores the extracted data in the local database.
@@ -101,7 +101,7 @@ class ScryfallDataParser {
     await _database.delete(_database.scryfallCardFaces).go();
     await _database.delete(_database.scryfallCards).go();
 
-    Future<_ParseChunkResult>? pendingParse;
+    Future<ParseChunkResult>? pendingParse;
 
     Future<void> awaitAndFlushPending() async {
     if (pendingParse == null) return;
@@ -163,12 +163,12 @@ class ScryfallDataParser {
 }
 
   /// Run the parsing of a chunk of [lines] in a separate isolate, filtering by [langs].
-  static Future<_ParseChunkResult> _runParseChunk(List<String> lines, List<String> langs) {
-    return Isolate.run(() => _parseChunk(lines, langs));
+  static Future<ParseChunkResult> _runParseChunk(List<String> lines, List<String> langs) {
+    return Isolate.run(() => parseChunk(lines, langs));
   }
 
   /// Parse a chunk of [lines] and return the parsed cards and faces, filtering by [langs].
-  static _ParseChunkResult _parseChunk(List<String> lines, List<String> langs) {
+  static ParseChunkResult parseChunk(List<String> lines, List<String> langs) {
     final cards = <ScryfallCardsCompanion>[];
     final faces = <ScryfallCardFacesCompanion>[];
     var parsedCount = 0;
@@ -192,7 +192,7 @@ class ScryfallDataParser {
       faces.addAll(_mapFaces(record));
     }
 
-    return _ParseChunkResult(cards, faces, parsedCount);
+    return ParseChunkResult(cards, faces, parsedCount);
   }
 
   /// Map a single [card] to a [ScryfallCardsCompanion] for database insertion.
@@ -450,7 +450,7 @@ class ScryfallDataParser {
         throw FormatException('Expected one JSON object per line');
       }
       final record = decoded.cast<String, dynamic>();
-      tags.add(_mapTag(record));
+      tags.add(mapTag(record));
     }
 
     await _database.transaction(() async {
@@ -468,7 +468,7 @@ class ScryfallDataParser {
   }
 
   /// Map a single [tag] to a [ScryfallTagsCompanion] for database insertion.
-  static ScryfallTagsCompanion _mapTag(Map<String, dynamic> tag) {
+  static ScryfallTagsCompanion mapTag(Map<String, dynamic> tag) {
     return ScryfallTagsCompanion.insert(
       scryfallId: _stringValue(tag, 'id'),
       label: _stringValue(tag, 'label'),

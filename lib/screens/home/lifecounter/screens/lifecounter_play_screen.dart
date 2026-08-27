@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../services/localization_service.dart';
 import 'package:multi_split_view/multi_split_view.dart';
-import '../data/lifecounter_model.dart';
-import '../data/lifecounter_storage.dart';
+import '../../../../services/life_counter/lifecounter_model.dart';
+import '../../../../services/life_counter/lifecounter_storage.dart';
 import '../widgets/lifecounter_random.dart';
 import '../widgets/player_panel.dart';
 
