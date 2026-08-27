@@ -207,6 +207,7 @@ class _PolygonIcon extends StatelessWidget {
   final bool useOnPrimary;
   const _PolygonIcon({super.key, required this.forValue, this.size = 40, this.useOnPrimary = false});
 
+  /// Returns the number of sides for a given dice type or shape.
   int _sidesFor(String v) {
     switch (v) {
       case 'd4':

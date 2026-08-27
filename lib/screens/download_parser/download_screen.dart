@@ -76,6 +76,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
     }
   }
 
+  /// Navigate to the ParserScreen after the download is complete.
   void _openParser() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(

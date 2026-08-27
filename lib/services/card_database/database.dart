@@ -12,11 +12,21 @@ class StringListConverter extends TypeConverter<List<String>, String> {
   const StringListConverter();
 
   @override
-  List<String> fromSql(String fromDb) { return List<String>.from(json.decode(fromDb)); }
+  List<String> fromSql(String fromDb) {
+    return List<String>.from(json.decode(fromDb));
+  }
 
   @override
-  String toSql(List<String> value) { return json.encode(value); }
+  String toSql(List<String> value) {
+    return json.encode(value);
+  }
 }
+
+// ==============================================================================
+// Scryfall Database Tables
+// ==============================================================================
+
+/// Stores the card data imported from Scryfall.
 class ScryfallCards extends Table {
   TextColumn get scryfallId => text()();
   TextColumn get oracleId => text().nullable()();
@@ -155,7 +165,9 @@ class ScryfallCards extends Table {
   Set<Column> get primaryKey => {scryfallId};
 }
 
+/// Stores the individual faces of multi-faced Scryfall cards.
 class ScryfallCardFaces extends Table {
+  // Links each face to its parent card.
   TextColumn get cardId => text().references(ScryfallCards, #scryfallId)();
   IntColumn get faceIndex => integer()();
 
@@ -214,6 +226,7 @@ class ScryfallTags extends Table {
   Set<Column> get primaryKey => {scryfallId};
 }
 
+/// Stores the set data imported from Scryfall.
 class ScryfallSets extends Table {
   TextColumn get scryfallId => text()();
   TextColumn get code => text()();
@@ -232,7 +245,24 @@ class ScryfallSets extends Table {
   Set<Column> get primaryKey => {scryfallId};
 }
 
+// ==============================================================================
+// Collection Tables
+// ==============================================================================
+
+// Comming soon...
+
+// =============================================================================
+// Deck Tables
+// =============================================================================
+
+// Comming soon...
+
+// ==============================================================================
+// AppDatabase and Queries
+// ==============================================================================
+
 @DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags, ScryfallSets])
+/// Provides access to the application's local Drift database.
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal([QueryExecutor? executor]) : super(executor ?? _openConnection());
 
@@ -251,11 +281,17 @@ class AppDatabase extends _$AppDatabase {
           await m.createAll();
         },
         onUpgrade: (m, from, to) async {
+          // Scryfall data doesn't need to be migrated. Will be deleted and redownloaded.
           await m.deleteTable('scryfall_card_faces');
           await m.deleteTable('scryfall_cards');
           await m.deleteTable('scryfall_tags');
           await m.deleteTable('scryfall_sets');
-          await m.createAll();
+          await m.createTable(scryfallCardFaces);
+          await m.createTable(scryfallCards);
+          await m.createTable(scryfallTags);
+          await m.createTable(scryfallSets);
+          // Other tables probably need migration. Add here :)
+          // Collection, decks etc
         },
         beforeOpen: (details) async {
           await customStatement('PRAGMA journal_mode = WAL;');
@@ -275,6 +311,11 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
+  // =============================================================================
+  // Custom queries
+  // =============================================================================
+
+  /// Get all card faces associated with a specific card ID, ordered by face index.
   Future<List<ScryfallCardFace>> getCardFacesByCardId(String cardId) async {
     return (select(scryfallCardFaces)
           ..where((tbl) => tbl.cardId.equals(cardId))
@@ -282,6 +323,7 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  /// Get cards based on Scryfall syntax, search scope, and ordering preferences.
   Future<List<ScryfallCard>> getCardsByScryfallSyntax(String syntax, String searchScope, String orderBy, String orderDir) async {
     final tokens = tokenizeScryfallSyntax(syntax);
     final hasLangFilter = containsLangFilter(tokens);
@@ -323,6 +365,7 @@ class AppDatabase extends _$AppDatabase {
     return rows;
   }
 
+  /// Resolve tag lookups for a set of [slugs] and a specific [tagType], returning a map of slugs to their associated tag IDs.
   Future<Map<String, List<String>>> _resolveTagLookups(Set<String> slugs, String tagType) async {
     if (slugs.isEmpty) return {};
 

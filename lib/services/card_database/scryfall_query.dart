@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart';
 import 'database.dart';
 
+/// Supported comparison operators for Scryfall filters.
 enum FilterOp { eq, ne, gt, gte, lt, lte, contains }
 
+/// Maps a Scryfall operator to its corresponding filter operation.
 FilterOp _mapOp(String s) => switch (s) {
       ':' => FilterOp.contains,
       '=' => FilterOp.eq,
@@ -14,8 +16,10 @@ FilterOp _mapOp(String s) => switch (s) {
       _ => throw FormatException('Unknown operator: $s'),
     };
 
+/// Base class for parsed Scryfall query tokens.
 sealed class QueryToken {}
 
+/// Represents a single Scryfall filter such as `type:creature`.
 class FilterToken extends QueryToken {
   final String key;
   final FilterOp op;
@@ -32,6 +36,7 @@ class FilterToken extends QueryToken {
   String toString() => '${isNegated ? '-' : ''}$key${op.name}$value';
 }
 
+/// Represents multiple query tokens combined with AND or OR.
 class ListToken extends QueryToken {
   final bool isOR;
   final List<QueryToken> tokens;
@@ -43,8 +48,11 @@ class ListToken extends QueryToken {
   });
 }
 
+// =============================================================================
 // Utility functions
+// =============================================================================
 
+/// Splits a query into tokens while preserving quoted values and parentheses.
 List<String> _splitTokens(String input) {
   final tokens = <String>[];
   final buf = StringBuffer();
@@ -95,6 +103,7 @@ List<String> _splitTokens(String input) {
   return tokens;
 }
 
+/// Parses a Scryfall query string into a list of query tokens.
 List<QueryToken> tokenizeScryfallSyntax(String input) {
   final trimmed = input.trim();
   if (trimmed.isEmpty) return [];
@@ -104,6 +113,7 @@ List<QueryToken> tokenizeScryfallSyntax(String input) {
   return [root];
 }
 
+/// Checks whether the query contains a language filter.
 bool containsLangFilter(List<QueryToken> tokens) {
   bool check(QueryToken t) {
     if (t is FilterToken) return t.key == 'lang' || t.key == 'language';
@@ -113,6 +123,7 @@ bool containsLangFilter(List<QueryToken> tokens) {
   return tokens.any(check);
 }
 
+/// Checks whether the query contains a non-negated type filter.
 bool containsTypeFilter(List<QueryToken> tokens) {
   bool check(QueryToken t) {
     if (t is FilterToken) return (t.key == 't' || t.key == 'type') && t.isNegated == false;
@@ -122,6 +133,7 @@ bool containsTypeFilter(List<QueryToken> tokens) {
   return tokens.any(check);
 }
 
+/// Checks whether the query contains a non-negated set filter.
 bool containsSetFilter(List<QueryToken> tokens) {
   bool check(QueryToken t) {
     if (t is FilterToken) return (t.key == 's' || t.key == 'e' || t.key == 'set' || t.key == 'edition') && t.isNegated == false;
@@ -137,6 +149,7 @@ const Map<String, String> _isValueToOracleTagSlug = {
   'creatureland': 'creatureland'
 };
 
+/// Collects all Oracle Tag values referenced by the query.
 Set<String> collectOracleTagLookups(List<QueryToken> tokens) {
   final result = <String>{};
   void visit(QueryToken t) {
@@ -156,6 +169,7 @@ Set<String> collectOracleTagLookups(List<QueryToken> tokens) {
   return result;
 }
 
+/// Collects all Illustration Tag values referenced by the query.
 Set<String> collectIllustrationTagLookups(List<QueryToken> tokens) {
   final result = <String>{};
   void visit(QueryToken t) {
@@ -169,6 +183,7 @@ Set<String> collectIllustrationTagLookups(List<QueryToken> tokens) {
   return result;
 }
 
+/// Applies the selected search scope to the result cards.
 void scopeCards(List<ScryfallCard> cards, String searchScope) {
   if (searchScope == 'one_card') {
     final seen = <String, ScryfallCard>{};
@@ -183,6 +198,7 @@ void scopeCards(List<ScryfallCard> cards, String searchScope) {
   }
 }
 
+/// Sorts cards according to the requested Scryfall sort order.
 void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir, List<ScryfallSet> allSets) {
   int cmp(ScryfallCard a, ScryfallCard b) {
     final powerA = double.tryParse(a.power ?? '') ?? 0.0;
@@ -207,15 +223,19 @@ void sortCards(List<ScryfallCard> cards, String orderBy, String orderDir, List<S
   cards.sort(cmp);
 }
 
+// =============================================================================
 // Parser
+// =============================================================================
 
 final _filterRe = RegExp(r'^(-)?(\w+)(:|>=|<=|=|!=|>|<)(?:"([^"]*)"|(\S+))$');
 
+/// Parses tokenized Scryfall syntax into a query token tree.
 class _TokenParser {
   final List<String> tokens;
   int pos = 0;
   _TokenParser(this.tokens);
 
+  /// Parses the complete token list.
   QueryToken parse() {
     final result = _parseOr();
     if (pos != tokens.length) {
@@ -224,6 +244,7 @@ class _TokenParser {
     return result;
   }
 
+  /// Parses OR expressions and their operands.
   QueryToken _parseOr() {
     final terms = [_parseAnd()];
     while (pos < tokens.length && tokens[pos].toUpperCase() == 'OR') {
@@ -233,6 +254,7 @@ class _TokenParser {
     return terms.length == 1 ? terms.first : ListToken(isOR: true, tokens: terms);
   }
 
+  /// Parses AND expressions and implicit adjacent terms.
   QueryToken _parseAnd() {
     final terms = <QueryToken>[];
     while (pos < tokens.length &&
@@ -244,6 +266,7 @@ class _TokenParser {
     return terms.length == 1 ? terms.first : ListToken(isOR: false, tokens: terms);
   }
 
+  /// Parses a single filter or parenthesized expression.
   QueryToken _parseTerm() {
     final tok = tokens[pos];
 
@@ -277,6 +300,7 @@ class _TokenParser {
     return FilterToken(key: 'name', op: FilterOp.contains, value: value, isNegated: negated);
   }
 
+  /// Applies negation to a query token.
   QueryToken _negate(QueryToken t, bool negated) {
     if (!negated) return t;
     return switch (t) {
@@ -286,10 +310,13 @@ class _TokenParser {
   }
 }
 
+// ==============================================================================
 // Compiler for compiling QueryToken into a Drift Expression
+// ==============================================================================
 
 const Map<String, int> _colorBits = {'w': 1, 'u': 2, 'b': 4, 'r': 8, 'g': 16};
 
+/// Converts a color name, nickname, or color combination into a bit mask.
 int _colorMaskFromValue(String value) {
   final v = value.toLowerCase();
   const nicknames = {
@@ -349,6 +376,7 @@ int _colorMaskFromValue(String value) {
   return mask;
 }
 
+/// Returns the database column containing legality for the given format.
 GeneratedColumn<String> _legalityColumn($ScryfallCardsTable t, String format) {
   return switch (format.toLowerCase()) {
     'standard' => t.legalStandard,
@@ -377,6 +405,7 @@ GeneratedColumn<String> _legalityColumn($ScryfallCardsTable t, String format) {
   };
 }
 
+/// Builds a numeric comparison expression from a filter value.
 Expression<bool> _numericExpression(Expression<double> col, FilterOp op, String rawValue) {
   final n = double.tryParse(rawValue);
   if (n == null) throw FormatException('Ungültiger Zahlenwert: $rawValue');
@@ -391,6 +420,7 @@ Expression<bool> _numericExpression(Expression<double> col, FilterOp op, String 
   };
 }
 
+/// Builds a numeric comparison for values stored as strings.
 Expression<bool> _numericStringExpression(Expression<String> col, FilterOp op, String rawValue) {
   // Convert * to 0, since Scryfall treats * as 0 for comparison purposes
   final n = rawValue == '*' ? 0.0 : double.tryParse(rawValue);
@@ -407,6 +437,7 @@ Expression<bool> _numericStringExpression(Expression<String> col, FilterOp op, S
   return col.isNull().not() & expr;
 }
 
+/// Builds a comparison expression for the ordered rarity values.
 Expression<bool> _rarityCompareExpression(Expression<int> col, FilterOp op, String rawValue) {
   final v = rawValue.toLowerCase();
   final rarityOrder = ['common', 'uncommon', 'rare', 'mythic'];
@@ -415,6 +446,7 @@ Expression<bool> _rarityCompareExpression(Expression<int> col, FilterOp op, Stri
   return _numericExpression(col.cast<double>(), op, index.toString());
 }
 
+/// Builds a color or color identity comparison from a bit mask.
 Expression<bool> _colorMaskExpression(Expression<int> col, FilterOp op, String rawValue, bool isIdentity) {
   final v = rawValue.toLowerCase();
 
@@ -464,6 +496,7 @@ Expression<bool> _colorMaskExpression(Expression<int> col, FilterOp op, String r
   };
 }
 
+/// Converts Scryfall's `~` name placeholder into a SQL LIKE pattern.
 Expression<String> _tildeToNamePattern(Expression<String> nameCol, String rawValue) {
   final parts = rawValue.split('~');
   Expression<String> pattern = const Variable<String>('%');
@@ -474,6 +507,7 @@ Expression<String> _tildeToNamePattern(Expression<String> nameCol, String rawVal
   return pattern + const Variable<String>('%');
 }
 
+/// Builds a comparison between power and toughness values.
 Expression<bool> _powerToughnessCompareExpression(Expression<String> col, FilterOp op, Expression<String> otherCol) {
   final colNum = col.cast<double>();
   final otherColNum = otherCol.cast<double>();
@@ -487,11 +521,13 @@ Expression<bool> _powerToughnessCompareExpression(Expression<String> col, Filter
   };
 }
 
+/// Applies a card condition and falls back to matching card faces when needed.
 Expression<bool> _withFaceFallback($ScryfallCardsTable t, AppDatabase db, Expression<bool> cardMatch, Expression<bool> faceCondition) {
   final needsFaceValues = t.layout.isIn(const ['transform', 'modal_dfc', 'meld']);
   return (needsFaceValues & _anyFaceMatches(db, t.scryfallId, faceCondition)) | (needsFaceValues.not() & cardMatch);
 }
 
+/// Builds a date comparison expression.
 Expression<bool> _dateCompareExpression(Expression<String> col, FilterOp op, DateTime date) {
   final colDate = col.cast<DateTime>();
   return switch (op) {
@@ -509,6 +545,7 @@ const Map<String, String> _hybridCanonicalOrder = {
   'BW': 'WB', 'RU': 'UR', 'GB': 'BG', 'WR': 'RW', 'UG': 'GU', // enemy
 };
 
+/// Parses a mana cost into canonical mana symbols.
 List<String> _parseManaSymbols(String value) {
   if (value.contains('{')) {
     final matches = RegExp(r'\{([^}]+)\}').allMatches(value);
@@ -557,6 +594,7 @@ List<String> _parseManaSymbols(String value) {
   return symbols;
 }
 
+/// Removes the given mana symbols from a database expression.
 Expression<String> _stripSymbols(Expression<String> col, Iterable<String> symbols) {
   var expr = col;
   for (final s in symbols) {
@@ -565,6 +603,7 @@ Expression<String> _stripSymbols(Expression<String> col, Iterable<String> symbol
   return expr;
 }
 
+/// Builds a mana cost comparison from parsed mana symbols.
 Expression<bool> _manaCostExpression(Expression<String> col, FilterOp op, String rawValue) {
   final symbols = _parseManaSymbols(rawValue);
 
@@ -601,10 +640,12 @@ Expression<bool> _manaCostExpression(Expression<String> col, FilterOp op, String
   };
 }
 
+/// Checks whether a mana cost contains a hybrid mana symbol.
 Expression<bool> _hasHybridSymbol(Expression<String> manaCost) {
   return manaCost.like('%W/U%') | manaCost.like('%W/B%') | manaCost.like('%B/R%') | manaCost.like('%B/G%') | manaCost.like('%U/B%') | manaCost.like('%U/R%') | manaCost.like('%R/G%') | manaCost.like('%R/W%') | manaCost.like('%G/W%') | manaCost.like('%G/U%');
 }
 
+/// Builds the expression for an Scryfall `is:` or `not:` filter.
 Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, List<String>> oracleTagIds, AppDatabase db) {
   // Unsupported:
   // - newinpauper
@@ -785,6 +826,7 @@ Expression<bool> _isExpression($ScryfallCardsTable t, String value, Map<String, 
   }
 }
 
+/// Builds a tag lookup expression for Oracle or Illustration Tags.
 Expression<bool> _tagExpression($ScryfallCardsTable t, String tag, bool isOracleTag, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds) {
   final lookup = isOracleTag ? oracleTagIds : illustrationTagIds;
   final ids = lookup[tag.toLowerCase()] ?? const <String>[];
@@ -792,6 +834,7 @@ Expression<bool> _tagExpression($ScryfallCardsTable t, String tag, bool isOracle
   return isOracleTag ? t.oracleId.isIn(ids) : t.illustrationId.isIn(ids);
 }
 
+/// Builds a set expression for a block or set group.
 Expression<bool> _blockAndGroupExpression($ScryfallCardsTable t, String code, List<ScryfallSet> allSets, bool isBlock) {
   List<String> sets;
   if (isBlock) {
@@ -811,6 +854,7 @@ Expression<bool> _blockAndGroupExpression($ScryfallCardsTable t, String code, Li
   return t.setCode.isIn(sets);
 }
 
+/// Checks whether any face of a card matches the given condition.
 Expression<bool> _anyFaceMatches(AppDatabase db, Expression<String> cardId, Expression<bool> condition) {
   final facesQuery = db.selectOnly(db.scryfallCardFaces)
     ..addColumns([db.scryfallCardFaces.cardId])
@@ -818,10 +862,12 @@ Expression<bool> _anyFaceMatches(AppDatabase db, Expression<String> cardId, Expr
   return existsQuery(facesQuery);
 }
 
+/// Matches a card or any of its faces against the given conditions.
 Expression<bool> _cardOrAnyFace(AppDatabase db, Expression<String> cardId, Expression<bool> cardCondition, Expression<bool> faceCondition) {
   return cardCondition | _anyFaceMatches(db, cardId, faceCondition);
 }
 
+/// Compiles a single filter token into a Drift database expression.
 Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets, AppDatabase db) {
   // Unsupported filters (from the original scryfall syntax):
   // - edhrecrank (not included in scryfall data)
@@ -1017,6 +1063,7 @@ Expression<bool> _compileFilter($ScryfallCardsTable t, FilterToken f, Map<String
   }
 }
 
+/// Compiles a parsed query token tree into a Drift database expression.
 Expression<bool> compileQueryToken($ScryfallCardsTable t, QueryToken token, Map<String, List<String>> oracleTagIds, Map<String, List<String>> illustrationTagIds, List<ScryfallSet> allSets, AppDatabase db) {
   if (token is ListToken) {
     if (token.tokens.isEmpty) return const Constant(true);

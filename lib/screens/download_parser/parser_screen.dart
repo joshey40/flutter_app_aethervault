@@ -74,6 +74,7 @@ class _ParserScreenState extends State<ParserScreen> {
     }
   }
 
+  /// Open the home screen after parsing is complete.
   void _openHome() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(

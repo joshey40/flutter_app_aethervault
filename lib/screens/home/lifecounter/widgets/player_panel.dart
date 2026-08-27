@@ -53,7 +53,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
   int _tempDelta = 0;
   Timer? _hideTimer;
   late bool _partnerEnabled;
-  // No measurement keys — layout uses stretch behavior for equal heights
+  // No measurement keys, layout uses stretch behavior for equal heights
 
   void _handleIncrement(int delta) {
     setState(() {
@@ -124,8 +124,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // No measurement or debug logging — use layout stretch for matching heights.
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       decoration: BoxDecoration(
@@ -146,8 +144,10 @@ class _PlayerPanelState extends State<PlayerPanel> {
                 child: LayoutBuilder(builder: (context, constraints) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
+                    // Left column: Settings
+                    // Center: Life tracker
+                    // Right column: Commander Tax
                     children: [
-                      // Left column: Settings
                       SizedBox(
                         width: 48,
                         child: Column(
@@ -225,8 +225,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         ),
                       ),
                       const SizedBox(width: 6),
-
-                      // Center life tracker
                       Expanded(
                         child: Column(
                           mainAxisSize: MainAxisSize.max,
@@ -307,10 +305,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                           ],
                         ),
                       ),
-
                       const SizedBox(width: 6),
-
-                      // Right: Commander Tax with invisible top/bottom labels to reserve space
                       SizedBox(
                         width: 48,
                         child: Column(

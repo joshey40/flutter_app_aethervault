@@ -59,6 +59,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     _checkDownloadNeed();
   }
 
+  /// Set the app's locale and save it to preferences.
   Future<void> _setLocale(Locale locale) async {
     await initializeLocalizations(locale.languageCode);
     setState(() {
@@ -67,6 +68,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     await widget.preferencesStorage.saveLocale(locale);
   }
 
+  /// Set the app's theme mode and save it to preferences.
   Future<void> _setThemeMode(ThemeMode themeMode) async {
     setState(() {
       _themeMode = themeMode;
@@ -74,6 +76,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
     await widget.preferencesStorage.saveThemeMode(themeMode);
   }
 
+  /// Check if any Scryfall bulk data types need to be downloaded.
   Future<void> _checkDownloadNeed() async {
     if (!mounted) return;
     final service = ScryfallDownloadService();

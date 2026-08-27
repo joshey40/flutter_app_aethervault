@@ -2,7 +2,7 @@ import 'lifecounter_model.dart';
 import '../../../../services/app_preferences_storage.dart';
 import 'package:flutter/foundation.dart';
 
-/// Exception thrown when storage operations fail.
+/// Exception thrown when there is an error in LifecounterStorage operations.
 class LifecounterStorageException implements Exception {
   final String message;
   LifecounterStorageException(this.message);
@@ -11,6 +11,7 @@ class LifecounterStorageException implements Exception {
 }
 
 class LifecounterStorage {
+  /// Save the current lifecounter [game] state as a JSON string.
   Future<void> saveGame(LifecounterGame game) async {
     final prefs = AppPreferencesStorage();
     try {
@@ -22,6 +23,8 @@ class LifecounterStorage {
     }
   }
 
+  /// Load the current lifecounter game state.
+  /// Returns null if no game is saved or if the saved data is invalid.
   Future<LifecounterGame?> loadGame() async {
     final prefs = AppPreferencesStorage();
     try {
@@ -38,6 +41,7 @@ class LifecounterStorage {
     }
   }
 
+  /// Clear the current lifecounter game state.
   Future<void> clearGame() async {
     final prefs = AppPreferencesStorage();
     try {

@@ -8,7 +8,11 @@ class AppPreferencesStorage {
   static const String _scryfallBulkDataItemsKey = 'scryfall.bulk_data_items';
   static const String _scryfallBulkDataMetadataKeyPrefix = 'scryfall.bulk_data_metadata.';
 
-  /// Settings
+  // ==============================================================================
+  // Settings
+  // =============================================================================
+
+  /// Read the theme mode from shared preferences. If not set, defaults to ThemeMode.dark.
   Future<ThemeMode> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
     switch (prefs.getString(_themeModeKey)) {
@@ -18,10 +22,11 @@ class AppPreferencesStorage {
         return ThemeMode.system;
       case 'light':
       default:
-        return ThemeMode.light;
+        return ThemeMode.dark;
     }
   }
 
+  /// Save the [themeMode] to shared preferences.
   Future<void> saveThemeMode(ThemeMode themeMode) async {
     final prefs = await SharedPreferences.getInstance();
     final value = switch (themeMode) {
@@ -32,6 +37,7 @@ class AppPreferencesStorage {
     await prefs.setString(_themeModeKey, value);
   }
 
+  /// Read the locale from shared preferences. If not set, defaults to Locale('en').
   Future<Locale> loadLocale() async {
     final prefs = await SharedPreferences.getInstance();
     final localeCode = prefs.getString(_localeKey);
@@ -41,38 +47,51 @@ class AppPreferencesStorage {
     };
   }
 
+  /// Save the [locale] to shared preferences.
   Future<void> saveLocale(Locale locale) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_localeKey, locale.languageCode);
   }
 
+  // ==============================================================================
   // Lifecounter
+  // =============================================================================
+  
+  /// Save the current lifecounter game state as a [json] string.
   Future<void> saveLifecounterGame(String json) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lifecounterKey, json);
   }
 
+  /// Load the current lifecounter game state as a JSON string. Returns null if no game state is saved.
   Future<String?> loadLifecounterGame() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_lifecounterKey);
   }
 
+  /// Clear the current lifecounter game state from shared preferences.
   Future<void> clearLifecounterGame() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_lifecounterKey);
   }
 
-  /// Scryfall Data
+  // ==============================================================================
+  // Scryfall Data
+  // ============================================================================
+  
+  /// Save the Scryfall bulk data items as a [json] string.
   Future<void> saveScryfallBulkDataItems(String json) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_scryfallBulkDataItemsKey, json);
   }
 
+  /// Load the Scryfall bulk data items as a JSON string. Returns null if no data is saved.
   Future<String?> loadScryfallBulkDataItems() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_scryfallBulkDataItemsKey);
   }
 
+  /// Save the Scryfall bulk data metadata for a specific [bulkDataType] as a [json] string.
   Future<void> saveScryfallBulkDataMetadata(String bulkDataType, String json) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
@@ -81,11 +100,13 @@ class AppPreferencesStorage {
     );
   }
 
+  /// Load the Scryfall bulk data metadata for a specific [bulkDataType] as a JSON string. Returns null if no data is saved.
   Future<String?> loadScryfallBulkDataMetadata(String bulkDataType) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('$_scryfallBulkDataMetadataKeyPrefix$bulkDataType');
   }
 
+  /// Remove the Scryfall bulk data metadata for a specific [bulkDataType] from shared preferences.
   Future<void> removeScryfallBulkDataMetadata(String bulkDataType) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_scryfallBulkDataMetadataKeyPrefix$bulkDataType');
