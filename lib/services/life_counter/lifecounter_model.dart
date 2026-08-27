@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+/// Stores the state of the current game in the lifecounter feature, including player lives, commander tax, and commander damage.
+/// 
+/// Commander damage as stored as `[sourcePlayer][targetPlayer][commanderSlot]`.
+/// The commander slot identifies which commander dealt the damage and allows damage from multiple commanders to be tracked independently.
 class LifecounterGame {
   final int startLife;
   final int playerCount;
@@ -26,7 +30,7 @@ class LifecounterGame {
       partnerEnabled = partnerEnabled ?? List<bool>.filled(playerCount, false),
       partnerTax = partnerTax ?? List<int>.filled(playerCount, 0);
       
-
+  /// Serialize the LifecounterGame to a JSON-compatible map.
   Map<String, dynamic> toJson() => {
         'startLife': startLife,
         'playerCount': playerCount,
@@ -39,8 +43,8 @@ class LifecounterGame {
         'name': name,
       };
 
-  // Deserialize JSON into a LifecounterGame.
-  // Ensure that lists (`currentLives` and `commanderTax`) always match `playerCount`.
+  /// Deserialize [json] into a LifecounterGame.
+  /// Ensure that lists (`currentLives` and `commanderTax`) always match `playerCount`.
   factory LifecounterGame.fromJson(Map<String, dynamic> json) {
     final startLife = json['startLife'] as int? ?? 20;
     final playerCount = json['playerCount'] as int? ?? 2;
@@ -116,6 +120,7 @@ class LifecounterGame {
 
   String encode() => json.encode(toJson());
 
+  /// Decode a LifecounterGame from a JSON string. Returns null if decoding fails.
   static LifecounterGame? decode(String? data) {
     if (data == null) return null;
     try {
@@ -151,14 +156,16 @@ class LifecounterGame {
     }
   }
 
-  /// Ensure all commanderDamage[source][target] slot lists match
-  /// at least the expected number of slots for the target (1 or 2 depending on partnerEnabled).
+  /// Ensure all commanderDamage[source][target] slot lists match at least the expected number of slots for the target (1 or 2 depending on partnerEnabled).
   /// Preserves extra slots so partner damage isn't lost.
   void normalizeCommanderDamageSlots() {
     final pc = playerCount;
     // Ensure outer structure
     while (commanderDamage.length < pc) {
       commanderDamage.add(List<List<int>>.generate(pc, (_) => [0]));
+    }
+    if (commanderDamage.length > pc) {
+      commanderDamage.removeRange(pc, commanderDamage.length);
     }
     for (var s = 0; s < pc; s++) {
       final row = commanderDamage[s];

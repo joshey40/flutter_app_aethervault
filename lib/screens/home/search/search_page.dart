@@ -25,6 +25,7 @@ class _SearchPageState extends State<SearchPage> {
   String _orderBy = 'name';
   String _orderDir = 'asc';
 
+  /// Handle changes in the search input field with a debounce.
   void _onSearchChanged(String value) {
     _debounce?.cancel();
 
@@ -43,6 +44,7 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  /// Execute the search query against the database and update the UI with results or errors.
   Future<void> _runSearch(String query) async {
     setState(() {
       _isLoading = true;
@@ -316,6 +318,7 @@ class _CardTileState extends State<_CardTile> {
     }
   }
 
+  /// Load card faces from the database if the main card image is not available.
   Future<void> _loadFaces() async {
     setState(() => _loadingFaces = true);
     final faces = await widget.database.getCardFacesByCardId(widget.card.scryfallId);
@@ -326,13 +329,16 @@ class _CardTileState extends State<_CardTile> {
     });
   }
 
+  /// Get the list of image URLs for the card faces, filtering out any null values.
   List<String> get _faceImageUrls {
     if (_faces == null) return const [];
     return _faces!.map((f) => f.imageNormal).whereType<String>().toList();
   }
 
+  /// Determine if the card can be flipped (i.e., has multiple distinct face images).
   bool get _canFlip => _faceImageUrls.length >= 2 && _faceImageUrls.toSet().length >= 2;
 
+  /// Get the current image URL to display, either from the main card or the selected face.
   String? get _currentImageUrl {
     if (widget.card.imageNormal != null) return widget.card.imageNormal;
     final urls = _faceImageUrls;
@@ -340,6 +346,7 @@ class _CardTileState extends State<_CardTile> {
     return urls[_faceIndex.clamp(0, urls.length - 1)];
   }
 
+  /// Flip to the next card face.
   void _flip() {
     final urls = _faceImageUrls;
     if (urls.length < 2) return;

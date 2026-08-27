@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../services/localization_service.dart';
 import 'package:multi_split_view/multi_split_view.dart';
-import '../data/lifecounter_model.dart';
-import '../data/lifecounter_storage.dart';
+import '../../../../services/life_counter/lifecounter_model.dart';
+import '../../../../services/life_counter/lifecounter_storage.dart';
 import '../widgets/lifecounter_random.dart';
 import '../widgets/player_panel.dart';
 
@@ -132,6 +132,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     return false;
   }
 
+  /// Ensure all commanderDamage[source][target] slot lists match at least the expected number of slots for the target (1 or 2 depending on partnerEnabled).
   List<int> _getCommanderDamageValues(int source, int target, bool targetHasPartner) {
     if (source < 0 || source >= _game.playerCount) return targetHasPartner ? [0, 0] : [0];
     if (target < 0 || target >= _game.playerCount) return targetHasPartner ? [0, 0] : [0];
@@ -141,6 +142,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     return values;
   }
 
+  /// Apply commander damage from [source] to [target] for the given [slot] (0 or 1), adjusting the target's life accordingly.
   void _applyCommanderDamage(int source, int target, int delta, int slot) {
     setState(() {
       // Ensure structure and slots are normalized via model
@@ -179,7 +181,6 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
               tooltip: loc.translate('lifecounter.resetGame'),
               onPressed: () => _confirmReset(),
             ),
-          // Mana toggle button
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'Mana',
@@ -321,7 +322,6 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
             child: MultiSplitView(
               axis: Axis.vertical,
               initialAreas: [
-                // top row: two equal panels
                 Area(
                   flex: 3,
                   builder: (c, a) => MultiSplitView(
@@ -332,7 +332,6 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                     ],
                   ),
                 ),
-                // bottom centered panel
                 Area(flex: 2, builder: (c, a) => _buildPlayer(2, 0)),
               ],
             ),
@@ -392,6 +391,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     super.dispose();
   }
 
+  /// Reset the game state to initial values for all players.
   void _resetGame() {
     setState(() {
       for (var i = 0; i < _game.playerCount; i++) {
@@ -409,6 +409,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     messenger.showSnackBar(SnackBar(content: Text(appLocalizations.translate('lifecounter.gameReset') != 'lifecounter.gameReset' ? appLocalizations.translate('lifecounter.gameReset') : 'Game reset')));
   }
 
+  /// Show a confirmation dialog before resetting the game state.
   Future<void> _confirmReset() async {
     final loc = appLocalizations;
     final ok = await showDialog<bool>(

@@ -40,13 +40,13 @@ class ScryfallDownloadService {
 
   Stream<DownloadProgress> get progressStream => _progressController.stream;
 
+  /// Check if any bulk data types need to be downloaded or updated.
   Future<Map<String, bool>> needsBulkDataDownload() async {
     try {
       await fetchBulkDataItems();
     } catch (_) {
       return { for (var type in bulkDataTypes) type: true };
     }
-
     var needsDownload = {
       for (var type in bulkDataTypes)
         type: await shouldDownloadBulkData(
@@ -54,10 +54,10 @@ class ScryfallDownloadService {
           bulkDataItem: await getDataTypeItem(type),
         ),
     };
-    
     return needsDownload;
   }
 
+  /// Download all bulk data types, optionally making a [forced] download even if up-to-date.
   Future<void> downloadAllBulkData(bool forced) async {
     await fetchBulkDataItems();
 
@@ -94,6 +94,7 @@ class ScryfallDownloadService {
     );
   }
   
+  /// Fetch the list of bulk data items from the Scryfall API and store it in preferences.
   Future<void> fetchBulkDataItems() async {
     final url = Uri.parse('https://api.scryfall.com/bulk-data');
     final response = await http.get(
@@ -114,6 +115,7 @@ class ScryfallDownloadService {
     }
   }
   
+  /// Get the bulk data item for a specific [bulkDataType] from preferences storage.
   Future<Map<String, dynamic>> getDataTypeItem(String bulkDataType) async {
     final bulkDataItemsJson = await _prefs.loadScryfallBulkDataItems();
 
@@ -133,6 +135,7 @@ class ScryfallDownloadService {
     return bulkDataItem;
   }
 
+  /// Determine if a specific [bulkDataType] needs to be downloaded based on its metadata and cached file.
   Future<bool> shouldDownloadBulkData({required String bulkDataType, required Map<String, dynamic> bulkDataItem}) async {
     final file = File(await getBulkDataFilePath(bulkDataType));
     final remoteUpdatedAt = bulkDataItem['updated_at']?.toString();
@@ -146,6 +149,7 @@ class ScryfallDownloadService {
     );
   }
 
+  /// Determine if a cache entry should be downloaded based on the existence of cached files and their timestamps.
   static bool shouldDownloadCacheEntry({required bool cachedFileExists, required bool metadataFileExists, required String? cachedUpdatedAt, required String? remoteUpdatedAt}) {
     if (!cachedFileExists || !metadataFileExists) {
       return true;
@@ -158,9 +162,11 @@ class ScryfallDownloadService {
     }
     final cached = DateTime.parse(cachedUpdatedAt);
     final remote = DateTime.parse(remoteUpdatedAt);
+    // If the cached data is older than 28 days, download it again just in case.
     return remote.difference(cached) >= const Duration(days: 28);
   }
 
+  /// Fetch and store a specific [bulkDataType] from the Scryfall API, updating progress as it downloads.
   Future<void> fetchAndStoreDataType(String bulkDataType, int totalBytes, int currentIndex, int totalFiles) async {
     final bulkDataItem = await getDataTypeItem(bulkDataType);
     final downloadUri = bulkDataItem['jsonl_download_uri'];
@@ -222,6 +228,8 @@ class ScryfallDownloadService {
     }
   }
 
+  /// Write metadata for a specific [bulkDataType] to preferences storage, including the download path and timestamp.
+  /// [bulkDataItem] is the metadata from the Scryfall API, and [destinationPath] is the local file path where the data was saved.
   Future<void> _writeMetadataForBulkData(String bulkDataType, Map<String, dynamic> bulkDataItem, String destinationPath) async {
     final metadata = {
       'type': bulkDataType,
@@ -233,6 +241,7 @@ class ScryfallDownloadService {
     await _prefs.saveScryfallBulkDataMetadata(bulkDataType, json.encode(metadata));
   }
 
+  /// Load the cached "updated_at" timestamp for a specific [bulkDataType] from preferences storage.
   Future<String?> _loadCachedUpdatedAt(String bulkDataType) async {
     final metadataJson = await _prefs.loadScryfallBulkDataMetadata(bulkDataType);
     if (metadataJson == null || metadataJson.isEmpty) {
@@ -251,15 +260,18 @@ class ScryfallDownloadService {
     return null;
   }
 
+  /// Get the directory where bulk data files are stored.
   Future<Directory> getBulkDataDirectory() async {
     final downloadDirectory = await getApplicationDocumentsDirectory();
     return Directory('${downloadDirectory.path}/bulk_data');
   }
 
+  /// Get the file path for a specific [bulkDataType] within the bulk data directory.
   Future<String> getBulkDataFilePath(String bulkDataType) async {
     return '${(await getBulkDataDirectory()).path}/$bulkDataType.jsonl.gz';
   }
 
+  /// Prune stale cache files in the bulk data directory that are not in [activeTypes].
   Future<void> pruneStaleCacheFiles(Directory cacheDirectory, Set<String> activeTypes) async {
     if (!await cacheDirectory.exists()) {
       return;
@@ -284,6 +296,7 @@ class ScryfallDownloadService {
     }
   }
 
+  /// Write the contents of a [stream] to a file at [destinationPath], calling [onProgress] with the number of bytes written.
   Future<void> writeStreamToFile(Stream<List<int>> stream, String destinationPath, {required void Function(int bytesWritten) onProgress}) async {
     final sink = File(destinationPath).openWrite();
     try {
@@ -299,6 +312,7 @@ class ScryfallDownloadService {
     }
   }
 
+  /// Dispose of the progress stream controller.
   void dispose() {
     _progressController.close();
   }

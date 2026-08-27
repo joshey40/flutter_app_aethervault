@@ -10,6 +10,7 @@ import 'dart:async';
 import 'database.dart';
 import 'scryfall_download.dart';
 
+/// Stores the current progress of the Scryfall data parsing process.
 class ParserProgress {
   final int? current;
   final int? total;
@@ -26,13 +27,17 @@ class ParserProgress {
   });
 }
 
-class _ParseChunkResult {
+/// Contains the parsed cards and faces of a single data chunk.
+class ParseChunkResult {
   final List<ScryfallCardsCompanion> cards;
   final List<ScryfallCardFacesCompanion> faces;
   final int parsedCount;
-  _ParseChunkResult(this.cards, this.faces, this.parsedCount);
+  ParseChunkResult(this.cards, this.faces, this.parsedCount);
 }
 
+/// Parses Scryfall bulk data and stores the extracted data in the local database.
+/// 
+/// Large card datasets are processed in chunks and parsed in separate isolates to avoid blocking the main Flutter isolate.
 class ScryfallDataParser {
   ScryfallDataParser({
     AppDatabase? database,
@@ -50,6 +55,7 @@ class ScryfallDataParser {
 
   final _progressController = StreamController<ParserProgress>.broadcast();
 
+  /// Stream of progress updates emitted during parsing.
   Stream<ParserProgress> get progressStream => _progressController.stream;
 
   Future<void> parseAllCardData() async {
@@ -66,8 +72,11 @@ class ScryfallDataParser {
     _progressController.add(ParserProgress(current: 4, total: 4, isRunning: false));
   }
 
+  // ==============================================================================
   // Parsing for card bulk data
+  // ============================================================================
 
+  /// Parse the bulk data of type [bulkDataType] and store it in the database, filtering by [langs] if provided.
   Future<void> parseBulkData(String bulkDataType, List<String> langs) async {
   if (!_cardBulkTypes.contains(bulkDataType)) {
     throw ArgumentError.value(
@@ -92,7 +101,7 @@ class ScryfallDataParser {
     await _database.delete(_database.scryfallCardFaces).go();
     await _database.delete(_database.scryfallCards).go();
 
-    Future<_ParseChunkResult>? pendingParse;
+    Future<ParseChunkResult>? pendingParse;
 
     Future<void> awaitAndFlushPending() async {
     if (pendingParse == null) return;
@@ -153,11 +162,13 @@ class ScryfallDataParser {
   _progressController.add(ParserProgress(cardsParsed: parsedCount, currentType: bulkDataType, isRunning: false));
 }
 
-  static Future<_ParseChunkResult> _runParseChunk(List<String> lines, List<String> langs) {
-    return Isolate.run(() => _parseChunk(lines, langs));
+  /// Run the parsing of a chunk of [lines] in a separate isolate, filtering by [langs].
+  static Future<ParseChunkResult> _runParseChunk(List<String> lines, List<String> langs) {
+    return Isolate.run(() => parseChunk(lines, langs));
   }
 
-  static _ParseChunkResult _parseChunk(List<String> lines, List<String> langs) {
+  /// Parse a chunk of [lines] and return the parsed cards and faces, filtering by [langs].
+  static ParseChunkResult parseChunk(List<String> lines, List<String> langs) {
     final cards = <ScryfallCardsCompanion>[];
     final faces = <ScryfallCardFacesCompanion>[];
     var parsedCount = 0;
@@ -181,9 +192,10 @@ class ScryfallDataParser {
       faces.addAll(_mapFaces(record));
     }
 
-    return _ParseChunkResult(cards, faces, parsedCount);
+    return ParseChunkResult(cards, faces, parsedCount);
   }
 
+  /// Map a single [card] to a [ScryfallCardsCompanion] for database insertion.
   static ScryfallCardsCompanion _mapCard(Map<String, dynamic> card) {
     final imageUris = _objectField(card, 'image_uris');
     final legalities = _objectField(card, 'legalities');
@@ -340,6 +352,7 @@ class ScryfallDataParser {
     );
   }
 
+  /// Map the faces of a [card] to a list of [ScryfallCardFacesCompanion] for database insertion.
   static List<ScryfallCardFacesCompanion> _mapFaces(Map<String, dynamic> card) {
     final cardFaces = _listField(card, 'card_faces');
     if (cardFaces.isEmpty) {
@@ -357,11 +370,8 @@ class ScryfallDataParser {
     ];
   }
 
-  static ScryfallCardFacesCompanion _mapFace({
-    required String cardId,
-    required int faceIndex,
-    required Map<String, dynamic> face,
-  }) {
+  /// Map a single [face] of a card to a [ScryfallCardFacesCompanion] for database insertion.
+  static ScryfallCardFacesCompanion _mapFace({required String cardId, required int faceIndex, required Map<String, dynamic> face}) {
     final imageUris = _objectField(face, 'image_uris');
     final colors = _stringListField(face, 'colors');
     final colorIndicator = _stringListField(face, 'color_indicator');
@@ -407,8 +417,11 @@ class ScryfallDataParser {
     );
   }
 
+  // ==============================================================================
   // Parsing for art_tags and oracle_tags
+  // ============================================================================
 
+  /// Parse the bulk data of type [bulkDataType] (either 'art_tags' or 'oracle_tags') and store it in the database.
   Future<void> parseTagsBulkData(String bulkDataType) async {
     final bulkDataFilePath = await _downloadService.getBulkDataFilePath(bulkDataType);
     final bulkDataFile = File(bulkDataFilePath);
@@ -437,7 +450,7 @@ class ScryfallDataParser {
         throw FormatException('Expected one JSON object per line');
       }
       final record = decoded.cast<String, dynamic>();
-      tags.add(_mapTag(record));
+      tags.add(mapTag(record));
     }
 
     await _database.transaction(() async {
@@ -454,7 +467,8 @@ class ScryfallDataParser {
     _progressController.add(ParserProgress(cardsParsed: tags.length, currentType: bulkDataType, isRunning: true));
   }
 
-  static ScryfallTagsCompanion _mapTag(Map<String, dynamic> tag) {
+  /// Map a single [tag] to a [ScryfallTagsCompanion] for database insertion.
+  static ScryfallTagsCompanion mapTag(Map<String, dynamic> tag) {
     return ScryfallTagsCompanion.insert(
       scryfallId: _stringValue(tag, 'id'),
       label: _stringValue(tag, 'label'),
@@ -468,6 +482,7 @@ class ScryfallDataParser {
     );
   }
 
+  /// Extract the list of tagged IDs from a [tag] and return them as a list of strings.
   static List<String> _taggedIdsField(Map<String, dynamic> tag) {
     final taggings = _listField(tag, 'taggings');
     final ids = <String>[];
@@ -481,8 +496,11 @@ class ScryfallDataParser {
     return ids;
   }
 
+  // ==============================================================================
   // Parsing sets
+  // ============================================================================
 
+  /// Parse the sets data from Scryfall and store it in the database.
   Future<void> parseSetsData() async {
     final client = http.Client();
     try {
@@ -529,26 +547,33 @@ class ScryfallDataParser {
     }
   }
 
+  // ==============================================================================
   // Helper functions
+  // ============================================================================
 
+  /// Get a nested object field from [source] by [key], returning it as a [Map<String, dynamic>] if it exists, or null otherwise.
   static Map<String, dynamic>? _objectField(Map<String, dynamic> source, String key) {
     final value = source[key];
     return value is Map ? value.cast<String, dynamic>() : null;
   }
 
+  /// Get a list field from [source] by [key], returning it as a [List<dynamic>] if it exists, or an empty list otherwise.
   static List<dynamic> _listField(Map<String, dynamic> source, String key) {
     final value = source[key];
     return value is List ? value : const <dynamic>[];
   }
 
+  /// Get a list field from [source] by [key], returning it as a [List<String>] if it exists, or an empty list otherwise.
   static List<String> _stringListField(Map<String, dynamic> source, String key) {
     return _listField(source, key).map((value) => value.toString()).toList(growable: false);
   }
 
+  /// Get a list field from [source] by [key], returning it as a [List<String>] if it exists, or an empty list otherwise.
   static List<String> _dynamicListField(Map<String, dynamic> source, String key) {
     return _stringListField(source, key);
   }
 
+  /// Get a string value from [source] by [key], throwing a [FormatException] if the key is missing.
   static String _stringValue(Map<String, dynamic> source, String key) {
     final value = source[key];
     if (value == null) {
@@ -557,6 +582,7 @@ class ScryfallDataParser {
     return value.toString();
   }
 
+  /// Get a string value from [source] by [key], returning it as a nullable string if it exists, or null otherwise.
   static String? _stringField(Map<String, dynamic>? source, String key) {
     final value = source?[key];
     if (value == null) {
@@ -565,6 +591,7 @@ class ScryfallDataParser {
     return value.toString();
   }
 
+  /// Get a double value from [source] by [key], returning it as a double if it exists, or 0.0 otherwise.
   static double _doubleValue(Map<String, dynamic> source, String key) {
     final value = source[key];
     if (value is num) {
@@ -576,15 +603,18 @@ class ScryfallDataParser {
     return 0.0;
   }
 
+  /// Get a boolean value from [source] by [key], returning it as a boolean if it exists, or false otherwise.
   static bool _boolValue(Map<String, dynamic> source, String key) {
     return source[key] == true;
   }
 
+  /// Check if [source] contains [expected] in the list field specified by [key].
   static bool _containsString(Map<String, dynamic> source, String key, String expected) {
     final values = _stringListField(source, key);
     return values.contains(expected);
   }
 
+  /// Convert a list of [colors] to a bitmask representation, where each color corresponds to a specific bit.
   static Value<int> _colorMask(List<String> colors) {
     var mask = 0;
     for (final color in colors) {
@@ -609,6 +639,7 @@ class ScryfallDataParser {
     return Value(mask);
   }
 
+  /// Convert a rarity string to an integer value.
   static int _rarityValue(String rarity) {
     switch (rarity.toLowerCase()) {
       case 'common':
@@ -624,6 +655,7 @@ class ScryfallDataParser {
     }
   }
 
+  /// Encode a JSON object to a string, or return null if the [value] is null.
   static String? _encodeJsonOrNull(Object? value) {
     if (value == null) {
       return null;
@@ -631,6 +663,7 @@ class ScryfallDataParser {
     return jsonEncode(value);
   }
 
+  /// Dispose of the parser by closing the progress stream controller.
   void dispose() {
     _progressController.close();
   }
