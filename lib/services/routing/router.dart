@@ -16,6 +16,7 @@ import '../../screens/home/settings/settings_page.dart';
 GoRouter createAppRouter({required String initialLocation}) {
   return GoRouter(
     initialLocation: initialLocation,
+    debugLogDiagnostics: true,
 
     routes: [
     // ------------------------------------------------------------
@@ -69,7 +70,9 @@ GoRouter createAppRouter({required String initialLocation}) {
               GoRoute(
                 path: '/search',
                 builder: (context, state) {
-                  final query = state.uri.queryParameters['q'] ?? '';
+
+                  final query = state.uri.queryParameters['q'];
+
                   return SearchPage(
                     initialQuery: query,
                   );

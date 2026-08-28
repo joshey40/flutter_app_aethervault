@@ -35,21 +35,37 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
 
     final query = value.trim();
+
     if (query.isEmpty) {
+      context.replace('/search');
+
       setState(() {
         _results = [];
         _isLoading = false;
         _errorMessage = null;
       });
+
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      _runSearch(query);
-    });
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () {
+        final currentQuery = GoRouterState.of(context).uri.queryParameters['q'] ?? '';
+
+        if (currentQuery != query) {
+          context.replace(
+            '/search?q=${Uri.encodeQueryComponent(query)}',
+          );
+        }
+
+        _runSearch(query);
+      },
+    );
   }
 
-  /// Execute the search query against the database and update the UI with results or errors.
+  /// Execute the search query against the database and update the UI
+  /// with results or errors.
   Future<void> _runSearch(String query) async {
     setState(() {
       _isLoading = true;
@@ -57,17 +73,25 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      final results = await _database.getCardsByScryfallSyntax(query, _searchScope, _orderBy, _orderDir);
+      final results = await _database.getCardsByScryfallSyntax(
+        query,
+        _searchScope,
+        _orderBy,
+        _orderDir,
+      );
 
       if (!mounted) return;
+
       setState(() {
         _results = results;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
-        _errorMessage = '${appLocalizations.translate('search.search_error')}: $e';
+        _errorMessage =
+            '${appLocalizations.translate('search.search_error')}: $e';
         _isLoading = false;
       });
     }
@@ -77,11 +101,55 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
 
-    _controller.text = widget.initialQuery ?? '';
+    final query = widget.initialQuery ?? '';
 
-    if (_controller.text.isNotEmpty) {
-      _onSearchChanged(_controller.text);
+    _controller.text = query;
+
+    if (query.isNotEmpty) {
+      _debounce = Timer(
+        const Duration(milliseconds: 300),
+        () => _runSearch(query),
+      );
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.initialQuery == widget.initialQuery) {
+      return;
+    }
+
+    final query = widget.initialQuery ?? '';
+
+    _debounce?.cancel();
+
+    if (_controller.text == query) {
+      return;
+    }
+
+    _controller.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(
+        offset: query.length,
+      ),
+    );
+
+    if (query.isEmpty) {
+      setState(() {
+        _results = [];
+        _isLoading = false;
+        _errorMessage = null;
+      });
+
+      return;
+    }
+
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runSearch(query),
+    );
   }
 
   @override
