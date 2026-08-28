@@ -12,8 +12,9 @@ import '../../screens/home/lifecounter/lifecounter_entry_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_start_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_play_screen.dart';
 import '../../screens/home/settings/settings_page.dart';
+import '../life_counter/lifecounter_controller.dart';
 
-GoRouter createAppRouter({required String initialLocation}) {
+GoRouter createAppRouter({required String initialLocation, required LifecounterController lifecounterController}) {
   return GoRouter(
     initialLocation: initialLocation,
     debugLogDiagnostics: true,
@@ -119,7 +120,7 @@ GoRouter createAppRouter({required String initialLocation}) {
               GoRoute(
                 path: '/lifecounter',
                 builder: (context, state) {
-                  return const LifecounterEntryScreen();
+                  return LifecounterEntryScreen(controller: lifecounterController);
                 },
                 routes: [
                   GoRoute(
@@ -133,6 +134,7 @@ GoRouter createAppRouter({required String initialLocation}) {
                       );
 
                       return LifecounterStartScreen(
+                        controller: lifecounterController,
                         initialStartLife: startLife,
                         initialPlayers: players,
                       );
@@ -141,7 +143,7 @@ GoRouter createAppRouter({required String initialLocation}) {
                   GoRoute(
                     path: 'game',
                     builder: (context, state) {
-                      return const LifecounterPlayScreen();
+                      return LifecounterPlayScreen(controller: lifecounterController);
                     },
                   ),
                 ],

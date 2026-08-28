@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../services/localization_service.dart';
 import '../../../services/life_counter/lifecounter_model.dart';
-import '../../../services/life_counter/lifecounter_storage.dart';
+import '../../../services/life_counter/lifecounter_controller.dart';
 
 class LifecounterStartScreen extends StatefulWidget {
   final int? initialStartLife;
   final int? initialPlayers;
+  final LifecounterController controller;
 
   const LifecounterStartScreen({
     super.key,
     this.initialStartLife,
     this.initialPlayers,
+    required this.controller,
   });
 
   @override
@@ -19,7 +21,6 @@ class LifecounterStartScreen extends StatefulWidget {
 }
 
 class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
-  final _storage = LifecounterStorage();
   late int _selectedStart;
   late int _players;
   String _selectedFormat = 'Standard';
@@ -54,7 +55,7 @@ class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
       commanderTax: List<int>.filled(players, 0),
       active: true,
     );
-    await _storage.saveGame(game);
+    await widget.controller.saveGame(game);
     if (!mounted) return;
     context.go('/lifecounter/game');
   }

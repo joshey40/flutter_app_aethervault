@@ -5,6 +5,7 @@ import 'services/app_settings_scope.dart';
 import 'services/app_preferences_storage.dart';
 import 'services/card_database/scryfall_download.dart';
 import 'services/localization_service.dart';
+import 'services/life_counter/lifecounter_controller.dart';
 import 'services/routing/router.dart';
 import 'theme/app_theme.dart';
 
@@ -18,15 +19,12 @@ Future<void> main() async {
 
   final preferencesStorage = AppPreferencesStorage();
 
-  final initialThemeMode =
-      await preferencesStorage.loadThemeMode();
+  final initialThemeMode = await preferencesStorage.loadThemeMode();
+  final initialLocale = await preferencesStorage.loadLocale();
+  await initializeLocalizations(initialLocale.languageCode);
 
-  final initialLocale =
-      await preferencesStorage.loadLocale();
-
-  await initializeLocalizations(
-    initialLocale.languageCode,
-  );
+  final lifecounterController = LifecounterController();
+  await lifecounterController.initialize();
 
   // Check whether the initial Scryfall data download is required.
   final needsDownload = await _checkDownloadNeed();
@@ -37,6 +35,7 @@ Future<void> main() async {
       initialThemeMode: initialThemeMode,
       initialLocale: initialLocale,
       needsDownload: needsDownload,
+      lifecounterController: lifecounterController,
     ),
   );
 }
@@ -45,8 +44,7 @@ Future<bool> _checkDownloadNeed() async {
   final service = ScryfallDownloadService();
 
   try {
-    final needsDownload =
-        await service.needsBulkDataDownload();
+    final needsDownload = await service.needsBulkDataDownload();
 
     return needsDownload.values.any((value) => value);
   } catch (_) {
@@ -64,6 +62,7 @@ class AetherVaultApp extends StatefulWidget {
     required this.initialThemeMode,
     required this.initialLocale,
     required this.needsDownload,
+    required this.lifecounterController,
   });
 
   final AppPreferencesStorage preferencesStorage;
@@ -71,6 +70,7 @@ class AetherVaultApp extends StatefulWidget {
   final ThemeMode initialThemeMode;
   final Locale initialLocale;
   final bool needsDownload;
+  final LifecounterController lifecounterController;
 
   @override
   State<AetherVaultApp> createState() => _AetherVaultAppState();
@@ -81,6 +81,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
   late Locale _locale;
 
   late final router = createAppRouter(
+    lifecounterController: widget.lifecounterController,
     initialLocation: widget.needsDownload
         ? '/download?forced=false'
         : '/overview',

@@ -6,12 +6,14 @@ import 'package:go_router/go_router.dart';
 import '../../../services/localization_service.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import '../../../services/life_counter/lifecounter_model.dart';
-import '../../../services/life_counter/lifecounter_storage.dart';
+import '../../../services/life_counter/lifecounter_controller.dart';
 import 'widgets/lifecounter_random.dart';
 import 'widgets/player_panel.dart';
 
 class LifecounterPlayScreen extends StatefulWidget {
-  const LifecounterPlayScreen({super.key});
+  const LifecounterPlayScreen({super.key, required this.controller});
+
+  final LifecounterController controller;
   @override
   State<LifecounterPlayScreen> createState() => _LifecounterPlayScreenState();
 }
@@ -19,7 +21,6 @@ class LifecounterPlayScreen extends StatefulWidget {
 class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   LifecounterGame? _game;
   bool _loading = true;
-  final _storage = LifecounterStorage();
   int? _commanderDamageTargetIndex;
   bool _showManaBar = false;
   final List<int> _manaCounts = List<int>.filled(6, 0);
@@ -32,7 +33,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   }
 
   Future<void> _loadGame() async {
-    final game = await LifecounterStorage().loadGame();
+    final game = await widget.controller.loadGame();
     if (!mounted) return;
 
     if (game == null) {
@@ -51,7 +52,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   Future<void> _save() async {
     if (_game == null) return;
     _game!.normalizeCommanderDamageSlots();
-    await _storage.saveGame(_game!);
+    await widget.controller.saveGame(_game!);
   }
 
   void _changeLife(int index, int delta) {
@@ -293,6 +294,11 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                                     onTap: () {
                                                       setState(() {
                                                         _manaCounts[i] = (_manaCounts[i] + 1).clamp(0, 9999);
+                                                      });
+                                                    },
+                                                    onLongPress: () {
+                                                      setState(() {
+                                                        _manaCounts[i] = _manaCounts[i] + 5;
                                                       });
                                                     },
                                                     child: Align(

@@ -2,45 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../services/localization_service.dart';
-import '../../../services/life_counter/lifecounter_storage.dart';
+import '../../../services/life_counter/lifecounter_controller.dart';
 
 class LifecounterEntryScreen extends StatefulWidget {
-  const LifecounterEntryScreen({super.key});
+  const LifecounterEntryScreen({super.key, required this.controller});
+
+  final LifecounterController controller;
 
   @override
   State<LifecounterEntryScreen> createState() => _LifecounterEntryScreenState();
 }
 
 class _LifecounterEntryScreenState extends State<LifecounterEntryScreen> {
-  final _storage = LifecounterStorage();
-  bool _loading = true;
-  bool _hasSavedGame = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final game = await _storage.loadGame();
-    if (!mounted) return;
-
-    setState(() {
-      _hasSavedGame = game != null;
-      _loading = false;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final loc = appLocalizations;
 
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    return AnimatedBuilder(
+      animation: widget.controller,
+      builder: (context, child) {
+        return _buildContent(context, loc);
+      },
+    );
+  }
+
+  Widget _buildContent(BuildContext context, dynamic loc) {
 
     return Scaffold(
       appBar: AppBar(
@@ -63,7 +49,7 @@ class _LifecounterEntryScreenState extends State<LifecounterEntryScreen> {
               label: Text(loc.translate('lifecounter.startGame')),
               onPressed: () => context.go('/lifecounter/newgame'),
             ),
-            if (_hasSavedGame) ...[
+            if (widget.controller.hasSavedGame) ...[
               const SizedBox(height: 8),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
