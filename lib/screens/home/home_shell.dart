@@ -1,59 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../services/localization_service.dart';
-import 'settings/settings_page.dart';
-import 'collection_page.dart';
-import 'decks_page.dart';
-import 'overview_page.dart';
-import 'search/search_page.dart';
-import 'lifecounter/screens/lifecounter_entry_screen.dart';
 
-class HomeShell extends StatefulWidget {
+class HomeShell extends StatelessWidget {
   const HomeShell({
     super.key,
-    required this.themeMode,
-    required this.onThemeModeChanged,
-    required this.locale,
-    required this.onLocaleChanged,
+    required this.navigationShell,
   });
 
-  final ThemeMode themeMode;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
-  final Locale locale;
-  final Future<void> Function(Locale locale) onLocaleChanged;
-
-  @override
-  State<HomeShell> createState() => _HomeShellState();
-}
-
-class _HomeShellState extends State<HomeShell> {
-  int _selectedIndex = 0;
+  final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) {
-    final pages = [
-      OverviewPage(key: ValueKey('overview-${widget.locale.languageCode}')),
-      SearchPage(key: ValueKey('search-${widget.locale.languageCode}')),
-      CollectionPage(key: ValueKey('collection-${widget.locale.languageCode}')),
-      DecksPage(key: ValueKey('decks-${widget.locale.languageCode}')),
-      LifecounterEntryScreen(key: ValueKey('lifecounter-${widget.locale.languageCode}')),
-      SettingsPage(
-        key: ValueKey('settings-${widget.locale.languageCode}'),
-        themeMode: widget.themeMode,
-        onThemeModeChanged: widget.onThemeModeChanged,
-        locale: widget.locale,
-        onLocaleChanged: widget.onLocaleChanged,
-      ),
-    ];
-
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: pages,
-      ),
+      body: navigationShell,
+
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
+        currentIndex: navigationShell.currentIndex,
+
+        onTap: (index) {
+          navigationShell.goBranch(
+            index,
+            initialLocation:
+                index == navigationShell.currentIndex,
+          );
+        },
+
         type: BottomNavigationBarType.fixed,
         items: [
           BottomNavigationBarItem(

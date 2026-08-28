@@ -1,23 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../services/localization_service.dart';
 import '../../services/card_database/scryfall_download.dart';
-import 'parser_screen.dart';
 
 class DownloadScreen extends StatefulWidget {
   const DownloadScreen({
     super.key,
-    required this.themeMode,
-    required this.onThemeModeChanged,
-    required this.locale,
-    required this.onLocaleChanged,
-    required this.forcedDownload
+    required this.forcedDownload,
   });
 
-  final ThemeMode themeMode;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
-  final Locale locale;
-  final Future<void> Function(Locale locale) onLocaleChanged;
   final bool forcedDownload;
 
   @override
@@ -78,16 +70,7 @@ class _DownloadScreenState extends State<DownloadScreen> {
 
   /// Navigate to the ParserScreen after the download is complete.
   void _openParser() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => ParserScreen(
-          themeMode: widget.themeMode,
-          onThemeModeChanged: widget.onThemeModeChanged,
-          locale: widget.locale,
-          onLocaleChanged: widget.onLocaleChanged,
-        ),
-      ),
-    );
+    context.go('/parser');
   }
 
   @override

@@ -1,22 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../services/localization_service.dart';
 import '../../services/card_database/scryfall_data_parser.dart';
-import '../home/home_shell.dart';
 
 class ParserScreen extends StatefulWidget {
   const ParserScreen({
     super.key,
-    required this.themeMode,
-    required this.onThemeModeChanged,
-    required this.locale,
-    required this.onLocaleChanged,
   });
-
-  final ThemeMode themeMode;
-  final ValueChanged<ThemeMode> onThemeModeChanged;
-  final Locale locale;
-  final Future<void> Function(Locale locale) onLocaleChanged;
 
   @override
   State<ParserScreen> createState() => _ParserScreenState();
@@ -76,16 +67,7 @@ class _ParserScreenState extends State<ParserScreen> {
 
   /// Open the home screen after parsing is complete.
   void _openHome() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => HomeShell(
-          themeMode: widget.themeMode,
-          onThemeModeChanged: widget.onThemeModeChanged,
-          locale: widget.locale,
-          onLocaleChanged: widget.onLocaleChanged,
-        ),
-      ),
-    );
+    context.go('/overview');
   }
 
   @override

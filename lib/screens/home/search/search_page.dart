@@ -4,10 +4,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app_aethervault/services/card_database/database.dart';
 import '../../../services/localization_service.dart';
-import 'scryfall_syntax_page.dart';
+import 'package:go_router/go_router.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  const SearchPage({
+    super.key,
+    this.initialQuery,
+  });
+
+  final String? initialQuery;
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -65,6 +70,17 @@ class _SearchPageState extends State<SearchPage> {
         _errorMessage = '${appLocalizations.translate('search.search_error')}: $e';
         _isLoading = false;
       });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller.text = widget.initialQuery ?? '';
+
+    if (_controller.text.isNotEmpty) {
+      _onSearchChanged(_controller.text);
     }
   }
 
@@ -187,11 +203,7 @@ class _SearchPageState extends State<SearchPage> {
                   icon: Icon(Icons.info_outline, size: 20, color: colorScheme.primary),
                   tooltip: appLocalizations.translate('search.syntax_help'),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ScryfallSyntaxPage(),
-                      ),
-                    );
+                    context.push('/search/syntax-help');
                   },
                 ),
               ),
