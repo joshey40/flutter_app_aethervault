@@ -4,10 +4,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app_aethervault/services/card_database/database.dart';
 import '../../../services/localization_service.dart';
-import 'scryfall_syntax_page.dart';
+import 'package:go_router/go_router.dart';
 
 class SearchPage extends StatefulWidget {
-  const SearchPage({super.key});
+  const SearchPage({
+    super.key,
+    this.initialQuery,
+  });
+
+  final String? initialQuery;
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -30,21 +35,37 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
 
     final query = value.trim();
+
     if (query.isEmpty) {
+      context.replace('/search');
+
       setState(() {
         _results = [];
         _isLoading = false;
         _errorMessage = null;
       });
+
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      _runSearch(query);
-    });
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () {
+        final currentQuery = GoRouterState.of(context).uri.queryParameters['q'] ?? '';
+
+        if (currentQuery != query) {
+          context.replace(
+            '/search?q=${Uri.encodeQueryComponent(query)}',
+          );
+        }
+
+        _runSearch(query);
+      },
+    );
   }
 
-  /// Execute the search query against the database and update the UI with results or errors.
+  /// Execute the search query against the database and update the UI
+  /// with results or errors.
   Future<void> _runSearch(String query) async {
     setState(() {
       _isLoading = true;
@@ -52,20 +73,83 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      final results = await _database.getCardsByScryfallSyntax(query, _searchScope, _orderBy, _orderDir);
+      final results = await _database.getCardsByScryfallSyntax(
+        query,
+        _searchScope,
+        _orderBy,
+        _orderDir,
+      );
 
       if (!mounted) return;
+
       setState(() {
         _results = results;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
-        _errorMessage = '${appLocalizations.translate('search.search_error')}: $e';
+        _errorMessage =
+            '${appLocalizations.translate('search.search_error')}: $e';
         _isLoading = false;
       });
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    final query = widget.initialQuery ?? '';
+
+    _controller.text = query;
+
+    if (query.isNotEmpty) {
+      _debounce = Timer(
+        const Duration(milliseconds: 300),
+        () => _runSearch(query),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.initialQuery == widget.initialQuery) {
+      return;
+    }
+
+    final query = widget.initialQuery ?? '';
+
+    _debounce?.cancel();
+
+    if (_controller.text == query) {
+      return;
+    }
+
+    _controller.value = TextEditingValue(
+      text: query,
+      selection: TextSelection.collapsed(
+        offset: query.length,
+      ),
+    );
+
+    if (query.isEmpty) {
+      setState(() {
+        _results = [];
+        _isLoading = false;
+        _errorMessage = null;
+      });
+
+      return;
+    }
+
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => _runSearch(query),
+    );
   }
 
   @override
@@ -187,11 +271,7 @@ class _SearchPageState extends State<SearchPage> {
                   icon: Icon(Icons.info_outline, size: 20, color: colorScheme.primary),
                   tooltip: appLocalizations.translate('search.syntax_help'),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ScryfallSyntaxPage(),
-                      ),
-                    );
+                    context.push('/search/syntax-help');
                   },
                 ),
               ),

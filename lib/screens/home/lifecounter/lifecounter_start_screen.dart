@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
-import '../../../../services/localization_service.dart';
-import '../../../../services/life_counter/lifecounter_model.dart';
-import '../../../../services/life_counter/lifecounter_storage.dart';
-import 'lifecounter_play_screen.dart';
+import 'package:go_router/go_router.dart';
+import '../../../services/localization_service.dart';
+import '../../../services/life_counter/lifecounter_model.dart';
+import '../../../services/life_counter/lifecounter_controller.dart';
 
 class LifecounterStartScreen extends StatefulWidget {
-  final void Function(LifecounterGame)? onGameStarted;
-  final VoidCallback? onCancel;
+  final int? initialStartLife;
+  final int? initialPlayers;
+  final LifecounterController controller;
 
-  const LifecounterStartScreen({super.key, this.onGameStarted, this.onCancel});
+  const LifecounterStartScreen({
+    super.key,
+    this.initialStartLife,
+    this.initialPlayers,
+    required this.controller,
+  });
 
   @override
   State<LifecounterStartScreen> createState() => _LifecounterStartScreenState();
 }
 
 class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
-  final _storage = LifecounterStorage();
-  int _selectedStart = 20;
-  int _players = 2;
+  late int _selectedStart;
+  late int _players;
   String _selectedFormat = 'Standard';
 
   static const Map<String, Map<String, int>> _presets = {
@@ -29,22 +34,30 @@ class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
   static const double _buttonWidth = 64.0;
   static const double _buttonSpacing = 4.0;
 
-  void _startGame() async {
+  @override
+  void initState() {
+    super.initState();
+    _selectedStart = widget.initialStartLife ?? 20;
+    _players = widget.initialPlayers ?? 2;
+
+    if (_selectedStart == 40 && _players == 4) {
+      _selectedFormat = 'Commander';
+    }
+  }
+
+  void _startGame({int? startLife, int? players}) async {
+    startLife ??= _selectedStart;
+    players ??= _players;
     final game = LifecounterGame(
-      startLife: _selectedStart,
-      playerCount: _players,
-      currentLives: List<int>.filled(_players, _selectedStart),
-      commanderTax: List<int>.filled(_players, 0),
+      startLife: startLife,
+      playerCount: players,
+      currentLives: List<int>.filled(players, startLife),
+      commanderTax: List<int>.filled(players, 0),
       active: true,
     );
-    await _storage.saveGame(game);
+    await widget.controller.saveGame(game);
     if (!mounted) return;
-    if (widget.onGameStarted != null) {
-      widget.onGameStarted!(game);
-    } else {
-      final navigator = Navigator.of(context);
-      navigator.push(MaterialPageRoute(builder: (_) => LifecounterPlayScreen(game: game)));
-    }
+    context.go('/lifecounter/game');
   }
 
   @override
@@ -53,7 +66,10 @@ class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.translate('lifecounter.title')),
-        leading: widget.onCancel != null ? IconButton(icon: const Icon(Icons.close), onPressed: widget.onCancel) : null,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => context.go('/lifecounter'),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -177,7 +193,7 @@ class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
             const Spacer(),
             ElevatedButton(
               style: ElevatedButton.styleFrom(minimumSize: const Size(140, 44)),
-              onPressed: _startGame,
+              onPressed: () => _startGame(),
               child: Text(loc.translate('lifecounter.startGame')),
             ),
           ],

@@ -1,66 +1,84 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../services/localization_service.dart';
+import '../../../services/localization_service.dart';
 import 'package:multi_split_view/multi_split_view.dart';
-import '../../../../services/life_counter/lifecounter_model.dart';
-import '../../../../services/life_counter/lifecounter_storage.dart';
-import '../widgets/lifecounter_random.dart';
-import '../widgets/player_panel.dart';
+import '../../../services/life_counter/lifecounter_model.dart';
+import '../../../services/life_counter/lifecounter_controller.dart';
+import 'widgets/lifecounter_random.dart';
+import 'widgets/player_panel.dart';
 
 class LifecounterPlayScreen extends StatefulWidget {
-  final LifecounterGame game;
-  final VoidCallback? onBack;
-  const LifecounterPlayScreen({super.key, required this.game, this.onBack});
+  const LifecounterPlayScreen({super.key, required this.controller});
+
+  final LifecounterController controller;
   @override
   State<LifecounterPlayScreen> createState() => _LifecounterPlayScreenState();
 }
+
 class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
-  late LifecounterGame _game;
-  final _storage = LifecounterStorage();
+  LifecounterGame? _game;
+  bool _loading = true;
   int? _commanderDamageTargetIndex;
   bool _showManaBar = false;
   final List<int> _manaCounts = List<int>.filled(6, 0);
-  // commanderDamage persisted on `_game.commanderDamage` as [source][target] -> [slot0, slot1?]
+  // commanderDamage persisted on `_currentGame.commanderDamage` as [source][target] -> [slot0, slot1?]
 
   @override
   void initState() {
     super.initState();
-    _game = widget.game;
+    _loadGame();
   }
+
+  Future<void> _loadGame() async {
+    final game = await widget.controller.loadGame();
+    if (!mounted) return;
+
+    if (game == null) {
+      context.go('/lifecounter');
+      return;
+    }
+
+    setState(() {
+      _game = game;
+      _loading = false;
+    });
+  }
+
+  LifecounterGame get _currentGame => _game!;
 
   Future<void> _save() async {
-    _game.normalizeCommanderDamageSlots();
-    await _storage.saveGame(_game);
+    if (_game == null) return;
+    _game!.normalizeCommanderDamageSlots();
+    await widget.controller.saveGame(_game!);
   }
-
-  
 
   void _changeLife(int index, int delta) {
     setState(() {
-      _game.currentLives[index] = (_game.currentLives[index] + delta).clamp(-999, 9999);
+      _currentGame.currentLives[index] = (_currentGame.currentLives[index] + delta).clamp(-999, 9999);
     });
     _save();
   }
 
   void _changeTax(int index, int delta) {
     setState(() {
-      _game.commanderTax[index] = (_game.commanderTax[index] + delta).clamp(0, 9999);
+      _currentGame.commanderTax[index] = (_currentGame.commanderTax[index] + delta).clamp(0, 9999);
     });
     _save();
   }
 
   void _changePartnerTax(int index, int delta) {
     setState(() {
-      _game.partnerTax[index] = (_game.partnerTax[index] + delta).clamp(0, 9999);
+      _currentGame.partnerTax[index] = (_currentGame.partnerTax[index] + delta).clamp(0, 9999);
     });
     _save();
   }
 
   void _resetPlayer(int index) {
     setState(() {
-      _game.currentLives[index] = _game.startLife;
+      _currentGame.currentLives[index] = _currentGame.startLife;
     });
     _save();
   }
@@ -73,26 +91,26 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
         aspectRatio: 3 / 2,
         child: PlayerPanel(
           index: i,
-          life: _game.currentLives[i],
+          life: _currentGame.currentLives[i],
           quarterTurns: quarterTurns,
           onIncrement: (d) => _changeLife(i, d),
           onReset: () => _resetPlayer(i),
-          commanderTax: _game.commanderTax[i],
+          commanderTax: _currentGame.commanderTax[i],
           onTaxChange: (d) => _changeTax(i, d),
-          partnerEnabled: _game.partnerEnabled[i],
+          partnerEnabled: _currentGame.partnerEnabled[i],
           onPartnerChanged: (v) {
             setState(() {
-              _game.partnerEnabled[i] = v;
-              _game.normalizeCommanderDamageSlots();
+              _currentGame.partnerEnabled[i] = v;
+              _currentGame.normalizeCommanderDamageSlots();
             });
             _save();
           },
-          partnerTax: _game.partnerTax[i],
+          partnerTax: _currentGame.partnerTax[i],
           onPartnerTaxChange: (d) => _changePartnerTax(i, d),
           onCommanderPressed: () => _toggleCommanderDamage(i),
           showCommanderOverlay: _commanderDamageTargetIndex != null,
           onCommanderOverlayTap: () => _clearCommanderDamage(),
-          commanderDamageFromSource: _commanderDamageTargetIndex != null ? _getCommanderDamageValues(i, _commanderDamageTargetIndex!, _game.partnerEnabled[_commanderDamageTargetIndex!]) : null,
+          commanderDamageFromSource: _commanderDamageTargetIndex != null ? _getCommanderDamageValues(i, _commanderDamageTargetIndex!, _currentGame.partnerEnabled[_commanderDamageTargetIndex!]) : null,
           isCommanderTarget: _commanderDamageTargetIndex != null && _commanderDamageTargetIndex == i,
           onCommanderOverlayAdjust: (d, slot) {
             if (_commanderDamageTargetIndex == null) return;
@@ -121,10 +139,10 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   }
 
   bool _isPlayerLost(int target) {
-    if (target < 0 || target >= _game.playerCount) return false;
-    if (_game.currentLives[target] <= 0) return true;
-    for (var source = 0; source < _game.playerCount; source++) {
-      final slots = _game.commanderDamage[source][target];
+    if (target < 0 || target >= _currentGame.playerCount) return false;
+    if (_currentGame.currentLives[target] <= 0) return true;
+    for (var source = 0; source < _currentGame.playerCount; source++) {
+      final slots = _currentGame.commanderDamage[source][target];
       for (final v in slots) {
         if (v >= 21) return true;
       }
@@ -134,9 +152,9 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
 
   /// Ensure all commanderDamage[source][target] slot lists match at least the expected number of slots for the target (1 or 2 depending on partnerEnabled).
   List<int> _getCommanderDamageValues(int source, int target, bool targetHasPartner) {
-    if (source < 0 || source >= _game.playerCount) return targetHasPartner ? [0, 0] : [0];
-    if (target < 0 || target >= _game.playerCount) return targetHasPartner ? [0, 0] : [0];
-    final values = _game.commanderDamage[source][target];
+    if (source < 0 || source >= _currentGame.playerCount) return targetHasPartner ? [0, 0] : [0];
+    if (target < 0 || target >= _currentGame.playerCount) return targetHasPartner ? [0, 0] : [0];
+    final values = _currentGame.commanderDamage[source][target];
     if (values.isEmpty) return targetHasPartner ? [0, 0] : [0];
     if (targetHasPartner && values.length == 1) return [values[0], 0];
     return values;
@@ -146,14 +164,14 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   void _applyCommanderDamage(int source, int target, int delta, int slot) {
     setState(() {
       // Ensure structure and slots are normalized via model
-      _game.normalizeCommanderDamageSlots();
-      final list = _game.commanderDamage[source][target];
+      _currentGame.normalizeCommanderDamageSlots();
+      final list = _currentGame.commanderDamage[source][target];
       while (list.length <= slot) {
         list.add(0);
       }
-      _game.commanderDamage[source][target][slot] = (_game.commanderDamage[source][target][slot] + delta).clamp(0, 9999);
+      _currentGame.commanderDamage[source][target][slot] = (_currentGame.commanderDamage[source][target][slot] + delta).clamp(0, 9999);
       // Apply life change to the target: damage reduces life by delta (negative delta restores life)
-      _game.currentLives[target] = (_game.currentLives[target] - delta).clamp(0, 9999);
+      _currentGame.currentLives[target] = (_currentGame.currentLives[target] - delta).clamp(0, 9999);
     });
     _save();
   }
@@ -162,6 +180,12 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading || _game == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final loc = appLocalizations;
 
     return Scaffold(
@@ -171,8 +195,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
           icon: const Icon(Icons.arrow_back),
           tooltip: appLocalizations.translate('back'),
           onPressed: () {
-            if (widget.onBack != null) return widget.onBack!();
-            Navigator.of(context).maybePop();
+            context.go('/lifecounter');
           },
         ),
         actions: [
@@ -193,7 +216,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
           IconButton(
             icon: const Icon(Icons.casino),
             tooltip: 'Random',
-            onPressed: () => showRandomPicker(context, maxPlayers: _game.playerCount),
+            onPressed: () => showRandomPicker(context, maxPlayers: _currentGame.playerCount),
           ),
         ],
       ),
@@ -273,6 +296,11 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                                         _manaCounts[i] = (_manaCounts[i] + 1).clamp(0, 9999);
                                                       });
                                                     },
+                                                    onLongPress: () {
+                                                      setState(() {
+                                                        _manaCounts[i] = _manaCounts[i] + 5;
+                                                      });
+                                                    },
                                                     child: Align(
                                                       alignment: Alignment.centerRight,
                                                       child: Padding(
@@ -306,7 +334,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
             ),
           ),
           Expanded(child: Builder(builder: (ctx) {
-        final count = _game.playerCount;
+        final count = _currentGame.playerCount;
         const double gap = 2.0;
         if (count == 1) {
           return Padding(
@@ -394,12 +422,12 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   /// Reset the game state to initial values for all players.
   void _resetGame() {
     setState(() {
-      for (var i = 0; i < _game.playerCount; i++) {
-        _game.currentLives[i] = _game.startLife;
-        _game.commanderTax[i] = 0;
-        _game.partnerTax[i] = 0;
-        for (var s = 0; s < _game.playerCount; s++) {
-          _game.commanderDamage[s][i] = List<int>.filled(_game.partnerEnabled[i] ? 2 : 1, 0);
+      for (var i = 0; i < _currentGame.playerCount; i++) {
+        _currentGame.currentLives[i] = _currentGame.startLife;
+        _currentGame.commanderTax[i] = 0;
+        _currentGame.partnerTax[i] = 0;
+        for (var s = 0; s < _currentGame.playerCount; s++) {
+          _currentGame.commanderDamage[s][i] = List<int>.filled(_currentGame.partnerEnabled[i] ? 2 : 1, 0);
         }
       }
     });

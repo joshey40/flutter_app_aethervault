@@ -1,4 +1,4 @@
-package com.example.flutter_app_aethervault
+package com.aethervault.flutter_app_aethervault
 
 import android.os.Bundle
 import android.view.WindowManager
