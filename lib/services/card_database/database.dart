@@ -315,6 +315,11 @@ class AppDatabase extends _$AppDatabase {
   // Custom queries
   // =============================================================================
 
+  /// Get a single card by its Scryfall ID.
+  Future<ScryfallCard?> getCardById(String scryfallId) async {
+    return (select(scryfallCards)..where((tbl) => tbl.scryfallId.equals(scryfallId))).getSingleOrNull();
+  }
+
   /// Get all card faces associated with a specific card ID, ordered by face index.
   Future<List<ScryfallCardFace>> getCardFacesByCardId(String cardId) async {
     return (select(scryfallCardFaces)

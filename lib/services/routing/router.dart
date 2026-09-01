@@ -13,6 +13,9 @@ import '../../screens/home/lifecounter/lifecounter_start_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_play_screen.dart';
 import '../../screens/home/settings/settings_page.dart';
 import '../life_counter/lifecounter_controller.dart';
+import 'sheet_page.dart';
+import 'sheet_scaffold.dart';
+import '../../screens/home/search/search_card_sheet.dart';
 
 GoRouter createAppRouter({required String initialLocation, required LifecounterController lifecounterController}) {
   return GoRouter(
@@ -71,11 +74,11 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
               GoRoute(
                 path: '/search',
                 builder: (context, state) {
-
-                  final query = state.uri.queryParameters['q'];
-
                   return SearchPage(
-                    initialQuery: query,
+                    initialQuery: state.uri.queryParameters['q'],
+                    initialScope: state.uri.queryParameters['scope'],
+                    initialSort: state.uri.queryParameters['sort'],
+                    initialOrder: state.uri.queryParameters['order'],
                   );
                 },
                 routes: [
@@ -83,6 +86,18 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
                     path: 'syntax-help',
                     builder: (context, state) {
                       return const ScryfallSyntaxPage();
+                    },
+                  ),
+                  GoRoute(
+                    path: 'card/:cardId',
+                    pageBuilder: (context, state) {
+                      final cardId = state.pathParameters['cardId']!;
+                      return buildSheetPage(
+                        key: state.pageKey,
+                        child: CardDetailSheetScaffold(
+                          child: SearchCardSheet(cardId: cardId),
+                        ),
+                      );
                     },
                   ),
                 ],
