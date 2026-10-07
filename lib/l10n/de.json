@@ -69,7 +69,9 @@
     "germanShort": "DE",
     "downloadSection": "Download",
     "downloadData": "Daten herunterladen",
-    "downloadDataDescription": "Lade die neuesten Kartendaten von Scryfall herunter."
+    "downloadDataDescription": "Lade die neuesten Kartendaten von Scryfall herunter.",
+    "parseData": "Daten parsen",
+    "parseDataDescription": "Parst die heruntergeladenen Kartendaten und speichert sie in der lokalen Datenbank."
   },
   "download": {
     "loading": "Bulk-Daten werden geladen",

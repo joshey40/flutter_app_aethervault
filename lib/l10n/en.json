@@ -69,7 +69,9 @@
     "germanShort": "DE",
     "downloadSection": "Download",
     "downloadData": "Download data",
-    "downloadDataDescription": "Download the latest card data from Scryfall."
+    "downloadDataDescription": "Download the latest card data from Scryfall.",
+    "parseData": "Parse data",
+    "parseDataDescription": "Parse the downloaded card data and store it in the local database."
   },
   "download": {
     "loading": "Bulk data is being loaded",
