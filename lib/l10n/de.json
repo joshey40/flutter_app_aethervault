@@ -69,7 +69,9 @@
     "germanShort": "DE",
     "downloadSection": "Download",
     "downloadData": "Daten herunterladen",
-    "downloadDataDescription": "Lade die neuesten Kartendaten von Scryfall herunter."
+    "downloadDataDescription": "Lade die neuesten Kartendaten von Scryfall herunter.",
+    "parseData": "Daten parsen",
+    "parseDataDescription": "Parst die heruntergeladenen Kartendaten und speichert sie in der lokalen Datenbank."
   },
   "download": {
     "loading": "Bulk-Daten werden geladen",
@@ -87,6 +89,50 @@
     "waiting": "Bitte warten, während die Daten geparst werden.",
     "retry": "Erneut versuchen",
     "progress": "Fortschritt: "
+  },
+  "card_detail": {
+    "title": "Kartendetails",
+    "load_error": "Karte konnte nicht geladen werden",
+    "not_found": "Karte nicht gefunden.",
+    "legalities": "Legalities",
+    "unreleased": "Diese Karte ist noch nicht veröffentlicht.",
+    "power_toughness": "Stärke / Widerstand",
+    "loyalty": "Loyalität",
+    "defense": "Verteidigung",
+    "collector_number": "Nr.",
+    "illustrated_by": "Illustriert von",
+    "previous_face": "Vorherige Seite",
+    "next_face": "Nächste Seite",
+    "choose_variant": "Kartenversion auswählen",
+    "choose_language": "Sprache auswählen",
+    "add_to_deck": "Zum Deck hinzufügen",
+    "add_to_collection": "Zur Sammlung hinzufügen",
+    "action_placeholder": "Aktion ist noch nicht implementiert",
+    "status": {
+      "legal": "Legal",
+      "not_legal": "Nicht legal",
+      "banned": "Gebannt",
+      "restricted": "Eingeschränkt",
+      "unreleased": "Noch nicht veröffentlicht"
+    },
+    "formats": {
+      "standard": "Standard",
+      "future": "Future",
+      "historic": "Historic",
+      "timeless": "Timeless",
+      "pioneer": "Pioneer",
+      "modern": "Modern",
+      "legacy": "Legacy",
+      "pauper": "Pauper",
+      "vintage": "Vintage",
+      "commander": "Commander",
+      "oathbreaker": "Oathbreaker",
+      "brawl": "Brawl",
+      "alchemy": "Alchemy",
+      "duel": "Duel",
+      "old_school": "Old School",
+      "premodern": "Premodern"
+    }
   },
   "ok": "OK",
   "cancel": "Abbrechen",

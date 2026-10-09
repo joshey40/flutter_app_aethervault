@@ -13,24 +13,25 @@ import '../../screens/home/lifecounter/lifecounter_start_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_play_screen.dart';
 import '../../screens/home/settings/settings_page.dart';
 import '../life_counter/lifecounter_controller.dart';
+import 'card_detail_route.dart';
 
-GoRouter createAppRouter({required String initialLocation, required LifecounterController lifecounterController}) {
+GoRouter createAppRouter({
+  required String initialLocation,
+  required LifecounterController lifecounterController,
+}) {
   return GoRouter(
     initialLocation: initialLocation,
     debugLogDiagnostics: true,
 
     routes: [
-    // ------------------------------------------------------------
-    // Download / Parser
-    // ------------------------------------------------------------
-
+      // ------------------------------------------------------------
+      // Download / Parser
+      // ------------------------------------------------------------
       GoRoute(
         path: '/download',
         builder: (context, state) {
           final forced = state.uri.queryParameters['forced'] == 'true';
-          return DownloadScreen(
-            forcedDownload: forced,
-          );
+          return DownloadScreen(forcedDownload: forced);
         },
       ),
 
@@ -44,12 +45,9 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
       // ------------------------------------------------------------
       // Home Shell
       // ------------------------------------------------------------
-
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return HomeShell(
-            navigationShell: navigationShell,
-          );
+          return HomeShell(navigationShell: navigationShell);
         },
 
         branches: [
@@ -71,11 +69,11 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
               GoRoute(
                 path: '/search',
                 builder: (context, state) {
-
-                  final query = state.uri.queryParameters['q'];
-
                   return SearchPage(
-                    initialQuery: query,
+                    initialQuery: state.uri.queryParameters['q'],
+                    initialScope: state.uri.queryParameters['scope'],
+                    initialSort: state.uri.queryParameters['sort'],
+                    initialOrder: state.uri.queryParameters['order'],
                   );
                 },
                 routes: [
@@ -83,6 +81,14 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
                     path: 'syntax-help',
                     builder: (context, state) {
                       return const ScryfallSyntaxPage();
+                    },
+                  ),
+                  GoRoute(
+                    path: 'card/:cardId',
+                    builder: (context, state) {
+                      return CardDetailRoute(
+                        cardId: state.pathParameters['cardId']!,
+                      );
                     },
                   ),
                 ],
@@ -120,7 +126,9 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
               GoRoute(
                 path: '/lifecounter',
                 builder: (context, state) {
-                  return LifecounterEntryScreen(controller: lifecounterController);
+                  return LifecounterEntryScreen(
+                    controller: lifecounterController,
+                  );
                 },
                 routes: [
                   GoRoute(
@@ -143,7 +151,9 @@ GoRouter createAppRouter({required String initialLocation, required LifecounterC
                   GoRoute(
                     path: 'game',
                     builder: (context, state) {
-                      return LifecounterPlayScreen(controller: lifecounterController);
+                      return LifecounterPlayScreen(
+                        controller: lifecounterController,
+                      );
                     },
                   ),
                 ],

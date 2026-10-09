@@ -92,13 +92,17 @@ class _ParserScreenState extends State<ParserScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 12),
-                  Text(
-                    _error != null  
-                        ? '${appLocalizations.translate('parser.failed')}\n$_error'
-                        : _progress?.currentType != null
-                            ? '${appLocalizations.translate('parser.current')}${_progress!.currentType}'
-                            : appLocalizations.translate('parser.waiting'),
-                    textAlign: TextAlign.center,
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Text(
+                        _error != null
+                            ? '${appLocalizations.translate('parser.failed')}\n$_error'
+                            : _progress?.currentType != null
+                                ? '${appLocalizations.translate('parser.current')}${_progress!.currentType}'
+                                : appLocalizations.translate('parser.waiting'),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   if (_progress != null && _progress!.cardsParsed != null)

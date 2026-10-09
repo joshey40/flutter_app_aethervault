@@ -10,9 +10,15 @@ class SearchPage extends StatefulWidget {
   const SearchPage({
     super.key,
     this.initialQuery,
+    this.initialScope,
+    this.initialSort,
+    this.initialOrder,
   });
 
   final String? initialQuery;
+  final String? initialScope;
+  final String? initialSort;
+  final String? initialOrder;
 
   @override
   State<SearchPage> createState() => _SearchPageState();
@@ -102,8 +108,14 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
 
     final query = widget.initialQuery ?? '';
+    final scope = widget.initialScope ?? 'one_card';
+    final sort = widget.initialSort ?? 'name';
+    final order = widget.initialOrder ?? 'asc';
 
     _controller.text = query;
+    _searchScope = scope;
+    _orderBy = sort;
+    _orderDir = order;
 
     if (query.isNotEmpty) {
       _debounce = Timer(
@@ -444,7 +456,7 @@ class _CardTileState extends State<_CardTile> {
         children: [
           GestureDetector(
             onTap: () {
-              // TODO: Navigate to card detail
+              context.push('/search/card/${widget.card.scryfallId}');
             },
             child: imageUrl != null
                 ? CachedNetworkImage(

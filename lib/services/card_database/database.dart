@@ -73,7 +73,7 @@ class ScryfallCards extends Table {
   IntColumn get colorIdentityMask => integer().withDefault(const Constant(0))();
   TextColumn get producedManaJson => text().nullable()();
   IntColumn get producedManaMask => integer().withDefault(const Constant(0))();
-  
+
   TextColumn get power => text().nullable()();
   TextColumn get toughness => text().nullable()();
   TextColumn get loyalty => text().nullable()();
@@ -240,7 +240,7 @@ class ScryfallSets extends Table {
   TextColumn get blockCode => text().nullable()();
   TextColumn get blockName => text().nullable()();
   TextColumn get iconSvgUri => text()();
-  
+
   @override
   Set<Column> get primaryKey => {scryfallId};
 }
@@ -277,30 +277,30 @@ class AppDatabase extends _$AppDatabase {
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (m) async {
-          await m.createAll();
-        },
-        onUpgrade: (m, from, to) async {
-          // Scryfall data doesn't need to be migrated. Will be deleted and redownloaded.
-          await m.deleteTable('scryfall_card_faces');
-          await m.deleteTable('scryfall_cards');
-          await m.deleteTable('scryfall_tags');
-          await m.deleteTable('scryfall_sets');
-          await m.createTable(scryfallCardFaces);
-          await m.createTable(scryfallCards);
-          await m.createTable(scryfallTags);
-          await m.createTable(scryfallSets);
-          // Other tables probably need migration. Add here :)
-          // Collection, decks etc
-        },
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA journal_mode = WAL;');
-          await customStatement('PRAGMA synchronous = NORMAL;');
-          await customStatement('PRAGMA temp_store = MEMORY;');
-          await customStatement('PRAGMA cache_size = -50000;'); // 50 MB
-          await customStatement('PRAGMA mmap_size = 268435456;'); // 256 MB
-        },
-      );
+    onCreate: (m) async {
+      await m.createAll();
+    },
+    onUpgrade: (m, from, to) async {
+      // Scryfall data doesn't need to be migrated. Will be deleted and redownloaded.
+      await m.deleteTable('scryfall_card_faces');
+      await m.deleteTable('scryfall_cards');
+      await m.deleteTable('scryfall_tags');
+      await m.deleteTable('scryfall_sets');
+      await m.createTable(scryfallCardFaces);
+      await m.createTable(scryfallCards);
+      await m.createTable(scryfallTags);
+      await m.createTable(scryfallSets);
+      // Other tables probably need migration. Add here :)
+      // Collection, decks etc
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA journal_mode = WAL;');
+      await customStatement('PRAGMA synchronous = NORMAL;');
+      await customStatement('PRAGMA temp_store = MEMORY;');
+      await customStatement('PRAGMA cache_size = -50000;'); // 50 MB
+      await customStatement('PRAGMA mmap_size = 268435456;'); // 256 MB
+    },
+  );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(
@@ -314,6 +314,16 @@ class AppDatabase extends _$AppDatabase {
   // =============================================================================
   // Custom queries
   // =============================================================================
+
+  /// Get a single card by its Scryfall ID.
+  Future<ScryfallCard?> getCardById(String scryfallId) async {
+    return (select(scryfallCards)..where((tbl) => tbl.scryfallId.equals(scryfallId))).getSingleOrNull();
+  }
+
+  /// Get all printed variants that share an Oracle ID.
+  Future<List<ScryfallCard>> getCardVariantsByOracleId(String oracleId) async {
+    return (select(scryfallCards)..where((tbl) => tbl.oracleId.equals(oracleId))..orderBy([(tbl) => OrderingTerm(expression: tbl.releasedAt),(tbl) => OrderingTerm(expression: tbl.setName)])).get();
+  }
 
   /// Get all card faces associated with a specific card ID, ordered by face index.
   Future<List<ScryfallCardFace>> getCardFacesByCardId(String cardId) async {
@@ -394,5 +404,4 @@ class AppDatabase extends _$AppDatabase {
     }
     return result;
   }
-
 }
