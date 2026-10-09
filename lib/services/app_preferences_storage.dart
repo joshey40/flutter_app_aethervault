@@ -6,7 +6,8 @@ class AppPreferencesStorage {
   static const String _localeKey = 'settings.locale';
   static const String _lifecounterKey = 'lifecounter.current_game';
   static const String _scryfallBulkDataItemsKey = 'scryfall.bulk_data_items';
-  static const String _scryfallBulkDataMetadataKeyPrefix = 'scryfall.bulk_data_metadata.';
+  static const String _scryfallBulkDataMetadataKeyPrefix =
+      'scryfall.bulk_data_metadata.';
 
   // ==============================================================================
   // Settings
@@ -56,7 +57,7 @@ class AppPreferencesStorage {
   // ==============================================================================
   // Lifecounter
   // =============================================================================
-  
+
   /// Save the current lifecounter game state as a [json] string.
   Future<void> saveLifecounterGame(String json) async {
     final prefs = await SharedPreferences.getInstance();
@@ -78,7 +79,7 @@ class AppPreferencesStorage {
   // ==============================================================================
   // Scryfall Data
   // ============================================================================
-  
+
   /// Save the Scryfall bulk data items as a [json] string.
   Future<void> saveScryfallBulkDataItems(String json) async {
     final prefs = await SharedPreferences.getInstance();
@@ -92,7 +93,10 @@ class AppPreferencesStorage {
   }
 
   /// Save the Scryfall bulk data metadata for a specific [bulkDataType] as a [json] string.
-  Future<void> saveScryfallBulkDataMetadata(String bulkDataType, String json) async {
+  Future<void> saveScryfallBulkDataMetadata(
+    String bulkDataType,
+    String json,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       '$_scryfallBulkDataMetadataKeyPrefix$bulkDataType',

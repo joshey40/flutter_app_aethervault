@@ -82,7 +82,8 @@ class ScryfallCards extends Table {
 
   TextColumn get keywordsJson => text().nullable()();
   BoolColumn get hasCardFaces => boolean().withDefault(const Constant(false))();
-  BoolColumn get hasColorIndicator => boolean().withDefault(const Constant(false))();
+  BoolColumn get hasColorIndicator =>
+      boolean().withDefault(const Constant(false))();
   TextColumn get borderColor => text().nullable()();
   TextColumn get frame => text().nullable()();
   TextColumn get frameEffectsJson => text().nullable()();
@@ -105,7 +106,8 @@ class ScryfallCards extends Table {
   BoolColumn get fullArt => boolean().withDefault(const Constant(false))();
   BoolColumn get textless => boolean().withDefault(const Constant(false))();
   BoolColumn get booster => boolean().withDefault(const Constant(false))();
-  BoolColumn get storySpotlight => boolean().withDefault(const Constant(false))();
+  BoolColumn get storySpotlight =>
+      boolean().withDefault(const Constant(false))();
   BoolColumn get promo => boolean().withDefault(const Constant(false))();
   BoolColumn get reprint => boolean().withDefault(const Constant(false))();
   BoolColumn get variation => boolean().withDefault(const Constant(false))();
@@ -185,7 +187,8 @@ class ScryfallCardFaces extends Table {
   TextColumn get colorsJson => text().nullable()();
   IntColumn get colorMask => integer().withDefault(const Constant(0))();
   TextColumn get colorIndicatorJson => text().nullable()();
-  IntColumn get colorIndicatorMask => integer().withDefault(const Constant(0))();
+  IntColumn get colorIndicatorMask =>
+      integer().withDefault(const Constant(0))();
 
   TextColumn get power => text().nullable()();
   TextColumn get toughness => text().nullable()();
@@ -261,10 +264,13 @@ class ScryfallSets extends Table {
 // AppDatabase and Queries
 // ==============================================================================
 
-@DriftDatabase(tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags, ScryfallSets])
+@DriftDatabase(
+  tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags, ScryfallSets],
+)
 /// Provides access to the application's local Drift database.
 class AppDatabase extends _$AppDatabase {
-  AppDatabase._internal([QueryExecutor? executor]) : super(executor ?? _openConnection());
+  AppDatabase._internal([QueryExecutor? executor])
+    : super(executor ?? _openConnection());
 
   static AppDatabase? _instance;
 
@@ -317,12 +323,20 @@ class AppDatabase extends _$AppDatabase {
 
   /// Get a single card by its Scryfall ID.
   Future<ScryfallCard?> getCardById(String scryfallId) async {
-    return (select(scryfallCards)..where((tbl) => tbl.scryfallId.equals(scryfallId))).getSingleOrNull();
+    return (select(
+      scryfallCards,
+    )..where((tbl) => tbl.scryfallId.equals(scryfallId))).getSingleOrNull();
   }
 
   /// Get all printed variants that share an Oracle ID.
   Future<List<ScryfallCard>> getCardVariantsByOracleId(String oracleId) async {
-    return (select(scryfallCards)..where((tbl) => tbl.oracleId.equals(oracleId))..orderBy([(tbl) => OrderingTerm(expression: tbl.releasedAt),(tbl) => OrderingTerm(expression: tbl.setName)])).get();
+    return (select(scryfallCards)
+          ..where((tbl) => tbl.oracleId.equals(oracleId))
+          ..orderBy([
+            (tbl) => OrderingTerm(expression: tbl.releasedAt),
+            (tbl) => OrderingTerm(expression: tbl.setName),
+          ]))
+        .get();
   }
 
   /// Get all card faces associated with a specific card ID, ordered by face index.
@@ -334,7 +348,12 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Get cards based on Scryfall syntax, search scope, and ordering preferences.
-  Future<List<ScryfallCard>> getCardsByScryfallSyntax(String syntax, String searchScope, String orderBy, String orderDir) async {
+  Future<List<ScryfallCard>> getCardsByScryfallSyntax(
+    String syntax,
+    String searchScope,
+    String orderBy,
+    String orderDir,
+  ) async {
     final tokens = tokenizeScryfallSyntax(syntax);
     final hasLangFilter = containsLangFilter(tokens);
     final hasTypeFilter = containsTypeFilter(tokens);
@@ -343,8 +362,11 @@ class AppDatabase extends _$AppDatabase {
     final oracleTagSlugs = collectOracleTagLookups(tokens);
     final illustrationTagSlugs = collectIllustrationTagLookups(tokens);
     final oracleTagIds = await _resolveTagLookups(oracleTagSlugs, 'oracle');
-    final illustrationTagIds = await _resolveTagLookups(illustrationTagSlugs, 'illustration');
- 
+    final illustrationTagIds = await _resolveTagLookups(
+      illustrationTagSlugs,
+      'illustration',
+    );
+
     final allSets = await select(scryfallSets).get();
 
     final query = select(scryfallCards)
@@ -352,11 +374,31 @@ class AppDatabase extends _$AppDatabase {
         Expression<bool> expr = const Constant(true);
         if (tokens.isNotEmpty) {
           expr = tokens
-              .map((tok) => compileQueryToken(t, tok, oracleTagIds, illustrationTagIds, allSets, this))
+              .map(
+                (tok) => compileQueryToken(
+                  t,
+                  tok,
+                  oracleTagIds,
+                  illustrationTagIds,
+                  allSets,
+                  this,
+                ),
+              )
               .reduce((a, b) => a & b);
         }
         if (!hasTypeFilter) {
-          expr = expr & t.layout.isNotIn(['token', 'double_faced_token', 'emblem', 'host', 'art_series', 'planar', 'scheme', 'vanguard']);
+          expr =
+              expr &
+              t.layout.isNotIn([
+                'token',
+                'double_faced_token',
+                'emblem',
+                'host',
+                'art_series',
+                'planar',
+                'scheme',
+                'vanguard',
+              ]);
           expr = expr & t.typeLine.equals('Card').not();
         }
         if (!hasLangFilter) {
@@ -368,7 +410,9 @@ class AppDatabase extends _$AppDatabase {
         return expr;
       });
 
-    query.orderBy([(t) => OrderingTerm(expression: t.releasedAt, mode: OrderingMode.desc)]);
+    query.orderBy([
+      (t) => OrderingTerm(expression: t.releasedAt, mode: OrderingMode.desc),
+    ]);
     final rows = await query.get();
     scopeCards(rows, searchScope);
     sortCards(rows, orderBy, orderDir, allSets);
@@ -376,15 +420,22 @@ class AppDatabase extends _$AppDatabase {
   }
 
   /// Resolve tag lookups for a set of [slugs] and a specific [tagType], returning a map of slugs to their associated tag IDs.
-  Future<Map<String, List<String>>> _resolveTagLookups(Set<String> slugs, String tagType) async {
+  Future<Map<String, List<String>>> _resolveTagLookups(
+    Set<String> slugs,
+    String tagType,
+  ) async {
     if (slugs.isEmpty) return {};
 
-    final allTags = await (select(scryfallTags)..where((t) => t.type.equals(tagType))).get();
+    final allTags = await (select(
+      scryfallTags,
+    )..where((t) => t.type.equals(tagType))).get();
     final byId = {for (final tag in allTags) tag.scryfallId: tag};
 
     final result = <String, List<String>>{};
     for (final slug in slugs) {
-      final roots = allTags.where((t) => t.slug == slug || t.aliasesJson.contains(slug));
+      final roots = allTags.where(
+        (t) => t.slug == slug || t.aliasesJson.contains(slug),
+      );
       if (roots.isEmpty) continue;
 
       final ids = <String>{};

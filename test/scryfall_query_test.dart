@@ -48,9 +48,7 @@ void main() {
     });
 
     test('parses OR expressions', () {
-      final tokens = tokenizeScryfallSyntax(
-        'type:creature OR type:instant',
-      );
+      final tokens = tokenizeScryfallSyntax('type:creature OR type:instant');
 
       expect(tokens, hasLength(1));
       final list = tokens.single as ListToken;
@@ -85,9 +83,7 @@ void main() {
     });
 
     test('parses negated parenthesized expressions', () {
-      final tokens = tokenizeScryfallSyntax(
-        '-(type:creature OR type:instant)',
-      );
+      final tokens = tokenizeScryfallSyntax('-(type:creature OR type:instant)');
 
       final token = tokens.single as ListToken;
 
@@ -96,9 +92,7 @@ void main() {
     });
 
     test('keeps quoted values together', () {
-      final tokens = tokenizeScryfallSyntax(
-        'name:"Lightning Bolt"',
-      );
+      final tokens = tokenizeScryfallSyntax('name:"Lightning Bolt"');
 
       final token = tokens.single as FilterToken;
 
@@ -158,14 +152,8 @@ void main() {
     });
 
     test('detects set filters only when they are not negated', () {
-      expect(
-        containsSetFilter(tokenizeScryfallSyntax('-set:abc')),
-        isFalse,
-      );
-      expect(
-        containsSetFilter(tokenizeScryfallSyntax('set:abc')),
-        isTrue,
-      );
+      expect(containsSetFilter(tokenizeScryfallSyntax('-set:abc')), isFalse);
+      expect(containsSetFilter(tokenizeScryfallSyntax('set:abc')), isTrue);
     });
 
     test('collects Oracle Tag lookups', () {
@@ -180,9 +168,7 @@ void main() {
     });
 
     test('collects Illustration Tag lookups', () {
-      final tokens = tokenizeScryfallSyntax(
-        'art:dragon atag:angel',
-      );
+      final tokens = tokenizeScryfallSyntax('art:dragon atag:angel');
 
       expect(
         collectIllustrationTagLookups(tokens),

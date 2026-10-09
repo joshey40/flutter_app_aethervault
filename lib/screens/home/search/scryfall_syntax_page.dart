@@ -6,15 +6,10 @@ class ScryfallSyntaxPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Scryfall Syntax Guide"),
-      ),
+      appBar: AppBar(title: Text("Scryfall Syntax Guide")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Text(
-          "Content",
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        child: Text("Content", style: Theme.of(context).textTheme.bodyLarge),
       ),
     );
   }

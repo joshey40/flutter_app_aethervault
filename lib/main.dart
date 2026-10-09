@@ -13,9 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Lock orientation to portrait only.
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final preferencesStorage = AppPreferencesStorage();
 
@@ -97,9 +95,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
 
   /// Set the app's locale and save it to preferences.
   Future<void> _setLocale(Locale locale) async {
-    await initializeLocalizations(
-      locale.languageCode,
-    );
+    await initializeLocalizations(locale.languageCode);
 
     if (!mounted) {
       return;
@@ -109,15 +105,11 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       _locale = locale;
     });
 
-    await widget.preferencesStorage.saveLocale(
-      locale,
-    );
+    await widget.preferencesStorage.saveLocale(locale);
   }
 
   /// Set the app's theme mode and save it to preferences.
-  Future<void> _setThemeMode(
-    ThemeMode themeMode,
-  ) async {
+  Future<void> _setThemeMode(ThemeMode themeMode) async {
     if (!mounted) {
       return;
     }
@@ -126,9 +118,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
       _themeMode = themeMode;
     });
 
-    await widget.preferencesStorage.saveThemeMode(
-      themeMode,
-    );
+    await widget.preferencesStorage.saveThemeMode(themeMode);
   }
 
   @override

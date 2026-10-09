@@ -26,7 +26,9 @@ class AppTheme {
   static const Color vaultInkMuted = Color(0xFF8A9099);
 
   static TextTheme _textTheme(Brightness brightness) {
-    final base = brightness == Brightness.dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme;
+    final base = brightness == Brightness.dark
+        ? ThemeData.dark().textTheme
+        : ThemeData.light().textTheme;
     return GoogleFonts.manropeTextTheme(base).copyWith(
       displayLarge: GoogleFonts.spaceGrotesk(
         fontSize: 57,
@@ -130,7 +132,10 @@ class AppTheme {
         side: const BorderSide(color: vaultBorderLight, width: 1),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
+        textStyle: GoogleFonts.manrope(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
       ),
     ),
     iconTheme: const IconThemeData(color: vaultGoldMuted),
@@ -140,7 +145,10 @@ class AppTheme {
         foregroundColor: vaultOnDark,
         minimumSize: const Size.fromHeight(50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w600, fontSize: 15),
+        textStyle: GoogleFonts.spaceGrotesk(
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -228,7 +236,10 @@ class AppTheme {
         side: const BorderSide(color: vaultBorder, width: 1),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
+        textStyle: GoogleFonts.manrope(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
       ),
     ),
     iconTheme: const IconThemeData(color: vaultBeige),
@@ -238,7 +249,10 @@ class AppTheme {
         foregroundColor: vaultInk,
         minimumSize: const Size.fromHeight(50),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        textStyle: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.w600, fontSize: 15),
+        textStyle: GoogleFonts.spaceGrotesk(
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
       ),
     ),
     textButtonTheme: TextButtonThemeData(

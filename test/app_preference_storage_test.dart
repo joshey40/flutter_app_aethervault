@@ -18,17 +18,13 @@ void main() {
     });
 
     test('loads saved light theme', () async {
-      SharedPreferences.setMockInitialValues({
-        'settings.themeMode': 'light',
-      });
+      SharedPreferences.setMockInitialValues({'settings.themeMode': 'light'});
 
       expect(await storage.loadThemeMode(), ThemeMode.light);
     });
 
     test('loads saved system theme', () async {
-      SharedPreferences.setMockInitialValues({
-        'settings.themeMode': 'system',
-      });
+      SharedPreferences.setMockInitialValues({'settings.themeMode': 'system'});
 
       expect(await storage.loadThemeMode(), ThemeMode.system);
     });
@@ -45,9 +41,7 @@ void main() {
     });
 
     test('loads saved German locale', () async {
-      SharedPreferences.setMockInitialValues({
-        'settings.locale': 'de',
-      });
+      SharedPreferences.setMockInitialValues({'settings.locale': 'de'});
 
       expect(await storage.loadLocale(), const Locale('de'));
     });
@@ -98,59 +92,34 @@ void main() {
     test('saves and loads bulk data metadata', () async {
       const json = '{"updated_at":"2026-01-01"}';
 
-      await storage.saveScryfallBulkDataMetadata(
-        'default_cards',
-        json,
-      );
+      await storage.saveScryfallBulkDataMetadata('default_cards', json);
 
-      expect(
-        await storage.loadScryfallBulkDataMetadata(
-          'default_cards',
-        ),
-        json,
-      );
+      expect(await storage.loadScryfallBulkDataMetadata('default_cards'), json);
     });
 
     test('metadata is stored separately by bulk data type', () async {
-      await storage.saveScryfallBulkDataMetadata(
-        'default_cards',
-        'default',
-      );
+      await storage.saveScryfallBulkDataMetadata('default_cards', 'default');
 
-      await storage.saveScryfallBulkDataMetadata(
-        'oracle_cards',
-        'oracle',
-      );
+      await storage.saveScryfallBulkDataMetadata('oracle_cards', 'oracle');
 
       expect(
-        await storage.loadScryfallBulkDataMetadata(
-          'default_cards',
-        ),
+        await storage.loadScryfallBulkDataMetadata('default_cards'),
         'default',
       );
 
       expect(
-        await storage.loadScryfallBulkDataMetadata(
-          'oracle_cards',
-        ),
+        await storage.loadScryfallBulkDataMetadata('oracle_cards'),
         'oracle',
       );
     });
 
     test('removes bulk data metadata', () async {
-      await storage.saveScryfallBulkDataMetadata(
-        'default_cards',
-        'metadata',
-      );
+      await storage.saveScryfallBulkDataMetadata('default_cards', 'metadata');
 
-      await storage.removeScryfallBulkDataMetadata(
-        'default_cards',
-      );
+      await storage.removeScryfallBulkDataMetadata('default_cards');
 
       expect(
-        await storage.loadScryfallBulkDataMetadata(
-          'default_cards',
-        ),
+        await storage.loadScryfallBulkDataMetadata('default_cards'),
         isNull,
       );
     });

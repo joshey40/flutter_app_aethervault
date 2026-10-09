@@ -5,9 +5,7 @@ import '../../services/localization_service.dart';
 import '../../services/card_database/scryfall_data_parser.dart';
 
 class ParserScreen extends StatefulWidget {
-  const ParserScreen({
-    super.key,
-  });
+  const ParserScreen({super.key});
 
   @override
   State<ParserScreen> createState() => _ParserScreenState();
@@ -98,8 +96,8 @@ class _ParserScreenState extends State<ParserScreen> {
                         _error != null
                             ? '${appLocalizations.translate('parser.failed')}\n$_error'
                             : _progress?.currentType != null
-                                ? '${appLocalizations.translate('parser.current')}${_progress!.currentType}'
-                                : appLocalizations.translate('parser.waiting'),
+                            ? '${appLocalizations.translate('parser.current')}${_progress!.currentType}'
+                            : appLocalizations.translate('parser.waiting'),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -123,7 +121,7 @@ class _ParserScreenState extends State<ParserScreen> {
                     ElevatedButton(
                       onPressed: _startParsing,
                       child: Text(appLocalizations.translate('parser.retry')),
-                    )
+                    ),
                 ],
               ),
             ),

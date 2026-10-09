@@ -5,12 +5,6 @@ class DecksPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text(
-          'Deck Page',
-        ),
-      ),
-    );
+    return const Scaffold(body: Center(child: Text('Deck Page')));
   }
 }

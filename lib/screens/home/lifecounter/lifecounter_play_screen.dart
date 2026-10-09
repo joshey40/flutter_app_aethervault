@@ -57,21 +57,33 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
 
   void _changeLife(int index, int delta) {
     setState(() {
-      _currentGame.currentLives[index] = (_currentGame.currentLives[index] + delta).clamp(-999, 9999);
+      _currentGame.currentLives[index] =
+          (_currentGame.currentLives[index] + delta).clamp(-999, 9999);
     });
     _save();
   }
 
   void _changeTax(int index, int delta) {
     setState(() {
-      _currentGame.commanderTax[index] = (_currentGame.commanderTax[index] + delta).clamp(0, 9999);
+      _currentGame.commanderTax[index] =
+          (_currentGame.commanderTax[index] + delta).clamp(0, 9999);
     });
     _save();
   }
 
   void _changePartnerTax(int index, int delta) {
     setState(() {
-      _currentGame.partnerTax[index] = (_currentGame.partnerTax[index] + delta).clamp(0, 9999);
+      _currentGame.partnerTax[index] = (_currentGame.partnerTax[index] + delta)
+          .clamp(0, 9999);
+    });
+    _save();
+  }
+
+  void _changeCounter(int playerIndex, int counterIndex, int delta) {
+    setState(() {
+      _currentGame.playerCounters[playerIndex][counterIndex] =
+          (_currentGame.playerCounters[playerIndex][counterIndex] + delta)
+              .clamp(0, 9999);
     });
     _save();
   }
@@ -107,11 +119,38 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
           },
           partnerTax: _currentGame.partnerTax[i],
           onPartnerTaxChange: (d) => _changePartnerTax(i, d),
+          playerName: _currentGame.playerNames[i],
+          panelColor: _currentGame.playerColors[i],
+          counters: _currentGame.playerCounters[i],
+          onCounterChange: (counterIndex, delta) =>
+              _changeCounter(i, counterIndex, delta),
+          isMonarch: _currentGame.monarchPlayerIndex == i,
+          onMonarchPressed: () => _toggleMonarch(i),
+          onPlayerNameChanged: (name) {
+            setState(() {
+              _currentGame.playerNames[i] = name;
+            });
+            _save();
+          },
+          onPanelColorChanged: (color) {
+            setState(() {
+              _currentGame.playerColors[i] = color;
+            });
+            _save();
+          },
           onCommanderPressed: () => _toggleCommanderDamage(i),
           showCommanderOverlay: _commanderDamageTargetIndex != null,
           onCommanderOverlayTap: () => _clearCommanderDamage(),
-          commanderDamageFromSource: _commanderDamageTargetIndex != null ? _getCommanderDamageValues(i, _commanderDamageTargetIndex!, _currentGame.partnerEnabled[_commanderDamageTargetIndex!]) : null,
-          isCommanderTarget: _commanderDamageTargetIndex != null && _commanderDamageTargetIndex == i,
+          commanderDamageFromSource: _commanderDamageTargetIndex != null
+              ? _getCommanderDamageValues(
+                  i,
+                  _commanderDamageTargetIndex!,
+                  _currentGame.partnerEnabled[_commanderDamageTargetIndex!],
+                )
+              : null,
+          isCommanderTarget:
+              _commanderDamageTargetIndex != null &&
+              _commanderDamageTargetIndex == i,
           onCommanderOverlayAdjust: (d, slot) {
             if (_commanderDamageTargetIndex == null) return;
             _applyCommanderDamage(i, _commanderDamageTargetIndex!, d, slot);
@@ -138,6 +177,14 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     });
   }
 
+  void _toggleMonarch(int playerIndex) {
+    setState(() {
+      _currentGame.monarchPlayerIndex =
+          _currentGame.monarchPlayerIndex == playerIndex ? null : playerIndex;
+    });
+    _save();
+  }
+
   bool _isPlayerLost(int target) {
     if (target < 0 || target >= _currentGame.playerCount) return false;
     if (_currentGame.currentLives[target] <= 0) return true;
@@ -151,9 +198,17 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   }
 
   /// Ensure all commanderDamage[source][target] slot lists match at least the expected number of slots for the target (1 or 2 depending on partnerEnabled).
-  List<int> _getCommanderDamageValues(int source, int target, bool targetHasPartner) {
-    if (source < 0 || source >= _currentGame.playerCount) return targetHasPartner ? [0, 0] : [0];
-    if (target < 0 || target >= _currentGame.playerCount) return targetHasPartner ? [0, 0] : [0];
+  List<int> _getCommanderDamageValues(
+    int source,
+    int target,
+    bool targetHasPartner,
+  ) {
+    if (source < 0 || source >= _currentGame.playerCount) {
+      return targetHasPartner ? [0, 0] : [0];
+    }
+    if (target < 0 || target >= _currentGame.playerCount) {
+      return targetHasPartner ? [0, 0] : [0];
+    }
     final values = _currentGame.commanderDamage[source][target];
     if (values.isEmpty) return targetHasPartner ? [0, 0] : [0];
     if (targetHasPartner && values.length == 1) return [values[0], 0];
@@ -169,9 +224,14 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
       while (list.length <= slot) {
         list.add(0);
       }
-      _currentGame.commanderDamage[source][target][slot] = (_currentGame.commanderDamage[source][target][slot] + delta).clamp(0, 9999);
+      _currentGame.commanderDamage[source][target][slot] =
+          (_currentGame.commanderDamage[source][target][slot] + delta).clamp(
+            0,
+            9999,
+          );
       // Apply life change to the target: damage reduces life by delta (negative delta restores life)
-      _currentGame.currentLives[target] = (_currentGame.currentLives[target] - delta).clamp(0, 9999);
+      _currentGame.currentLives[target] =
+          (_currentGame.currentLives[target] - delta).clamp(0, 9999);
     });
     _save();
   }
@@ -181,9 +241,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading || _game == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final loc = appLocalizations;
@@ -200,10 +258,10 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
         ),
         actions: [
           IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: loc.translate('lifecounter.resetGame'),
-              onPressed: () => _confirmReset(),
-            ),
+            icon: const Icon(Icons.refresh),
+            tooltip: loc.translate('lifecounter.resetGame'),
+            onPressed: () => _confirmReset(),
+          ),
           IconButton(
             icon: const Icon(Icons.auto_awesome),
             tooltip: 'Mana',
@@ -216,7 +274,11 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
           IconButton(
             icon: const Icon(Icons.casino),
             tooltip: 'Random',
-            onPressed: () => showRandomPicker(context, maxPlayers: _currentGame.playerCount),
+            onPressed: () => showRandomPicker(
+              context,
+              maxPlayers: _currentGame.playerCount,
+              playerNames: _currentGame.playerNames,
+            ),
           ),
         ],
       ),
@@ -249,17 +311,27 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                           Colors.grey,
                         ];
 
-                        
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 2.0),
-                            child: SizedBox(
-                              child: Material(
-                                color: colors[i],
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.0)),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 2.0, vertical: 2.0),
-                                  child: Builder(builder: (ctx) {
-                                    final textColor = (i == 0 || i == 5) ? Colors.black87 : Colors.white;
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4.0,
+                            vertical: 2.0,
+                          ),
+                          child: SizedBox(
+                            child: Material(
+                              color: colors[i],
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6.0),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 2.0,
+                                  vertical: 2.0,
+                                ),
+                                child: Builder(
+                                  builder: (ctx) {
+                                    final textColor = (i == 0 || i == 5)
+                                        ? Colors.black87
+                                        : Colors.white;
                                     return SizedBox(
                                       width: 55,
                                       height: 32,
@@ -272,7 +344,9 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                                   child: InkWell(
                                                     onTap: () {
                                                       setState(() {
-                                                        _manaCounts[i] = (_manaCounts[i] - 1).clamp(0, 9999);
+                                                        _manaCounts[i] =
+                                                            (_manaCounts[i] - 1)
+                                                                .clamp(0, 9999);
                                                       });
                                                     },
                                                     onLongPress: () {
@@ -281,10 +355,19 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                                       });
                                                     },
                                                     child: Align(
-                                                      alignment: Alignment.centerLeft,
+                                                      alignment:
+                                                          Alignment.centerLeft,
                                                       child: Padding(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 0.0),
-                                                        child: Icon(Icons.remove_circle_outline, size: 16, color: textColor),
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 0.0,
+                                                            ),
+                                                        child: Icon(
+                                                          Icons
+                                                              .remove_circle_outline,
+                                                          size: 16,
+                                                          color: textColor,
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
@@ -293,19 +376,31 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                                   child: InkWell(
                                                     onTap: () {
                                                       setState(() {
-                                                        _manaCounts[i] = (_manaCounts[i] + 1).clamp(0, 9999);
+                                                        _manaCounts[i] =
+                                                            (_manaCounts[i] + 1)
+                                                                .clamp(0, 9999);
                                                       });
                                                     },
                                                     onLongPress: () {
                                                       setState(() {
-                                                        _manaCounts[i] = _manaCounts[i] + 5;
+                                                        _manaCounts[i] =
+                                                            _manaCounts[i] + 5;
                                                       });
                                                     },
                                                     child: Align(
-                                                      alignment: Alignment.centerRight,
+                                                      alignment:
+                                                          Alignment.centerRight,
                                                       child: Padding(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 0.0),
-                                                        child: Icon(Icons.add_circle_outline, size: 16, color: textColor),
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 0.0,
+                                                            ),
+                                                        child: Icon(
+                                                          Icons
+                                                              .add_circle_outline,
+                                                          size: 16,
+                                                          color: textColor,
+                                                        ),
                                                       ),
                                                     ),
                                                   ),
@@ -315,100 +410,179 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                           ),
                                           Center(
                                             child: IgnorePointer(
-                                              child: Text('${_manaCounts[i]}', style: TextStyle(fontSize: 13, color: textColor)),
+                                              child: Text(
+                                                '${_manaCounts[i]}',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  color: textColor,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ],
                                       ),
                                     );
-                                  }),
+                                  },
                                 ),
                               ),
                             ),
-                          );
-                        }),
+                          ),
+                        );
+                      }),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-          Expanded(child: Builder(builder: (ctx) {
-        final count = _currentGame.playerCount;
-        const double gap = 2.0;
-        if (count == 1) {
-          return Padding(
-            padding: const EdgeInsets.all(gap),
-            child: Center(child: _buildPlayer(0, 1)),
-          );
-        }
-
-        // Special-case 3 players: top row two players, bottom centered player
-        if (count == 3) {
-          return Padding(
-            padding: const EdgeInsets.all(gap),
-            child: MultiSplitView(
-              axis: Axis.vertical,
-              initialAreas: [
-                Area(
-                  flex: 3,
-                  builder: (c, a) => MultiSplitView(
-                    axis: Axis.horizontal,
-                    initialAreas: [
-                      Area(builder: (ctx, ar) => _buildPlayer(0, 1)),
-                      Area(builder: (ctx, ar) => _buildPlayer(1, 3)),
-                    ],
-                  ),
-                ),
-                Area(flex: 2, builder: (c, a) => _buildPlayer(2, 0)),
-              ],
+          Expanded(
+            child: Builder(
+              builder: (ctx) {
+                final count = _currentGame.playerCount;
+                const double gap = 2.0;
+                return Padding(
+                  padding: const EdgeInsets.all(gap),
+                  child: _buildSeatLayout(count, _currentGame.seatLayout),
+                );
+              },
             ),
-          );
-        }
-
-        // special-case 2 players: top and bottom
-        if (count == 2) {
-          return Padding(
-            padding: const EdgeInsets.all(gap),
-            child: MultiSplitView(
-              axis: Axis.vertical,
-              initialAreas: [
-                Area(builder: (c, a) => _buildPlayer(0, 2)),
-                Area(builder: (c, a) => _buildPlayer(1, 0)),
-              ],
-            ),
-          );
-        }
-
-        final leftCount = (count / 2).ceil();
-        final rightCount = count - leftCount;
-        final leftIndices = List<int>.generate(leftCount, (i) => i);
-        final rightIndices = List<int>.generate(rightCount, (i) => leftCount + i);
-        final rightQuarter = 3;
-
-        return Padding(
-          padding: const EdgeInsets.all(gap),
-          child: MultiSplitView(
-            axis: Axis.horizontal,
-            initialAreas: [
-              Area(
-                builder: (c, a) => MultiSplitView(
-                  axis: Axis.vertical,
-                  initialAreas: leftIndices.map((i) => Area(builder: (ctx, ar) => _buildPlayer(i, 1))).toList(),
-                ),
-              ),
-              Area(
-                builder: (c, a) => MultiSplitView(
-                  axis: Axis.vertical,
-                  initialAreas: rightIndices.map((i) => Area(builder: (ctx, ar) => _buildPlayer(i, rightQuarter))).toList(),
-                ),
-              ),
-            ],
           ),
-        );
-          })),
         ],
       ),
+    );
+  }
+
+  Widget _buildSeatLayout(int count, String layout) {
+    switch ('$count:$layout') {
+      case '1:option1':
+        return Center(child: _buildPlayer(0, 1));
+      case '2:option2':
+        return _verticalPlayers([0, 1], 1);
+      case '2:option1':
+        return _verticalPlayersWithTurns([0, 1], [2, 0]);
+      case '3:option2':
+        return _horizontalSides(
+          left: [0, 1],
+          leftQuarter: 1,
+          right: [2],
+          rightQuarter: 3,
+        );
+      case '3:option1':
+        return _verticalAreas(
+          [
+            (context) => _horizontalPlayersWithTurns([0, 1], [1, 3]),
+            (context) => _buildPlayer(2, 0),
+          ],
+          flexes: [3, 2],
+        );
+      case '4:option2':
+        return _verticalAreas(
+          [
+            (context) => _buildPlayer(0, 2),
+            (context) => _horizontalPlayersWithTurns([1, 2], [1, 3]),
+            (context) => _buildPlayer(3, 0),
+          ],
+          flexes: [2, 3, 2],
+        );
+      case '4:option1':
+        return _horizontalSides(
+          left: [0, 1],
+          leftQuarter: 1,
+          right: [2, 3],
+          rightQuarter: 3,
+        );
+      case '5:option2':
+        return _verticalAreas(
+          [
+            (context) => _horizontalSides(
+              left: [0, 1],
+              leftQuarter: 1,
+              right: [2, 3],
+              rightQuarter: 3,
+            ),
+            (context) => _buildPlayer(4, 0),
+          ],
+          flexes: [7, 3],
+        );
+      case '5:option1':
+        return _horizontalSides(
+          left: [0, 1, 2],
+          leftQuarter: 1,
+          right: [3, 4],
+          rightQuarter: 3,
+        );
+      case '6:option1':
+      default:
+        return _horizontalSides(
+          left: List<int>.generate((count / 2).ceil(), (i) => i),
+          leftQuarter: 1,
+          right: List<int>.generate(
+            count - (count / 2).ceil(),
+            (i) => (count / 2).ceil() + i,
+          ),
+          rightQuarter: 3,
+        );
+    }
+  }
+
+  Widget _verticalPlayers(List<int> indices, int quarterTurns) {
+    return _verticalPlayersWithTurns(
+      indices,
+      List<int>.filled(indices.length, quarterTurns),
+    );
+  }
+
+  Widget _verticalPlayersWithTurns(List<int> indices, List<int> turns) {
+    return _verticalAreas(
+      List<WidgetBuilder>.generate(
+        indices.length,
+        (index) =>
+            (context) => _buildPlayer(indices[index], turns[index]),
+      ),
+    );
+  }
+
+  Widget _verticalAreas(List<WidgetBuilder> builders, {List<int>? flexes}) {
+    return MultiSplitView(
+      axis: Axis.vertical,
+      initialAreas: builders
+          .asMap()
+          .entries
+          .map(
+            (entry) => Area(
+              flex: flexes == null ? null : flexes[entry.key].toDouble(),
+              builder: (context, area) => entry.value(context),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Widget _horizontalPlayersWithTurns(List<int> indices, List<int> turns) {
+    return MultiSplitView(
+      axis: Axis.horizontal,
+      initialAreas: List<Area>.generate(
+        indices.length,
+        (index) => Area(
+          builder: (context, area) =>
+              _buildPlayer(indices[index], turns[index]),
+        ),
+      ),
+    );
+  }
+
+  Widget _horizontalSides({
+    required List<int> left,
+    required int leftQuarter,
+    required List<int> right,
+    required int rightQuarter,
+  }) {
+    return MultiSplitView(
+      axis: Axis.horizontal,
+      initialAreas: [
+        Area(builder: (context, area) => _verticalPlayers(left, leftQuarter)),
+        Area(builder: (context, area) => _verticalPlayers(right, rightQuarter)),
+      ],
     );
   }
 
@@ -427,14 +601,26 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
         _currentGame.commanderTax[i] = 0;
         _currentGame.partnerTax[i] = 0;
         for (var s = 0; s < _currentGame.playerCount; s++) {
-          _currentGame.commanderDamage[s][i] = List<int>.filled(_currentGame.partnerEnabled[i] ? 2 : 1, 0);
+          _currentGame.commanderDamage[s][i] = List<int>.filled(
+            _currentGame.partnerEnabled[i] ? 2 : 1,
+            0,
+          );
         }
       }
     });
     _save();
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(SnackBar(content: Text(appLocalizations.translate('lifecounter.gameReset') != 'lifecounter.gameReset' ? appLocalizations.translate('lifecounter.gameReset') : 'Game reset')));
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          appLocalizations.translate('lifecounter.gameReset') !=
+                  'lifecounter.gameReset'
+              ? appLocalizations.translate('lifecounter.gameReset')
+              : 'Game reset',
+        ),
+      ),
+    );
   }
 
   /// Show a confirmation dialog before resetting the game state.
@@ -443,11 +629,34 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(loc.translate('lifecounter.resetGame') != 'lifecounter.resetGame' ? loc.translate('lifecounter.resetGame') : 'Reset game'),
-        content: Text(loc.translate('lifecounter.resetConfirm') != 'lifecounter.resetConfirm' ? loc.translate('lifecounter.resetConfirm') : 'Are you sure you want to reset all players to start life?'),
+        title: Text(
+          loc.translate('lifecounter.resetGame') != 'lifecounter.resetGame'
+              ? loc.translate('lifecounter.resetGame')
+              : 'Reset game',
+        ),
+        content: Text(
+          loc.translate('lifecounter.resetConfirm') !=
+                  'lifecounter.resetConfirm'
+              ? loc.translate('lifecounter.resetConfirm')
+              : 'Are you sure you want to reset all players to start life?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(loc.translate('cancel') != 'cancel' ? loc.translate('cancel') : 'Cancel')),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(loc.translate('confirm') != 'confirm' ? loc.translate('confirm') : 'Reset')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              loc.translate('cancel') != 'cancel'
+                  ? loc.translate('cancel')
+                  : 'Cancel',
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              loc.translate('confirm') != 'confirm'
+                  ? loc.translate('confirm')
+                  : 'Reset',
+            ),
+          ),
         ],
       ),
     );

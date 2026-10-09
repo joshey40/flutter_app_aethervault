@@ -9,7 +9,7 @@ import 'lifecounter_storage.dart';
 /// to infer state changes from navigation lifecycle callbacks.
 class LifecounterController extends ChangeNotifier {
   LifecounterController({LifecounterStorage? storage})
-      : _storage = storage ?? LifecounterStorage();
+    : _storage = storage ?? LifecounterStorage();
 
   final LifecounterStorage _storage;
   bool _hasSavedGame = false;

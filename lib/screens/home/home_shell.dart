@@ -4,10 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../services/localization_service.dart';
 
 class HomeShell extends StatelessWidget {
-  const HomeShell({
-    super.key,
-    required this.navigationShell,
-  });
+  const HomeShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
@@ -22,8 +19,7 @@ class HomeShell extends StatelessWidget {
         onTap: (index) {
           navigationShell.goBranch(
             index,
-            initialLocation:
-                index == navigationShell.currentIndex,
+            initialLocation: index == navigationShell.currentIndex,
           );
         },
 

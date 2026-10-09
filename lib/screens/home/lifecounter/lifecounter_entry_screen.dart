@@ -27,11 +27,8 @@ class _LifecounterEntryScreenState extends State<LifecounterEntryScreen> {
   }
 
   Widget _buildContent(BuildContext context, dynamic loc) {
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(loc.translate('lifecounter.title')),
-      ),
+      appBar: AppBar(title: Text(loc.translate('lifecounter.title'))),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
