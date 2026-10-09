@@ -5,6 +5,11 @@ import '../../screens/widgets/card_details/card_deatail_sheet.dart';
 import '../card_database/database.dart';
 import '../localization_service.dart';
 
+// =============================================================================
+// Card detail route
+// =============================================================================
+
+/// Loads the selected card and presents its search-specific detail actions.
 class CardDetailRoute extends StatefulWidget {
   const CardDetailRoute({required this.cardId, super.key});
 
@@ -23,6 +28,7 @@ class _CardDetailRouteState extends State<CardDetailRoute> {
     _cardFuture = _loadCard();
   }
 
+  /// Loads the selected card, its printed variants, and all variant faces.
   Future<_CardDetailData?> _loadCard() async {
     final database = AppDatabase();
     final card = await database.getCardById(widget.cardId);

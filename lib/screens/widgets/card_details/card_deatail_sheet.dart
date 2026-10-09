@@ -5,6 +5,15 @@ import '../../../../services/card_database/database.dart';
 import '../../../../services/localization_service.dart';
 import '../../../../services/scryfall_symbol_service.dart';
 
+// =============================================================================
+// Card detail sheet
+// =============================================================================
+
+/// Displays card information and context-specific actions for one card.
+///
+/// Search provides [variants] and [variantFaces] so users can switch between
+/// printed versions, languages, and faces. Other contexts can keep these lists
+/// empty and provide their own actions later.
 class CardDetailSheet extends StatefulWidget {
   const CardDetailSheet({
     required this.card,
@@ -272,6 +281,7 @@ class _CardDetailSheetState extends State<CardDetailSheet> {
 // Card details
 // =============================================================================
 
+/// Renders the selected face's text, stats, legalities, and metadata.
 class CardDetailInfo extends StatelessWidget {
   const CardDetailInfo({
     required this.card,
@@ -501,6 +511,7 @@ class _LegalityTile extends StatelessWidget {
 // Media and navigation
 // =============================================================================
 
+/// Displays the current card image with loading and error fallbacks.
 class CardDetailMedia extends StatelessWidget {
   const CardDetailMedia({required this.imageUrl, super.key});
 
@@ -532,6 +543,7 @@ class CardDetailMedia extends StatelessWidget {
   }
 }
 
+/// Provides previous and next controls for a multi-face card.
 class CardDetailFaceNavigation extends StatelessWidget {
   const CardDetailFaceNavigation({
     required this.faceIndex,
@@ -590,6 +602,7 @@ class CardDetailSectionDivider extends StatelessWidget {
 // Pickers and context-specific actions
 // =============================================================================
 
+/// Shows the printed variants for the currently selected language.
 Future<int?> showCardVariantPicker({
   required BuildContext context,
   required List<ScryfallCard> variants,
@@ -631,6 +644,7 @@ Future<int?> showCardVariantPicker({
   );
 }
 
+/// Shows the languages available across the card's printed variants.
 Future<String?> showCardLanguagePicker({
   required BuildContext context,
   required List<String> languages,
@@ -658,6 +672,7 @@ Future<String?> showCardLanguagePicker({
   );
 }
 
+/// Builds the search-only printed variant action button.
 Widget buildVariantButton({
   required VoidCallback onPressed,
   required String tooltip,
@@ -669,6 +684,7 @@ Widget buildVariantButton({
   );
 }
 
+/// Builds the search-only language action button.
 Widget buildLanguageButton({
   required VoidCallback onPressed,
   required String tooltip,
