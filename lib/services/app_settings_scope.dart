@@ -17,20 +17,16 @@ class AppSettingsScope extends InheritedWidget {
   final Future<void> Function(Locale locale) onLocaleChanged;
 
   static AppSettingsScope of(BuildContext context) {
-    final result =
-        context.dependOnInheritedWidgetOfExactType<AppSettingsScope>();
+    final result = context
+        .dependOnInheritedWidgetOfExactType<AppSettingsScope>();
 
-    assert(
-      result != null,
-      'No AppSettingsScope found in context.',
-    );
+    assert(result != null, 'No AppSettingsScope found in context.');
 
     return result!;
   }
 
   @override
   bool updateShouldNotify(AppSettingsScope oldWidget) {
-    return themeMode != oldWidget.themeMode ||
-        locale != oldWidget.locale;
+    return themeMode != oldWidget.themeMode || locale != oldWidget.locale;
   }
 }

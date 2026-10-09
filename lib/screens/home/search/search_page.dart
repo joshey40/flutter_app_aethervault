@@ -54,20 +54,16 @@ class _SearchPageState extends State<SearchPage> {
       return;
     }
 
-    _debounce = Timer(
-      const Duration(milliseconds: 300),
-      () {
-        final currentQuery = GoRouterState.of(context).uri.queryParameters['q'] ?? '';
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      final currentQuery =
+          GoRouterState.of(context).uri.queryParameters['q'] ?? '';
 
-        if (currentQuery != query) {
-          context.replace(
-            '/search?q=${Uri.encodeQueryComponent(query)}',
-          );
-        }
+      if (currentQuery != query) {
+        context.replace('/search?q=${Uri.encodeQueryComponent(query)}');
+      }
 
-        _runSearch(query);
-      },
-    );
+      _runSearch(query);
+    });
   }
 
   /// Execute the search query against the database and update the UI
@@ -143,9 +139,7 @@ class _SearchPageState extends State<SearchPage> {
 
     _controller.value = TextEditingValue(
       text: query,
-      selection: TextSelection.collapsed(
-        offset: query.length,
-      ),
+      selection: TextSelection.collapsed(offset: query.length),
     );
 
     if (query.isEmpty) {
@@ -188,15 +182,32 @@ class _SearchPageState extends State<SearchPage> {
         expandedInsets: EdgeInsets.zero,
         textStyle: textTheme.bodyMedium,
         leadingIcon: Icon(icon, size: 18, color: colorScheme.primary),
-        trailingIcon: Icon(Icons.keyboard_arrow_down, size: 20, color: colorScheme.primary),
-        selectedTrailingIcon: Icon(Icons.keyboard_arrow_up, size: 20, color: colorScheme.primary),
+        trailingIcon: Icon(
+          Icons.keyboard_arrow_down,
+          size: 20,
+          color: colorScheme.primary,
+        ),
+        selectedTrailingIcon: Icon(
+          Icons.keyboard_arrow_up,
+          size: 20,
+          color: colorScheme.primary,
+        ),
         inputDecorationTheme: InputDecorationTheme(
           isDense: true,
           filled: true,
           fillColor: colorScheme.surface,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
-          prefixIconConstraints: const BoxConstraints(minWidth: 26, minHeight: 22),
-          suffixIconConstraints: const BoxConstraints(minWidth: 26, minHeight: 22),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 4.0,
+            vertical: 4.0,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 26,
+            minHeight: 22,
+          ),
+          suffixIconConstraints: const BoxConstraints(
+            minWidth: 26,
+            minHeight: 22,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14.0),
             borderSide: BorderSide(color: colorScheme.outline),
@@ -226,7 +237,9 @@ class _SearchPageState extends State<SearchPage> {
               (v) => DropdownMenuEntry<T>(
                 value: v,
                 label: labelBuilder(v),
-                style: MenuItemButton.styleFrom(textStyle: textTheme.bodyMedium),
+                style: MenuItemButton.styleFrom(
+                  textStyle: textTheme.bodyMedium,
+                ),
               ),
             )
             .toList(),
@@ -247,7 +260,12 @@ class _SearchPageState extends State<SearchPage> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 10.0, right: 10.0, bottom: 2.0, top: 64.0),
+          padding: const EdgeInsets.only(
+            left: 10.0,
+            right: 10.0,
+            bottom: 2.0,
+            top: 64.0,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -256,10 +274,18 @@ class _SearchPageState extends State<SearchPage> {
                   controller: _controller,
                   decoration: InputDecoration(
                     hintText: appLocalizations.translate('search.bar_hint'),
-                    prefixIcon: Icon(Icons.search, size: 20, color: colorScheme.primary),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 20,
+                      color: colorScheme.primary,
+                    ),
                     suffixIcon: _controller.text.isNotEmpty
                         ? IconButton(
-                            icon: Icon(Icons.clear, size: 20, color: colorScheme.primary),
+                            icon: Icon(
+                              Icons.clear,
+                              size: 20,
+                              color: colorScheme.primary,
+                            ),
                             onPressed: () {
                               _controller.clear();
                               _onSearchChanged('');
@@ -280,7 +306,11 @@ class _SearchPageState extends State<SearchPage> {
                   border: Border.all(color: colorScheme.outline),
                 ),
                 child: IconButton(
-                  icon: Icon(Icons.info_outline, size: 20, color: colorScheme.primary),
+                  icon: Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
                   tooltip: appLocalizations.translate('search.syntax_help'),
                   onPressed: () {
                     context.push('/search/syntax-help');
@@ -291,14 +321,20 @@ class _SearchPageState extends State<SearchPage> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 10.0, right: 10.0, bottom: 2.0, top: 10.0),
+          padding: const EdgeInsets.only(
+            left: 10.0,
+            right: 10.0,
+            bottom: 2.0,
+            top: 10.0,
+          ),
           child: Row(
             children: [
               _buildFilterDropdown<String>(
                 context: context,
                 initialValue: _searchScope,
                 values: const ['one_card', 'all_prints'],
-                labelBuilder: (v) => appLocalizations.translate('search.scope.$v'),
+                labelBuilder: (v) =>
+                    appLocalizations.translate('search.scope.$v'),
                 icon: Icons.filter_alt_outlined,
                 onSelected: (value) {
                   setState(() => _searchScope = value);
@@ -309,8 +345,18 @@ class _SearchPageState extends State<SearchPage> {
               _buildFilterDropdown<String>(
                 context: context,
                 initialValue: _orderBy,
-                values: const ['name', 'released_at', 'set', 'rarity', 'color', 'cmc', 'power', 'toughness'],
-                labelBuilder: (v) => appLocalizations.translate('search.order.$v'),
+                values: const [
+                  'name',
+                  'released_at',
+                  'set',
+                  'rarity',
+                  'color',
+                  'cmc',
+                  'power',
+                  'toughness',
+                ],
+                labelBuilder: (v) =>
+                    appLocalizations.translate('search.order.$v'),
                 icon: Icons.sort_by_alpha,
                 onSelected: (value) {
                   setState(() => _orderBy = value);
@@ -322,7 +368,8 @@ class _SearchPageState extends State<SearchPage> {
                 context: context,
                 initialValue: _orderDir,
                 values: const ['asc', 'desc'],
-                labelBuilder: (v) => appLocalizations.translate('search.order.$v'),
+                labelBuilder: (v) =>
+                    appLocalizations.translate('search.order.$v'),
                 icon: Icons.swap_vert,
                 onSelected: (value) {
                   setState(() => _orderDir = value);
@@ -333,7 +380,12 @@ class _SearchPageState extends State<SearchPage> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 8.0, left: 10.0, right: 10.0, bottom: 2.0),
+          padding: const EdgeInsets.only(
+            top: 8.0,
+            left: 10.0,
+            right: 10.0,
+            bottom: 2.0,
+          ),
           child: Row(
             children: [
               Text(
@@ -364,7 +416,11 @@ class _SearchPageState extends State<SearchPage> {
                   child: Text(
                     _controller.text.isEmpty
                         ? appLocalizations.translate('search.hint')
-                        : (_isLoading ? '' : appLocalizations.translate('search.no_results')),
+                        : (_isLoading
+                              ? ''
+                              : appLocalizations.translate(
+                                  'search.no_results',
+                                )),
                   ),
                 )
               : GridView.builder(
@@ -413,7 +469,9 @@ class _CardTileState extends State<_CardTile> {
   /// Load card faces from the database if the main card image is not available.
   Future<void> _loadFaces() async {
     setState(() => _loadingFaces = true);
-    final faces = await widget.database.getCardFacesByCardId(widget.card.scryfallId);
+    final faces = await widget.database.getCardFacesByCardId(
+      widget.card.scryfallId,
+    );
     if (!mounted) return;
     setState(() {
       _faces = faces;
@@ -428,7 +486,8 @@ class _CardTileState extends State<_CardTile> {
   }
 
   /// Determine if the card can be flipped (i.e., has multiple distinct face images).
-  bool get _canFlip => _faceImageUrls.length >= 2 && _faceImageUrls.toSet().length >= 2;
+  bool get _canFlip =>
+      _faceImageUrls.length >= 2 && _faceImageUrls.toSet().length >= 2;
 
   /// Get the current image URL to display, either from the main card or the selected face.
   String? get _currentImageUrl {
@@ -463,7 +522,9 @@ class _CardTileState extends State<_CardTile> {
                     imageUrl: imageUrl,
                     fit: BoxFit.cover,
                     placeholder: (context, url) => Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       child: const Center(
                         child: SizedBox(
                           width: 20,
@@ -473,12 +534,16 @@ class _CardTileState extends State<_CardTile> {
                       ),
                     ),
                     errorWidget: (context, url, error) => Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       child: const Icon(Icons.image_not_supported),
                     ),
                   )
                 : Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     child: _loadingFaces
                         ? const Center(
                             child: SizedBox(

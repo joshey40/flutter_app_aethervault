@@ -5,10 +5,7 @@ import '../../services/localization_service.dart';
 import '../../services/card_database/scryfall_download.dart';
 
 class DownloadScreen extends StatefulWidget {
-  const DownloadScreen({
-    super.key,
-    required this.forcedDownload,
-  });
+  const DownloadScreen({super.key, required this.forcedDownload});
 
   final bool forcedDownload;
 
@@ -99,16 +96,20 @@ class _DownloadScreenState extends State<DownloadScreen> {
                     _error != null
                         ? '${appLocalizations.translate('download.failed')}\n$_error'
                         : _progress?.currentType != null
-                            ? '${appLocalizations.translate('download.current')}${_progress!.currentType}'
-                            : appLocalizations.translate('download.waiting'),
+                        ? '${appLocalizations.translate('download.current')}${_progress!.currentType}'
+                        : appLocalizations.translate('download.waiting'),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
-                  if (_progress != null && _progress!.bytesTotal != null && _progress!.bytesTotal! > 0)
+                  if (_progress != null &&
+                      _progress!.bytesTotal != null &&
+                      _progress!.bytesTotal! > 0)
                     Column(
                       children: [
                         LinearProgressIndicator(
-                          value: (_progress!.bytesDownloaded ?? 0) / _progress!.bytesTotal!,
+                          value:
+                              (_progress!.bytesDownloaded ?? 0) /
+                              _progress!.bytesTotal!,
                         ),
                         const SizedBox(height: 8),
                         Text(

@@ -5,9 +5,7 @@ import '../../../services/app_settings_scope.dart';
 import '../../../services/localization_service.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({
-    super.key,
-  });
+  const SettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,9 +30,7 @@ class SettingsPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    appLocalizations.translate(
-                      'settings.preferencesSection',
-                    ),
+                    appLocalizations.translate('settings.preferencesSection'),
                     style: theme.textTheme.titleLarge,
                   ),
 
@@ -49,9 +45,7 @@ class SettingsPage extends StatelessWidget {
                       );
                     },
                     title: Text(
-                      appLocalizations.translate(
-                        'settings.darkMode',
-                      ),
+                      appLocalizations.translate('settings.darkMode'),
                     ),
                   ),
 
@@ -61,18 +55,12 @@ class SettingsPage extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.language),
                     title: Text(
-                      appLocalizations.translate(
-                        'settings.language',
-                      ),
+                      appLocalizations.translate('settings.language'),
                     ),
                     subtitle: Text(
                       settings.locale.languageCode == 'de'
-                          ? appLocalizations.translate(
-                              'settings.german',
-                            )
-                          : appLocalizations.translate(
-                              'settings.english',
-                            ),
+                          ? appLocalizations.translate('settings.german')
+                          : appLocalizations.translate('settings.english'),
                     ),
                     trailing: DropdownButton<String>(
                       value: settings.locale.languageCode,
@@ -81,17 +69,13 @@ class SettingsPage extends StatelessWidget {
                         DropdownMenuItem(
                           value: 'en',
                           child: Text(
-                            appLocalizations.translate(
-                              'settings.englishShort',
-                            ),
+                            appLocalizations.translate('settings.englishShort'),
                           ),
                         ),
                         DropdownMenuItem(
                           value: 'de',
                           child: Text(
-                            appLocalizations.translate(
-                              'settings.germanShort',
-                            ),
+                            appLocalizations.translate('settings.germanShort'),
                           ),
                         ),
                       ],
@@ -100,9 +84,7 @@ class SettingsPage extends StatelessWidget {
                           return;
                         }
 
-                        settings.onLocaleChanged(
-                          Locale(value),
-                        );
+                        settings.onLocaleChanged(Locale(value));
                       },
                     ),
                   ),
@@ -120,9 +102,7 @@ class SettingsPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    appLocalizations.translate(
-                      'settings.downloadSection',
-                    ),
+                    appLocalizations.translate('settings.downloadSection'),
                     style: theme.textTheme.titleLarge,
                   ),
 

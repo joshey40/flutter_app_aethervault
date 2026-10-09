@@ -12,22 +12,22 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (call) async {
-        if (call.method == 'getTemporaryDirectory') {
-          return Directory.systemTemp.path;
-        }
-        return null;
-      },
-    );
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (call) async {
+            if (call.method == 'getTemporaryDirectory') {
+              return Directory.systemTemp.path;
+            }
+            return null;
+          },
+        );
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      null,
-    );
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
   });
 
   const exampleCard = {
@@ -59,18 +59,12 @@ void main() {
     'border_color': 'black',
     'frame': '2015',
     'artist': 'Test Artist',
-    'legalities': {
-      'commander': 'legal',
-      'modern': 'not_legal',
-    },
-    'prices': {
-      'eur': '1.50',
-      'usd': '2.00',
-    },
+    'legalities': {'commander': 'legal', 'modern': 'not_legal'},
+    'prices': {'eur': '1.50', 'usd': '2.00'},
     'image_uris': {
-    'small': 'small.jpg',
-    'normal': 'normal.jpg',
-    'large': 'large.jpg',
+      'small': 'small.jpg',
+      'normal': 'normal.jpg',
+      'large': 'large.jpg',
     },
     'set_uri': 'https://scryfall.com/',
     'set_search_uri': 'https://scryfall.com/',
@@ -83,9 +77,10 @@ void main() {
   group('ScryfallDataParser', () {
     group('parse chunk', () {
       test('parses an English card and maps its data', () {
-        final result = ScryfallDataParser.parseChunk([
-          jsonEncode(exampleCard),
-        ], ['en']);
+        final result = ScryfallDataParser.parseChunk(
+          [jsonEncode(exampleCard)],
+          ['en'],
+        );
 
         expect(result.parsedCount, 1);
         expect(result.cards, hasLength(1));
@@ -124,10 +119,7 @@ void main() {
         var exampleCard2 = Map<String, dynamic>.from(exampleCard);
         exampleCard2['id'] = 'de-card';
         exampleCard2['lang'] = 'de';
-        final lines = [
-          jsonEncode(exampleCard1),
-          jsonEncode(exampleCard2),
-        ];
+        final lines = [jsonEncode(exampleCard1), jsonEncode(exampleCard2)];
 
         final result = ScryfallDataParser.parseChunk(lines, ['en']);
 
@@ -142,10 +134,7 @@ void main() {
         var exampleCard2 = Map<String, dynamic>.from(exampleCard);
         exampleCard2['id'] = 'digital-card';
         exampleCard2['digital'] = true;
-        final lines = [
-          jsonEncode(exampleCard1),
-          jsonEncode(exampleCard2),
-        ];
+        final lines = [jsonEncode(exampleCard1), jsonEncode(exampleCard2)];
 
         final result = ScryfallDataParser.parseChunk(lines, ['en']);
 
@@ -160,10 +149,7 @@ void main() {
         var exampleCard2 = Map<String, dynamic>.from(exampleCard);
         exampleCard2['id'] = 'digital-card';
         exampleCard2['digital'] = true;
-        final lines = [
-          jsonEncode(exampleCard1),
-          jsonEncode(exampleCard2),
-        ];
+        final lines = [jsonEncode(exampleCard1), jsonEncode(exampleCard2)];
 
         final result = ScryfallDataParser.parseChunk(lines, ['en']);
 
@@ -196,17 +182,22 @@ void main() {
             'toughness': '3',
           },
         ];
-        final result = ScryfallDataParser.parseChunk([
-          jsonEncode(transformCard),
-        ], ['en']);
+        final result = ScryfallDataParser.parseChunk(
+          [jsonEncode(transformCard)],
+          ['en'],
+        );
 
         final card = result.cards.single;
 
         expect(card.hasCardFaces.value, true);
         expect(result.faces, hasLength(2));
 
-        final frontFace = result.faces.firstWhere((f) => f.cardId.value == 'transform-1' && f.name.value == 'Front');
-        final backFace = result.faces.firstWhere((f) => f.cardId.value == 'transform-1' && f.name.value == 'Back');
+        final frontFace = result.faces.firstWhere(
+          (f) => f.cardId.value == 'transform-1' && f.name.value == 'Front',
+        );
+        final backFace = result.faces.firstWhere(
+          (f) => f.cardId.value == 'transform-1' && f.name.value == 'Back',
+        );
         expect(frontFace.manaCost.value, '{2}{G}');
         expect(frontFace.typeLine.value, 'Creature — Front');
         expect(frontFace.oracleText.value, 'Front ability.');
@@ -225,9 +216,10 @@ void main() {
         exampleCardColor['color_identity'] = ['W', 'U', 'B', 'R', 'G'];
         exampleCardColor['rarity'] = 'mythic';
         exampleCardColor['id'] = 'color-card';
-        final result = ScryfallDataParser.parseChunk([
-          jsonEncode(exampleCardColor),
-        ], ['en']);
+        final result = ScryfallDataParser.parseChunk(
+          [jsonEncode(exampleCardColor)],
+          ['en'],
+        );
 
         final card = result.cards.single;
 
@@ -245,13 +237,16 @@ void main() {
 
       test('throws when a required card field is missing', () {
         expect(
-          () => ScryfallDataParser.parseChunk([
-            jsonEncode({
-              'name': 'Incomplete Card',
-              'layout': 'normal',
-              'lang': 'en',
-            }),
-          ], ['en']),
+          () => ScryfallDataParser.parseChunk(
+            [
+              jsonEncode({
+                'name': 'Incomplete Card',
+                'layout': 'normal',
+                'lang': 'en',
+              }),
+            ],
+            ['en'],
+          ),
           throwsFormatException,
         );
       });
@@ -302,10 +297,7 @@ void main() {
       test('dispose closes the progress stream', () async {
         final parser = ScryfallDataParser();
 
-        final done = expectLater(
-          parser.progressStream,
-          emitsDone,
-        );
+        final done = expectLater(parser.progressStream, emitsDone);
 
         parser.dispose();
 

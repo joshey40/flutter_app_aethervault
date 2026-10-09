@@ -149,14 +149,9 @@ void main() {
 
     group('pruneStaleCacheFiles', () {
       test('does nothing when the cache directory does not exist', () async {
-        final directory = Directory(
-          '${tempDirectory.path}/missing',
-        );
+        final directory = Directory('${tempDirectory.path}/missing');
 
-        await service.pruneStaleCacheFiles(
-          directory,
-          {'oracle_cards'},
-        );
+        await service.pruneStaleCacheFiles(directory, {'oracle_cards'});
 
         expect(await directory.exists(), isFalse);
       });
@@ -165,29 +160,19 @@ void main() {
         final tmp = File('${tempDirectory.path}/cards.tmp');
         await tmp.writeAsString('temporary');
 
-        await service.pruneStaleCacheFiles(
-          tempDirectory,
-          {'oracle_cards'},
-        );
+        await service.pruneStaleCacheFiles(tempDirectory, {'oracle_cards'});
 
         expect(await tmp.exists(), isFalse);
       });
 
       test('removes inactive data files', () async {
-        final stale = File(
-          '${tempDirectory.path}/old_cards.jsonl.gz',
-        );
+        final stale = File('${tempDirectory.path}/old_cards.jsonl.gz');
         await stale.writeAsString('old');
 
-        final active = File(
-          '${tempDirectory.path}/oracle_cards.jsonl.gz',
-        );
+        final active = File('${tempDirectory.path}/oracle_cards.jsonl.gz');
         await active.writeAsString('active');
 
-        await service.pruneStaleCacheFiles(
-          tempDirectory,
-          {'oracle_cards'},
-        );
+        await service.pruneStaleCacheFiles(tempDirectory, {'oracle_cards'});
 
         expect(await stale.exists(), isFalse);
         expect(await active.exists(), isTrue);
@@ -197,10 +182,7 @@ void main() {
         final file = File('${tempDirectory.path}/keep.txt');
         await file.writeAsString('keep');
 
-        await service.pruneStaleCacheFiles(
-          tempDirectory,
-          {'oracle_cards'},
-        );
+        await service.pruneStaleCacheFiles(tempDirectory, {'oracle_cards'});
 
         expect(await file.exists(), isTrue);
       });
@@ -208,10 +190,7 @@ void main() {
 
     group('progress', () {
       test('dispose closes the progress stream', () async {
-        final done = expectLater(
-          service.progressStream,
-          emitsDone,
-        );
+        final done = expectLater(service.progressStream, emitsDone);
 
         service.dispose();
 
