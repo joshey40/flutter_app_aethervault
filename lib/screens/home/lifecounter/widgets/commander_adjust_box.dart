@@ -27,7 +27,12 @@ class CommanderAdjustBox extends StatelessWidget {
           color: Theme.of(context).colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withAlpha((0.12 * 255).round()), width: 1),
+            side: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withAlpha((0.12 * 255).round()),
+              width: 1,
+            ),
           ),
           clipBehavior: Clip.antiAlias,
           child: Stack(
@@ -44,7 +49,11 @@ class CommanderAdjustBox extends StatelessWidget {
                           alignment: Alignment.topCenter,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6.0),
-                            child: Text('+', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              '+',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       ),
@@ -57,7 +66,11 @@ class CommanderAdjustBox extends StatelessWidget {
                           alignment: Alignment.bottomCenter,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 6.0),
-                            child: Text('-', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                            child: Text(
+                              '-',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       ),
@@ -65,7 +78,14 @@ class CommanderAdjustBox extends StatelessWidget {
                   ],
                 ),
               ),
-              Center(child: Text('$value', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))),
+              Center(
+                child: Text(
+                  '$value',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

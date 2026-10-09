@@ -18,6 +18,14 @@ void main() {
       expect(game.commanderTax, [0, 0, 0]);
       expect(game.partnerEnabled, [false, false, false]);
       expect(game.partnerTax, [0, 0, 0]);
+      expect(game.playerNames, ['', '', '']);
+      expect(game.playerColors, ['default', 'default', 'default']);
+      expect(game.monarchPlayerIndex, isNull);
+      expect(game.playerCounters, [
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+      ]);
       expect(game.active, isTrue);
 
       expect(game.commanderDamage.length, 3);
@@ -47,6 +55,14 @@ void main() {
         ],
         partnerEnabled: [true, false],
         partnerTax: [2, 0],
+        playerNames: ['Alice', 'Bob'],
+        playerColors: ['green', 'blue'],
+        seatLayout: 'option2',
+        monarchPlayerIndex: 1,
+        playerCounters: [
+          [1, 2, 3, 4, 5, 6],
+          [6, 5, 4, 3, 2, 1],
+        ],
         active: false,
         name: 'Test Game',
       );
@@ -69,6 +85,14 @@ void main() {
       ]);
       expect(json['partnerEnabled'], [true, false]);
       expect(json['partnerTax'], [2, 0]);
+      expect(json['playerNames'], ['Alice', 'Bob']);
+      expect(json['playerColors'], ['green', 'blue']);
+      expect(json['seatLayout'], 'option2');
+      expect(json['monarchPlayerIndex'], 1);
+      expect(json['playerCounters'], [
+        [1, 2, 3, 4, 5, 6],
+        [6, 5, 4, 3, 2, 1],
+      ]);
       expect(json['active'], false);
       expect(json['name'], 'Test Game');
     });
@@ -91,6 +115,14 @@ void main() {
         ],
         partnerEnabled: [true, false],
         partnerTax: [2, 0],
+        playerNames: ['Alice', 'Bob'],
+        playerColors: ['green', 'blue'],
+        seatLayout: 'option2',
+        monarchPlayerIndex: 1,
+        playerCounters: [
+          [1, 2, 3, 4, 5, 6],
+          [6, 5, 4, 3, 2, 1],
+        ],
         active: false,
         name: 'Test Game',
       );
@@ -99,6 +131,17 @@ void main() {
 
       expect(decoded, isNotNull);
       expect(decoded!.toJson(), game.toJson());
+    });
+
+    test('defaults player settings for older saved games', () {
+      final game = LifecounterGame.fromJson({
+        'startLife': 20,
+        'playerCount': 2,
+        'currentLives': [20, 20],
+      });
+
+      expect(game.playerNames, ['', '']);
+      expect(game.playerColors, ['default', 'default']);
     });
 
     test('decode returns null for null data', () {
@@ -463,7 +506,6 @@ void main() {
       );
     });
   });
-
 }
 
 class FakeAppPreferencesStorage extends AppPreferencesStorage {

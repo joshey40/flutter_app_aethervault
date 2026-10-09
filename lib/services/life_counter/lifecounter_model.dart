@@ -1,47 +1,132 @@
 import 'dart:convert';
 
+const lifecounterPanelColorKeys = <String>{
+  'default',
+  'green',
+  'blue',
+  'red',
+  'purple',
+  'orange',
+};
+
+const lifecounterCounterCount = 6;
+
+List<String> _normalizeStringList(
+  dynamic raw,
+  int playerCount, {
+  required String defaultValue,
+  int? maxLength,
+}) {
+  final values = raw is List<dynamic>
+      ? raw.map((value) => value is String ? value : defaultValue).toList()
+      : <String>[];
+  final normalized = values
+      .map(
+        (value) => maxLength != null && value.length > maxLength
+            ? value.substring(0, maxLength)
+            : value,
+      )
+      .toList();
+
+  if (normalized.length < playerCount) {
+    normalized.addAll(
+      List<String>.filled(playerCount - normalized.length, defaultValue),
+    );
+  } else if (normalized.length > playerCount) {
+    normalized.removeRange(playerCount, normalized.length);
+  }
+
+  return normalized;
+}
+
+List<List<int>> _normalizeCounterList(dynamic raw, int playerCount) {
+  final rows = raw is List<dynamic> ? raw : const <dynamic>[];
+  return List<List<int>>.generate(playerCount, (index) {
+    final row = index < rows.length && rows[index] is List<dynamic>
+        ? (rows[index] as List<dynamic>)
+              .map((value) => value is int ? value : 0)
+              .toList()
+        : <int>[];
+    if (row.length < lifecounterCounterCount) {
+      row.addAll(List<int>.filled(lifecounterCounterCount - row.length, 0));
+    } else if (row.length > lifecounterCounterCount) {
+      row.removeRange(lifecounterCounterCount, row.length);
+    }
+    return row;
+  });
+}
+
 /// Stores the state of the current game in the lifecounter feature, including player lives, commander tax, and commander damage.
-/// 
+///
 /// Commander damage as stored as `[sourcePlayer][targetPlayer][commanderSlot]`.
 /// The commander slot identifies which commander dealt the damage and allows damage from multiple commanders to be tracked independently.
 class LifecounterGame {
   final int startLife;
   final int playerCount;
+  final List<List<int>> playerCounters;
   final List<int> currentLives;
   final List<int> commanderTax;
   final List<List<List<int>>> commanderDamage;
   final List<bool> partnerEnabled;
   final List<int> partnerTax;
+  final List<String> playerNames;
+  final List<String> playerColors;
+  final String seatLayout;
+  int? monarchPlayerIndex;
   final bool active;
   final String? name;
 
   LifecounterGame({
     required this.startLife,
     required this.playerCount,
+    List<List<int>>? playerCounters,
     required this.currentLives,
     List<int>? commanderTax,
     List<List<List<int>>>? commanderDamage,
     List<bool>? partnerEnabled,
     List<int>? partnerTax,
+    List<String>? playerNames,
+    List<String>? playerColors,
     this.active = true,
+    this.seatLayout = 'option1',
+    this.monarchPlayerIndex,
     this.name,
   }) : commanderTax = commanderTax ?? List<int>.filled(playerCount, 0),
-      commanderDamage = commanderDamage ?? List<List<List<int>>>.generate(playerCount, (_) => List<List<int>>.generate(playerCount, (_) => [0])),
-      partnerEnabled = partnerEnabled ?? List<bool>.filled(playerCount, false),
-      partnerTax = partnerTax ?? List<int>.filled(playerCount, 0);
-      
+       playerCounters =
+           playerCounters ??
+           List<List<int>>.generate(
+             playerCount,
+             (_) => List<int>.filled(lifecounterCounterCount, 0),
+           ),
+       commanderDamage =
+           commanderDamage ??
+           List<List<List<int>>>.generate(
+             playerCount,
+             (_) => List<List<int>>.generate(playerCount, (_) => [0]),
+           ),
+       partnerEnabled = partnerEnabled ?? List<bool>.filled(playerCount, false),
+       partnerTax = partnerTax ?? List<int>.filled(playerCount, 0),
+       playerNames = playerNames ?? List<String>.filled(playerCount, ''),
+       playerColors =
+           playerColors ?? List<String>.filled(playerCount, 'default');
+
   /// Serialize the LifecounterGame to a JSON-compatible map.
   Map<String, dynamic> toJson() => {
-        'startLife': startLife,
-        'playerCount': playerCount,
-        'currentLives': currentLives,
-      'commanderTax': commanderTax,
-      'commanderDamage': commanderDamage,
-      'partnerEnabled': partnerEnabled,
-      'partnerTax': partnerTax,
-        'active': active,
-        'name': name,
-      };
+    'startLife': startLife,
+    'playerCounters': playerCounters,
+    'playerCount': playerCount,
+    'currentLives': currentLives,
+    'commanderTax': commanderTax,
+    'commanderDamage': commanderDamage,
+    'partnerEnabled': partnerEnabled,
+    'partnerTax': partnerTax,
+    'playerNames': playerNames,
+    'playerColors': playerColors,
+    'seatLayout': seatLayout,
+    'monarchPlayerIndex': monarchPlayerIndex,
+    'active': active,
+    'name': name,
+  };
 
   /// Deserialize [json] into a LifecounterGame.
   /// Ensure that lists (`currentLives` and `commanderTax`) always match `playerCount`.
@@ -50,36 +135,56 @@ class LifecounterGame {
     final playerCount = json['playerCount'] as int? ?? 2;
 
     // Safely decode currentLives and normalize length to playerCount.
-    final currentLivesRaw = (json['currentLives'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+    final currentLivesRaw =
+        (json['currentLives'] as List<dynamic>?)
+            ?.map((e) => e as int)
+            .toList() ??
+        [];
     final currentLives = List<int>.from(currentLivesRaw);
     if (currentLives.length < playerCount) {
       // If stored list is shorter, fill remaining players with startLife.
-      currentLives.addAll(List<int>.filled(playerCount - currentLives.length, startLife));
+      currentLives.addAll(
+        List<int>.filled(playerCount - currentLives.length, startLife),
+      );
     } else if (currentLives.length > playerCount) {
       // If stored list is longer, truncate to match playerCount.
       currentLives.removeRange(playerCount, currentLives.length);
     }
 
     // Safely decode commanderTax and normalize length to playerCount.
-    final commanderTaxRaw = (json['commanderTax'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+    final commanderTaxRaw =
+        (json['commanderTax'] as List<dynamic>?)
+            ?.map((e) => e as int)
+            .toList() ??
+        [];
     final commanderTax = List<int>.from(commanderTaxRaw);
     if (commanderTax.length < playerCount) {
-      commanderTax.addAll(List<int>.filled(playerCount - commanderTax.length, 0));
+      commanderTax.addAll(
+        List<int>.filled(playerCount - commanderTax.length, 0),
+      );
     } else if (commanderTax.length > playerCount) {
       commanderTax.removeRange(playerCount, commanderTax.length);
     }
 
     // Safely decode partnerEnabled and normalize length to playerCount.
-    final partnerRaw = (json['partnerEnabled'] as List<dynamic>?)?.map((e) => e as bool).toList() ?? [];
+    final partnerRaw =
+        (json['partnerEnabled'] as List<dynamic>?)
+            ?.map((e) => e as bool)
+            .toList() ??
+        [];
     final partnerEnabled = List<bool>.from(partnerRaw);
     if (partnerEnabled.length < playerCount) {
-      partnerEnabled.addAll(List<bool>.filled(playerCount - partnerEnabled.length, false));
+      partnerEnabled.addAll(
+        List<bool>.filled(playerCount - partnerEnabled.length, false),
+      );
     } else if (partnerEnabled.length > playerCount) {
       partnerEnabled.removeRange(playerCount, partnerEnabled.length);
     }
 
     // Safely decode partnerTax and normalize length to playerCount.
-    final partnerTaxRaw = (json['partnerTax'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [];
+    final partnerTaxRaw =
+        (json['partnerTax'] as List<dynamic>?)?.map((e) => e as int).toList() ??
+        [];
     final partnerTax = List<int>.from(partnerTaxRaw);
     if (partnerTax.length < playerCount) {
       partnerTax.addAll(List<int>.filled(playerCount - partnerTax.length, 0));
@@ -87,16 +192,58 @@ class LifecounterGame {
       partnerTax.removeRange(playerCount, partnerTax.length);
     }
 
+    final playerNames = _normalizeStringList(
+      json['playerNames'],
+      playerCount,
+      defaultValue: '',
+      maxLength: 8,
+    );
+    final playerColors =
+        _normalizeStringList(
+              json['playerColors'],
+              playerCount,
+              defaultValue: 'default',
+            )
+            .map(
+              (color) =>
+                  lifecounterPanelColorKeys.contains(color) ? color : 'default',
+            )
+            .toList();
+    final seatLayout = json['seatLayout'] as String? ?? 'option1';
+    final storedMonarchIndex = json['monarchPlayerIndex'];
+    final monarchPlayerIndex =
+        storedMonarchIndex is int &&
+            storedMonarchIndex >= 0 &&
+            storedMonarchIndex < playerCount
+        ? storedMonarchIndex
+        : null;
+    final playerCounters = _normalizeCounterList(
+      json['playerCounters'],
+      playerCount,
+    );
+
     // Safely decode commanderDamage: nested list [source][target] -> [slot0, slot1]
-    final commanderDamageRaw = (json['commanderDamage'] as List<dynamic>?) ?? [];
-    final List<List<List<int>>> commanderDamage = List<List<List<int>>>.generate(playerCount, (s) {
-      final sourceRaw = (s < commanderDamageRaw.length ? commanderDamageRaw[s] as List<dynamic>? : null) ?? [];
+    final commanderDamageRaw =
+        (json['commanderDamage'] as List<dynamic>?) ?? [];
+    final List<List<List<int>>>
+    commanderDamage = List<List<List<int>>>.generate(playerCount, (s) {
+      final sourceRaw =
+          (s < commanderDamageRaw.length
+              ? commanderDamageRaw[s] as List<dynamic>?
+              : null) ??
+          [];
       return List<List<int>>.generate(playerCount, (t) {
-        final targetRaw = (t < sourceRaw.length ? (sourceRaw[t] as List<dynamic>?) : null) ?? [];
+        final targetRaw =
+            (t < sourceRaw.length ? (sourceRaw[t] as List<dynamic>?) : null) ??
+            [];
         final values = targetRaw.map((e) => e as int).toList();
-        final numSlots = (partnerEnabled.length > t && partnerEnabled[t]) ? 2 : 1;
+        final numSlots = (partnerEnabled.length > t && partnerEnabled[t])
+            ? 2
+            : 1;
         final list = List<int>.from(values);
-        if (list.length < numSlots) list.addAll(List<int>.filled(numSlots - list.length, 0));
+        if (list.length < numSlots) {
+          list.addAll(List<int>.filled(numSlots - list.length, 0));
+        }
         // Keep extra slots if present so partner damage isn't lost when partner is toggled off.
         return list;
       });
@@ -113,6 +260,11 @@ class LifecounterGame {
       commanderDamage: commanderDamage,
       partnerEnabled: partnerEnabled,
       partnerTax: partnerTax,
+      playerNames: playerNames,
+      playerColors: playerColors,
+      seatLayout: seatLayout,
+      monarchPlayerIndex: monarchPlayerIndex,
+      playerCounters: playerCounters,
       active: active,
       name: name,
     );
@@ -124,7 +276,8 @@ class LifecounterGame {
   static LifecounterGame? decode(String? data) {
     if (data == null) return null;
     try {
-      final Map<String, dynamic> map = json.decode(data) as Map<String, dynamic>;
+      final Map<String, dynamic> map =
+          json.decode(data) as Map<String, dynamic>;
       final game = LifecounterGame.fromJson(map);
       game.validate();
       return game;
@@ -138,20 +291,48 @@ class LifecounterGame {
   void validate() {
     if (playerCount <= 0) throw FormatException('playerCount must be > 0');
     if (startLife <= 0) throw FormatException('startLife must be > 0');
-    if (currentLives.length != playerCount) throw FormatException('currentLives length must equal playerCount');
-    if (commanderTax.length != playerCount) throw FormatException('commanderTax length must equal playerCount');
-    if (partnerEnabled.length != playerCount) throw FormatException('partnerEnabled length must equal playerCount');
-    if (partnerTax.length != playerCount) throw FormatException('partnerTax length must equal playerCount');
+    if (currentLives.length != playerCount) {
+      throw FormatException('currentLives length must equal playerCount');
+    }
+    if (commanderTax.length != playerCount) {
+      throw FormatException('commanderTax length must equal playerCount');
+    }
+    if (partnerEnabled.length != playerCount) {
+      throw FormatException('partnerEnabled length must equal playerCount');
+    }
+    if (partnerTax.length != playerCount) {
+      throw FormatException('partnerTax length must equal playerCount');
+    }
+    if (playerNames.length != playerCount) {
+      throw FormatException('playerNames length must equal playerCount');
+    }
+    if (playerColors.length != playerCount) {
+      throw FormatException('playerColors length must equal playerCount');
+    }
 
-    if (commanderDamage.length != playerCount) throw FormatException('commanderDamage outer length must equal playerCount');
+    if (commanderDamage.length != playerCount) {
+      throw FormatException(
+        'commanderDamage outer length must equal playerCount',
+      );
+    }
     for (var s = 0; s < commanderDamage.length; s++) {
       final row = commanderDamage[s];
-      if (row.length != playerCount) throw FormatException('commanderDamage[$s] length must equal playerCount');
+      if (row.length != playerCount) {
+        throw FormatException(
+          'commanderDamage[$s] length must equal playerCount',
+        );
+      }
       for (var t = 0; t < row.length; t++) {
         final slots = row[t];
-        final expectedSlots = (t < partnerEnabled.length && partnerEnabled[t]) ? 2 : 1;
+        final expectedSlots = (t < partnerEnabled.length && partnerEnabled[t])
+            ? 2
+            : 1;
         // Allow extra slots to preserve partner damage when partner was temporarily disabled.
-        if (slots.length < expectedSlots) throw FormatException('commanderDamage[$s][$t] must have at least $expectedSlots slots');
+        if (slots.length < expectedSlots) {
+          throw FormatException(
+            'commanderDamage[$s][$t] must have at least $expectedSlots slots',
+          );
+        }
       }
     }
   }
@@ -177,7 +358,9 @@ class LifecounterGame {
         row.removeRange(pc, row.length);
       }
       for (var t = 0; t < pc; t++) {
-        final expectedSlots = (partnerEnabled.length > t && partnerEnabled[t]) ? 2 : 1;
+        final expectedSlots = (partnerEnabled.length > t && partnerEnabled[t])
+            ? 2
+            : 1;
         final slots = row[t];
         if (slots.length < expectedSlots) {
           slots.addAll(List<int>.filled(expectedSlots - slots.length, 0));

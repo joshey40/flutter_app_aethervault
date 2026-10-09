@@ -11,10 +11,9 @@ class LifecounterStorageException implements Exception {
 }
 
 class LifecounterStorage {
-
   final AppPreferencesStorage _prefs;
   LifecounterStorage({AppPreferencesStorage? prefs})
-      : _prefs = prefs ?? AppPreferencesStorage();
+    : _prefs = prefs ?? AppPreferencesStorage();
 
   /// Save the current lifecounter [game] state as a JSON string.
   Future<void> saveGame(LifecounterGame game) async {
