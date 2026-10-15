@@ -32,6 +32,186 @@
       "cmc": "CMC",
       "power": "Stärke",
       "toughness": "Widerstand"
+    },
+    "syntax_help": "Syntax-Hilfe",
+    "syntax": {
+      "title": "Scryfall Syntax Guide",
+      "intro": "Die Suche funktioniert wie bei Scryfall: Kombiniere Schlüsselwörter wie t:creature oder c:r. Alle Begriffe müssen zutreffen. Mit OR und Klammern formulierst du Alternativen.",
+      "tap_hint": "Tippe auf ein Beispiel, um es direkt in der Suche auszuführen.",
+      "sections": {
+        "colors": {
+          "title": "Farben und Farbidentität",
+          "description": "Mit c: oder color: suchst du nach den Farben einer Karte, mit id: oder identity: nach ihrer Farbidentität. Erlaubt sind die Buchstaben w, u, b, r, g, Spitznamen wie azorius, bant, abzan oder chaos, c für farblos, m für mehrfarbig oder eine Zahl für die Anzahl der Farben. Vergleiche (>, >=, <, <=, =, !=) prüfen gegen Farbbereiche. Volle Farbnamen wie 'blue' werden noch nicht unterstützt.",
+          "ex1": "Karten, die mindestens rot und grün sind",
+          "ex2": "Spitznamen funktionieren: weiß-blaue Karten",
+          "ex3": "Karten, die in ein Esper-Commander-Deck passen",
+          "ex4": "Mehrfarbige Karten",
+          "ex5": "Karten mit genau zwei Farben"
+        },
+        "types": {
+          "title": "Kartentypen",
+          "description": "Mit t: oder type: suchst du nach Übertypen, Kartentypen und Untertypen. Teilwörter sind erlaubt. Text mit Leerzeichen kommt in Anführungszeichen.",
+          "ex1": "Legendäre Kreaturen",
+          "ex2": "Alles mit dem Typ Merfolk",
+          "ex3": "Standardländer",
+          "ex4": "Artefakte, die keine Kreaturen sind"
+        },
+        "text": {
+          "title": "Kartentext",
+          "description": "Mit o: oder oracle: findest du Formulierungen im Regeltext. Setze Phrasen in Anführungszeichen und nutze ~ als Platzhalter für den Kartennamen. Mit kw: oder keyword: suchst du nach Schlüsselwortfähigkeiten.",
+          "ex1": "Karten, die 'draw a card' enthalten",
+          "ex2": "Karten mit 'when <Kartenname> dies'",
+          "ex3": "Karten mit Flying und Lifelink"
+        },
+        "mana": {
+          "title": "Manakosten",
+          "description": "Mit m: oder mana: durchsuchst du Manakosten. Nicht geteilte Symbole kannst du ohne Klammern schreiben (G entspricht {G}), geteilte Symbole wie {2/G} brauchen immer Klammern. Bei Vergleichen sind Kosten größer, wenn sie dieselben Symbole und mehr enthalten. Mit cmc: oder mv: suchst du nach dem Manawert, mit produces: nach erzeugbarem Mana.",
+          "ex1": "Ein grünes und ein blaues Mana in den Kosten",
+          "ex2": "Zwei generische und zwei weiße Mana in den Kosten",
+          "ex3": "Kosten höher als drei generische, ein weißes und ein blaues Mana",
+          "ex4": "Ein phyrexianisches rotes Mana in den Kosten",
+          "ex5": "Blaue Karten mit Manawert 5",
+          "ex6": "Karten, die weißes und blaues Mana erzeugen",
+          "ex7": "Karten mit Hybrid-Manasymbolen"
+        },
+        "pt": {
+          "title": "Stärke, Widerstand und Loyalität",
+          "description": "Nutze pow:/power:, tou:/toughness: und loy:/loyalty: mit Vergleichen. Du kannst gegen eine Zahl oder gegeneinander vergleichen (pow>tou). Ein * zählt als 0.",
+          "ex1": "Stärke 5 oder mehr",
+          "ex2": "Kreaturen mit mehr Stärke als Widerstand",
+          "ex3": "Startloyalität 5 oder mehr"
+        },
+        "faces": {
+          "title": "Karten mit mehreren Seiten",
+          "description": "Karten mit mehr als einer Seite findest du über das Schlüsselwort is:: is:split, is:flip, is:transform, is:meld, is:leveler, is:dfc, is:mdfc, is:meldpart und is:meldresult.",
+          "ex1": "Karten, die sich verwandeln",
+          "ex2": "Modale doppelseitige Karten",
+          "ex3": "Split-Karten",
+          "ex4": "Karten, die verschmelzen",
+          "ex5": "Alle doppelseitigen Karten"
+        },
+        "spells": {
+          "title": "Zaubersprüche, Permanents und Effekte",
+          "description": "Karten, die als Zauberspruch gewirkt werden (is:spell), Permanents (is:permanent), historische Karten (is:historic), Kreaturen für deine Party (is:party) oder Outlaws (is:outlaw), modale Effekte (is:modal), Vanilla-Kreaturen (is:vanilla), French Vanilla (is:frenchvanilla), 2/2-'Bären' (is:bear) und Länder, die zu Kreaturen werden (is:manland).",
+          "ex1": "Spontanzauber und Hexereien",
+          "ex2": "Kreaturen ohne Regeltext",
+          "ex3": "2/2-Kreaturen mit Manawert 2",
+          "ex4": "Karten mit modaler Auswahl",
+          "ex5": "Länder, die zu Kreaturen werden können",
+          "ex6": "Kleriker, Schurken, Krieger oder Zauberer"
+        },
+        "extra": {
+          "title": "Extra- und Spaßkarten",
+          "description": "Spielmarken, Embleme, Ebenen, Schemes, Vanguards und Karten aus Memorabilia-, Promo- und Funny-Sets sind standardmäßig ausgeblendet. Suche nach ihrem Typ mit t: oder nach einem Set mit s:, um sie anzuzeigen.",
+          "ex1": "Scheme-Karten",
+          "ex2": "Plane-Karten",
+          "ex3": "Goblin-Spielmarken",
+          "ex4": "Vanguard-Karten"
+        },
+        "rarity": {
+          "title": "Seltenheit",
+          "description": "Nutze r: oder rarity: mit common, uncommon, rare oder mythic. Vergleiche wie >= funktionieren ebenfalls.",
+          "ex1": "Mythische Seltene",
+          "ex2": "Selten oder mythisch",
+          "ex3": "Gewöhnliche Kreaturen"
+        },
+        "sets": {
+          "title": "Sets und Blöcke",
+          "description": "Nutze s:, e:, set: oder edition: mit einem Set-Code, cn: oder number: für die Sammlernummer (nur exakte Treffer), b: oder block: mit dem Code des Blocks (der Code seines ersten Sets), g: oder group: für ein Set samt allem, was direkt dazugehört, und st: oder set_type: für die Art des Sets.",
+          "ex1": "Karten aus Krieg der Funken (War of the Spark)",
+          "ex2": "Karten aus War-of-the-Spark-Boostern",
+          "ex3": "Sammlernummer 100 in Kamigawa: Neon Dynasty",
+          "ex4": "Karten im Zendikar-Block",
+          "ex5": "Final-Fantasy-Karten inklusive verwandter Sets",
+          "ex6": "Karten aus Masters-Sets",
+          "ex7": "Legendäre Karten, die nie in Boostern waren"
+        },
+        "legality": {
+          "title": "Format-Legalität",
+          "description": "Mit f: oder format: findest du legale Karten, mit banned: gebannte und mit restricted: eingeschränkte Karten. Formate: standard, future, historic, timeless, gladiator, pioneer, modern, legacy, pauper, vintage, penny, commander (edh), oathbreaker, standardbrawl, brawl, alchemy, paupercommander, duel, oldschool, premodern und predh. Besondere is:-Schlüsselwörter: commander, brawler, companion, duelcommander, oathbreaker, partner, gamechanger und reserved.",
+          "ex1": "Legal in Modern",
+          "ex2": "Gebannt in Legacy",
+          "ex3": "Eingeschränkt in Vintage",
+          "ex4": "Mögliche Commander in einem Izzet-Deck",
+          "ex5": "Companion-Karten",
+          "ex6": "Karten mit irgendeiner Art von Partner",
+          "ex7": "Commander Game Changers",
+          "ex8": "Karten der Reserved List"
+        },
+        "prices": {
+          "title": "USD/EUR/TIX-Preise",
+          "description": "Nutze usd, eur oder tix mit Vergleichen, um Drucke nach Preis zu filtern.",
+          "ex1": "Commander-legale Drucke unter 1 USD",
+          "ex2": "Drucke ab 10 EUR",
+          "ex3": "Drucke unter 0,05 TIX"
+        },
+        "artist": {
+          "title": "Künstler, Flavortext und Wasserzeichen",
+          "description": "Nutze a: oder artist: für den Künstler, ft: oder flavor: für den Flavortext und wm: oder watermark: für das Wasserzeichen. Text mit Leerzeichen kommt in Anführungszeichen.",
+          "ex1": "Karten, die von Vincent Proce illustriert wurden",
+          "ex2": "Karten, die von Rebecca Guay illustriert wurden",
+          "ex3": "Flavortext, der Mishra erwähnt",
+          "ex4": "Karten mit dem Orzhov-Wasserzeichen"
+        },
+        "frame": {
+          "title": "Rahmen, Folie und Auflösung",
+          "description": "Nutze border: (black, white, silver, borderless), frame: (1993, 1997, 2003, 2015, future) und stamp: für den Sicherheitsstempel. is:full findet Full Art, is:foil, is:etched und is:glossy filtern Oberflächen und is:hires findet Bilder in hoher Auflösung.",
+          "ex1": "Kreaturen mit weißem Rand",
+          "ex2": "Karten im 2003er Rahmen",
+          "ex3": "Karten mit ovalem Sicherheitsstempel",
+          "ex4": "Full-Art-Karten",
+          "ex5": "Commander-2016-Karten, die als Folie erhältlich sind",
+          "ex6": "Etched-Foil-Drucke",
+          "ex7": "Drucke mit hochauflösendem Bild"
+        },
+        "year": {
+          "title": "Jahr",
+          "description": "Nutze year mit Vergleichen, um Karten relativ zu einem Erscheinungsjahr zu finden. now und today stehen für das aktuelle Jahr.",
+          "ex1": "Erschienen 2020 oder später",
+          "ex2": "Erschienen 1993",
+          "ex3": "In diesem Jahr erschienen"
+        },
+        "tags": {
+          "title": "Tagger-Tags",
+          "description": "Mit art:, atag: oder arttag: findest du Dinge in der Illustration einer Karte. Mit function:, otag: oder oracletag: findest du Oracle-Tags, die die Funktion einer Karte beschreiben. Die Daten stammen aus dem Tagger-Projekt.",
+          "ex1": "Karten, die Mana beschleunigen",
+          "ex2": "Karten, die Permanents entfernen",
+          "ex3": "Illustrationen mit einem Eichhörnchen"
+        },
+        "reprints": {
+          "title": "Neuauflagen",
+          "description": "Neuauflagen findest du mit is:reprint, Karten, die in ihrem Set neu waren, mit not:reprint.",
+          "ex1": "Neuauflagen in Magic 2015",
+          "ex2": "Neue Karten in Magic 2015"
+        },
+        "languages": {
+          "title": "Sprachen",
+          "description": "Standardmäßig wird auf Englisch gesucht. Mit lang: oder language: wählst du eine andere Sprache, mit lang:any alle Sprachen. Aktuell werden nur englische und deutsche Karten importiert.",
+          "ex1": "Deutsche Karten",
+          "ex2": "Deutsche Goblins",
+          "ex3": "Elfen in jeder Sprache"
+        },
+        "shortcuts": {
+          "title": "Abkürzungen und Spitznamen",
+          "description": "Praktische Abkürzungen für Landgruppen wie is:bikeland, bondland, bounceland, canopyland, checkland, creatureland, dual, fastland, fetchland, filterland, gainland, painland, pathway, scryland, surveilland, shadowland, shockland, slowland, storageland, tangoland, tricycleland (triome) und triland, dazu is:masterpiece.",
+          "ex1": "Fetchländer",
+          "ex2": "Shocklands",
+          "ex3": "Original-Dual-Lands",
+          "ex4": "Checklands",
+          "ex5": "Triomes",
+          "ex6": "Länder, die zu Kreaturen werden",
+          "ex7": "Karten der Masterpiece Series"
+        },
+        "logic": {
+          "title": "Negation, OR und Klammern",
+          "description": "Alle Schlüsselwörter lassen sich mit einem Bindestrich negieren: -t:creature. not: entspricht -is:. Wörter ohne Schlüsselwort durchsuchen den Kartennamen, Anführungszeichen halten Phrasen zusammen. Begriffe werden standardmäßig mit UND verknüpft, mit OR dazwischen formulierst du Alternativen und mit Klammern gruppierst du.",
+          "ex1": "Kreaturen, die nicht rot sind",
+          "ex2": "Goblins oder Elfen",
+          "ex3": "Goblins oder Elfen, die nicht grün sind",
+          "ex4": "Weder Länder noch Artefakte",
+          "ex5": "Karten mit 'serra angel' im Namen"
+        }
+      }
     }
   },
   "lifecounter": {

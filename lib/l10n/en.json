@@ -32,6 +32,186 @@
       "cmc": "CMC",
       "power": "Power",
       "toughness": "Toughness"
+    },
+    "syntax_help": "Syntax help",
+    "syntax": {
+      "title": "Scryfall Syntax Guide",
+      "intro": "Search works like Scryfall: combine keywords such as t:creature or c:r. All terms must match. Use OR and parentheses for alternatives.",
+      "tap_hint": "Tap an example to run it in the search.",
+      "sections": {
+        "colors": {
+          "title": "Colors and color identity",
+          "description": "Use c: or color: for the colors of a card and id: or identity: for its color identity. Use the letters w, u, b, r, g, nicknames like azorius, bant, abzan or chaos, c for colorless, m for multicolor, or a number for the amount of colors. Comparisons (>, >=, <, <=, =, !=) check against ranges of colors. Full color names like 'blue' are not supported yet.",
+          "ex1": "Cards that are at least red and green",
+          "ex2": "Nicknames work: white-blue cards",
+          "ex3": "Cards that fit into an Esper commander deck",
+          "ex4": "Multicolor cards",
+          "ex5": "Cards with exactly two colors"
+        },
+        "types": {
+          "title": "Card types",
+          "description": "Use t: or type: to search supertypes, card types and subtypes. Partial words are allowed. Put quotes around text with spaces.",
+          "ex1": "Legendary creatures",
+          "ex2": "Everything with the Merfolk type",
+          "ex3": "Basic lands",
+          "ex4": "Artifacts that are not creatures"
+        },
+        "text": {
+          "title": "Card text",
+          "description": "Use o: or oracle: to find phrases in the rules text. Put quotes around phrases and use ~ as a placeholder for the card's name. Use kw: or keyword: for keyword abilities.",
+          "ex1": "Cards that contain 'draw a card'",
+          "ex2": "Cards with 'when <card name> dies'",
+          "ex3": "Cards with flying and lifelink"
+        },
+        "mana": {
+          "title": "Mana costs",
+          "description": "Use m: or mana: to search mana costs. Symbols that are not split can be written without braces (G is the same as {G}), split symbols like {2/G} always need braces. With comparisons, a cost is greater if it contains the same symbols and more. Use cmc: or mv: for the mana value and produces: for mana a card can produce.",
+          "ex1": "One green and one blue mana in the cost",
+          "ex2": "Two generic and two white mana in the cost",
+          "ex3": "Costs more than three generic, one white and one blue",
+          "ex4": "One Phyrexian red mana in the cost",
+          "ex5": "Blue cards with mana value 5",
+          "ex6": "Cards that produce white and blue mana",
+          "ex7": "Cards with hybrid mana symbols"
+        },
+        "pt": {
+          "title": "Power, toughness and loyalty",
+          "description": "Use pow:/power:, tou:/toughness: and loy:/loyalty: with comparisons. You can compare against a number or against each other (pow>tou). A * counts as 0.",
+          "ex1": "Power 5 or more",
+          "ex2": "Creatures with more power than toughness",
+          "ex3": "Starting loyalty 5 or more"
+        },
+        "faces": {
+          "title": "Multi-faced cards",
+          "description": "Find cards with more than one face using the is: keyword: is:split, is:flip, is:transform, is:meld, is:leveler, is:dfc, is:mdfc, is:meldpart and is:meldresult.",
+          "ex1": "Cards that transform",
+          "ex2": "Modal double-faced cards",
+          "ex3": "Split cards",
+          "ex4": "Cards that meld",
+          "ex5": "All double-faced cards"
+        },
+        "spells": {
+          "title": "Spells, permanents and effects",
+          "description": "Cards that are cast as spells (is:spell), permanents (is:permanent), historic cards (is:historic), creatures for your party (is:party) or outlaws (is:outlaw), modal effects (is:modal), vanilla creatures (is:vanilla), French vanilla (is:frenchvanilla), 2/2 'bears' (is:bear) and lands that become creatures (is:manland).",
+          "ex1": "Instants and sorceries",
+          "ex2": "Creatures without rules text",
+          "ex3": "2/2 creatures with mana value 2",
+          "ex4": "Cards with a modal choice",
+          "ex5": "Lands that can become creatures",
+          "ex6": "Cleric, Rogue, Warrior or Wizard creatures"
+        },
+        "extra": {
+          "title": "Extra and funny cards",
+          "description": "Tokens, emblems, planes, schemes, vanguards and cards from memorabilia, promo and funny sets are hidden by default. Search for their type with t: or for a set with s: to show them.",
+          "ex1": "Scheme cards",
+          "ex2": "Plane cards",
+          "ex3": "Goblin tokens",
+          "ex4": "Vanguard cards"
+        },
+        "rarity": {
+          "title": "Rarity",
+          "description": "Use r: or rarity: with common, uncommon, rare or mythic. Comparisons like >= work too.",
+          "ex1": "Mythic rares",
+          "ex2": "Rare or mythic",
+          "ex3": "Common creatures"
+        },
+        "sets": {
+          "title": "Sets and blocks",
+          "description": "Use s:, e:, set: or edition: with a set code, cn: or number: for the collector number (exact match only), b: or block: with the code of the block (the code of its first set), g: or group: for a set and everything directly tied to it, and st: or set_type: for the type of set.",
+          "ex1": "Cards from War of the Spark",
+          "ex2": "Cards from War of the Spark boosters",
+          "ex3": "Collector number 100 in Kamigawa: Neon Dynasty",
+          "ex4": "Cards in the Zendikar block",
+          "ex5": "Final Fantasy cards including related sets",
+          "ex6": "Cards from Masters sets",
+          "ex7": "Legendary cards that are not in boosters"
+        },
+        "legality": {
+          "title": "Format legality",
+          "description": "Use f: or format: to find legal cards, banned: for banned and restricted: for restricted cards. Formats: standard, future, historic, timeless, gladiator, pioneer, modern, legacy, pauper, vintage, penny, commander (edh), oathbreaker, standardbrawl, brawl, alchemy, paupercommander, duel, oldschool, premodern and predh. Special is: keywords: commander, brawler, companion, duelcommander, oathbreaker, partner, gamechanger and reserved.",
+          "ex1": "Legal in Modern",
+          "ex2": "Banned in Legacy",
+          "ex3": "Restricted in Vintage",
+          "ex4": "Possible commanders in an Izzet deck",
+          "ex5": "Companion cards",
+          "ex6": "Cards with any kind of Partner",
+          "ex7": "Commander Game Changers",
+          "ex8": "Cards on the Reserved List"
+        },
+        "prices": {
+          "title": "USD/EUR/TIX prices",
+          "description": "Use usd, eur or tix with comparisons to filter prints by price.",
+          "ex1": "Commander-legal prints under 1 USD",
+          "ex2": "Prints that cost 10 EUR or more",
+          "ex3": "Prints under 0.05 TIX"
+        },
+        "artist": {
+          "title": "Artist, flavor text and watermark",
+          "description": "Use a: or artist: for the artist, ft: or flavor: for flavor text and wm: or watermark: for the watermark. Put quotes around text with spaces.",
+          "ex1": "Cards illustrated by Vincent Proce",
+          "ex2": "Cards illustrated by Rebecca Guay",
+          "ex3": "Flavor text that mentions Mishra",
+          "ex4": "Cards with the Orzhov watermark"
+        },
+        "frame": {
+          "title": "Border, frame, foil and resolution",
+          "description": "Use border: (black, white, silver, borderless), frame: (1993, 1997, 2003, 2015, future) and stamp: for the security stamp. is:full finds full art, is:foil, is:etched and is:glossy filter finishes and is:hires finds high-resolution images.",
+          "ex1": "White-bordered creatures",
+          "ex2": "Cards in the 2003 frame",
+          "ex3": "Cards with an oval security stamp",
+          "ex4": "Full art cards",
+          "ex5": "Commander 2016 cards available in foil",
+          "ex6": "Etched foil prints",
+          "ex7": "Prints with a high-resolution image"
+        },
+        "year": {
+          "title": "Year",
+          "description": "Use year with comparisons to find cards released relative to a certain year. now and today stand for the current year.",
+          "ex1": "Released in 2020 or later",
+          "ex2": "Released in 1993",
+          "ex3": "Released this year"
+        },
+        "tags": {
+          "title": "Tagger tags",
+          "description": "Use art:, atag: or arttag: to find things in a card's illustration. Use function:, otag: or oracletag: to find Oracle tags that describe the function of a card. The data comes from the Tagger project.",
+          "ex1": "Cards that help ramp mana",
+          "ex2": "Cards that remove permanents",
+          "ex3": "Illustrations that contain a squirrel"
+        },
+        "reprints": {
+          "title": "Reprints",
+          "description": "Find reprints with is:reprint and cards that were new in their set with not:reprint.",
+          "ex1": "Reprints in Magic 2015",
+          "ex2": "New cards in Magic 2015"
+        },
+        "languages": {
+          "title": "Languages",
+          "description": "Cards are searched in English by default. Use lang: or language: to request another language, or lang:any for all languages. Only English and German cards are imported at the moment.",
+          "ex1": "German cards",
+          "ex2": "German Goblins",
+          "ex3": "Elves in any language"
+        },
+        "shortcuts": {
+          "title": "Shortcuts and nicknames",
+          "description": "Convenience shortcuts for land groups like is:bikeland, bondland, bounceland, canopyland, checkland, creatureland, dual, fastland, fetchland, filterland, gainland, painland, pathway, scryland, surveilland, shadowland, shockland, slowland, storageland, tangoland, tricycleland (triome) and triland, plus is:masterpiece.",
+          "ex1": "Fetch lands",
+          "ex2": "Shock lands",
+          "ex3": "Original dual lands",
+          "ex4": "Check lands",
+          "ex5": "Triomes",
+          "ex6": "Lands that become creatures",
+          "ex7": "Masterpiece Series cards"
+        },
+        "logic": {
+          "title": "Negation, OR and parentheses",
+          "description": "All keywords can be negated with a hyphen: -t:creature. not: is the same as -is:. Words without a keyword search the card name, quotes keep phrases together. Terms are combined with AND by default, use OR between them for alternatives and parentheses to group.",
+          "ex1": "Creatures that are not red",
+          "ex2": "Goblins or Elves",
+          "ex3": "Goblins or Elves that are not green",
+          "ex4": "Neither lands nor artifacts",
+          "ex5": "Cards with 'serra angel' in the name"
+        }
+      }
     }
   },
   "lifecounter": {
