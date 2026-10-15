@@ -150,7 +150,7 @@ class ScryfallSyntaxPage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _SyntaxSectionCard(section: section),
-            )
+            ),
         ],
       ),
     );

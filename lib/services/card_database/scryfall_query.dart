@@ -246,6 +246,11 @@ void sortCards(
   cards.sort(cmp);
 }
 
+/// Negates [expr] and treats SQL NULL as false, so rows with NULL columns
+/// (e.g. printed_type_line on English cards) are matched by the negation.
+Expression<bool> _sqlNot(Expression<bool> expr) =>
+    coalesce<bool>([expr, const Constant(false)]).not();
+
 // =============================================================================
 // Parser
 // =============================================================================
@@ -1425,8 +1430,9 @@ Expression<bool> _compileFilter(
     // Is and Not
     case 'is':
       return _isExpression(t, f.value, oracleTagIds, db);
+    // _compileFilter
     case 'not':
-      return _isExpression(t, f.value, oracleTagIds, db).not();
+      return _sqlNot(_isExpression(t, f.value, oracleTagIds, db));
 
     default:
       return throw FormatException('Unbekannter key: $t.key');
@@ -1457,7 +1463,7 @@ Expression<bool> compileQueryToken(
         )
         .toList();
     final combined = compiled.reduce((a, b) => token.isOR ? (a | b) : (a & b));
-    return token.isNegated ? combined.not() : combined;
+    return token.isNegated ? _sqlNot(combined) : combined;
   }
   final f = token as FilterToken;
   final expr = _compileFilter(
@@ -1468,5 +1474,5 @@ Expression<bool> compileQueryToken(
     allSets,
     db,
   );
-  return f.isNegated ? expr.not() : expr;
+  return f.isNegated ? _sqlNot(expr) : expr;
 }
