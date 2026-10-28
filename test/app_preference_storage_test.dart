@@ -52,6 +52,24 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getString('settings.locale'), 'de');
     });
+
+    test('returns null when no server url is saved', () async {
+      expect(await storage.loadServerUrl(), isNull);
+    });
+
+    test('saves and loads server url', () async {
+      await storage.saveServerUrl('http://192.168.0.10:3333');
+
+      expect(await storage.loadServerUrl(), 'http://192.168.0.10:3333');
+    });
+
+    test('removes server url when saving null', () async {
+      await storage.saveServerUrl('http://192.168.0.10:3333');
+
+      await storage.saveServerUrl(null);
+
+      expect(await storage.loadServerUrl(), isNull);
+    });
   });
 
   group('Lifecounter', () {

@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 
+import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/register_screen.dart';
 import '../../screens/download_parser/download_screen.dart';
 import '../../screens/download_parser/parser_screen.dart';
 import '../../screens/home/home_shell.dart';
@@ -12,12 +14,14 @@ import '../../screens/home/lifecounter/lifecounter_entry_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_start_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_play_screen.dart';
 import '../../screens/home/settings/settings_page.dart';
+import '../auth/auth_controller.dart';
 import '../life_counter/lifecounter_controller.dart';
 import 'card_detail_route.dart';
 
 GoRouter createAppRouter({
   required String initialLocation,
   required LifecounterController lifecounterController,
+  required AuthController authController,
 }) {
   return GoRouter(
     initialLocation: initialLocation,
@@ -167,8 +171,22 @@ GoRouter createAppRouter({
               GoRoute(
                 path: '/settings',
                 builder: (context, state) {
-                  return const SettingsPage();
+                  return SettingsPage(authController: authController);
                 },
+                routes: [
+                  GoRoute(
+                    path: 'login',
+                    builder: (context, state) {
+                      return LoginScreen(authController: authController);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'register',
+                    builder: (context, state) {
+                      return RegisterScreen(authController: authController);
+                    },
+                  ),
+                ],
               ),
             ],
           ),

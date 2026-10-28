@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppPreferencesStorage {
   static const String _themeModeKey = 'settings.themeMode';
   static const String _localeKey = 'settings.locale';
+  static const String _serverUrlKey = 'settings.serverUrl';
   static const String _lifecounterKey = 'lifecounter.current_game';
   static const String _scryfallBulkDataItemsKey = 'scryfall.bulk_data_items';
   static const String _scryfallBulkDataMetadataKeyPrefix =
@@ -52,6 +53,21 @@ class AppPreferencesStorage {
   Future<void> saveLocale(Locale locale) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_localeKey, locale.languageCode);
+  }
+
+  /// Address of the server, null if none is set.
+  Future<String?> loadServerUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_serverUrlKey);
+  }
+
+  Future<void> saveServerUrl(String? serverUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (serverUrl == null) {
+      await prefs.remove(_serverUrlKey);
+    } else {
+      await prefs.setString(_serverUrlKey, serverUrl);
+    }
   }
 
   // ==============================================================================

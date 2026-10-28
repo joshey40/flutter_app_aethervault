@@ -79,6 +79,9 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "accountSection": "Account",
+    "accountDescription": "Ein Account ist optional. Melde dich an, um deine Kollektion und Decks zwischen Geräten zu synchronisieren.",
+    "serverAddress": "Server-Adresse",
     "preferencesSection": "Präferenzen",
     "darkMode": "Dunkler Modus",
     "language": "Sprache",
@@ -90,7 +93,37 @@
     "downloadData": "Daten herunterladen",
     "downloadDataDescription": "Lade die neuesten Kartendaten von Scryfall herunter.",
     "parseData": "Daten parsen",
-    "parseDataDescription": "Parst die heruntergeladenen Kartendaten und speichert sie in der lokalen Datenbank."
+    "parseDataDescription": "Parst die heruntergeladenen Kartendaten und speichert sie in der lokalen Datenbank.",
+    "loggedInAs": "Angemeldet als",
+    "offline": "Server nicht erreichbar, du bist offline.",
+    "serverLockedHint": "Melde dich ab, um den Server zu ändern."
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Registrieren",
+    "loginTitle": "Willkommen zurück",
+    "loginDescription": "Melde dich mit deinem Account auf dem eingestellten Server an.",
+    "registerTitle": "Account erstellen",
+    "registerDescription": "Erstelle einen neuen Account auf dem eingestellten Server.",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "passwordRepeat": "Passwort wiederholen",
+    "noAccount": "Noch keinen Account? Registrieren",
+    "haveAccount": "Schon einen Account? Anmelden",
+    "logout": "Abmelden",
+    "errors": {
+      "invalidCredentials": "Benutzername oder Passwort ist falsch.",
+      "userAlreadyExists": "Dieser Benutzername ist schon vergeben.",
+      "invalidRequest": "Der Server hat die Anfrage abgelehnt.",
+      "unauthorized": "Deine Sitzung ist nicht mehr gültig. Bitte melde dich erneut an.",
+      "invalidServerUrl": "Bitte gib eine gültige http- oder https-Adresse ein.",
+      "noServer": "Bitte trage zuerst eine Server-Adresse in den Einstellungen ein.",
+      "server": "Der Server hat einen Fehler gemeldet. Bitte versuche es später erneut.",
+      "network": "Server nicht erreichbar. Prüfe die Adresse und deine Verbindung.",
+      "emptyFields": "Bitte gib Benutzername und Passwort ein.",
+      "passwordMismatch": "Die Passwörter stimmen nicht überein.",
+      "serverLocked": "Melde dich ab, um die Server-Adresse zu ändern."
+    }
   },
   "download": {
     "loading": "Bulk-Daten werden geladen",
@@ -159,7 +192,5 @@
   "save": "Speichern",
   "confirm": "Bestätigen",
   "back": "Zurück",
-  "errors": {
-    
-  }
+  "errors": {}
 }
