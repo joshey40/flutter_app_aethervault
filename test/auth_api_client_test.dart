@@ -196,31 +196,48 @@ void main() {
   });
 
   group('isAethervaultServer', () {
-    test('sends GET /auth/status without a token', () async {
+    test('sends GET /alive without a token', () async {
       late http.Request sent;
-      final client = clientReturning(401, onRequest: (r) => sent = r);
+      final client = clientReturning(200, onRequest: (r) => sent = r);
 
       await client.isAethervaultServer(server);
 
       expect(sent.method, 'GET');
-      expect(sent.url.toString(), 'http://192.168.0.10:3333/auth/status');
+      expect(sent.url.toString(), 'http://192.168.0.10:3333/alive');
       expect(sent.headers.containsKey('Authorization'), isFalse);
     });
 
-    test('returns true when the auth middleware answers 401', () async {
-      final client = clientReturning(401, body: 'no token found\n');
+    test('keeps a path prefix of the server url', () async {
+      late http.Request sent;
+      final client = clientReturning(200, onRequest: (r) => sent = r);
+
+      await client.isAethervaultServer(
+        Uri.parse('https://example.com/aethervault'),
+      );
+
+      expect(sent.url.toString(), 'https://example.com/aethervault/alive');
+    });
+
+    test('returns true when /alive answers 200', () async {
+      final client = clientReturning(200);
 
       expect(await client.isAethervaultServer(server), isTrue);
     });
 
-    test('returns false for a server without auth endpoint', () async {
+    test('returns false for a server without /alive', () async {
       final client = clientReturning(404, body: 'Not Found');
 
       expect(await client.isAethervaultServer(server), isFalse);
     });
 
-    test('returns false for a server that answers 200', () async {
-      final client = clientReturning(200, body: '<html></html>');
+    test('returns false when /alive needs authentication', () async {
+      final client = clientReturning(401, body: 'no token found\n');
+
+      expect(await client.isAethervaultServer(server), isFalse);
+    });
+
+    test('returns false when the server reports an error', () async {
+      final client = clientReturning(500);
 
       expect(await client.isAethervaultServer(server), isFalse);
     });

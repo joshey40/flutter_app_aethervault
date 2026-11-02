@@ -72,7 +72,7 @@ class AuthApiClient {
   ) async {
     final response = await _send(
       () => _client.put(
-        _endpoint(server, 'register'),
+        _endpoint(server, 'auth/register'),
         headers: _jsonHeaders,
         body: _credentialsBody(username, password, deviceName),
       ),
@@ -90,7 +90,7 @@ class AuthApiClient {
   ) async {
     final response = await _send(
       () => _client.post(
-        _endpoint(server, 'login'),
+        _endpoint(server, 'auth/login'),
         headers: _jsonHeaders,
         body: _credentialsBody(username, password, deviceName),
       ),
@@ -106,7 +106,7 @@ class AuthApiClient {
   Future<void> logout(Uri server, String token) async {
     final response = await _send(
       () => _client.post(
-        _endpoint(server, 'logout'),
+        _endpoint(server, 'auth/logout'),
         headers: _bearerHeaders(token),
       ),
     );
@@ -117,7 +117,7 @@ class AuthApiClient {
   Future<TokenStatus> checkStatus(Uri server, String token) async {
     final response = await _send(
       () => _client.get(
-        _endpoint(server, 'status'),
+        _endpoint(server, 'auth/status'),
         headers: _bearerHeaders(token),
       ),
     );
@@ -130,11 +130,9 @@ class AuthApiClient {
   }
 
   Future<bool> isAethervaultServer(Uri server) async {
-    final response = await _send(
-      () => _client.get(_endpoint(server, 'status')),
-    );
+    final response = await _send(() => _client.get(_endpoint(server, 'alive')));
 
-    return response.statusCode == HttpStatus.unauthorized;
+    return response.statusCode == HttpStatus.ok;
   }
 
   void dispose() {
@@ -147,8 +145,8 @@ class AuthApiClient {
     return {'Authorization': 'Bearer $token'};
   }
 
-  Uri _endpoint(Uri server, String action) {
-    return server.replace(path: '${server.path}/auth/$action');
+  Uri _endpoint(Uri server, String path) {
+    return server.replace(path: '${server.path}/$path');
   }
 
   String _credentialsBody(String username, String password, String device) {
