@@ -12,6 +12,7 @@ enum AuthErrorType {
   invalidServerUrl,
   serverLocked,
   noServer,
+  serverNotConnected,
   server,
   network,
 }
@@ -126,6 +127,14 @@ class AuthApiClient {
     }
     _throwOnError(response);
     return TokenStatus.valid;
+  }
+
+  Future<bool> isAethervaultServer(Uri server) async {
+    final response = await _send(
+      () => _client.get(_endpoint(server, 'status')),
+    );
+
+    return response.statusCode == HttpStatus.unauthorized;
   }
 
   void dispose() {

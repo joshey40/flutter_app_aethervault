@@ -195,6 +195,50 @@ void main() {
     });
   });
 
+  group('isAethervaultServer', () {
+    test('sends GET /auth/status without a token', () async {
+      late http.Request sent;
+      final client = clientReturning(401, onRequest: (r) => sent = r);
+
+      await client.isAethervaultServer(server);
+
+      expect(sent.method, 'GET');
+      expect(sent.url.toString(), 'http://192.168.0.10:3333/auth/status');
+      expect(sent.headers.containsKey('Authorization'), isFalse);
+    });
+
+    test('returns true when the auth middleware answers 401', () async {
+      final client = clientReturning(401, body: 'no token found\n');
+
+      expect(await client.isAethervaultServer(server), isTrue);
+    });
+
+    test('returns false for a server without auth endpoint', () async {
+      final client = clientReturning(404, body: 'Not Found');
+
+      expect(await client.isAethervaultServer(server), isFalse);
+    });
+
+    test('returns false for a server that answers 200', () async {
+      final client = clientReturning(200, body: '<html></html>');
+
+      expect(await client.isAethervaultServer(server), isFalse);
+    });
+
+    test('throws network when the server is unreachable', () async {
+      final client = AuthApiClient(
+        client: MockClient((_) async {
+          throw const SocketException('Connection refused');
+        }),
+      );
+
+      expect(
+        client.isAethervaultServer(server),
+        authError(AuthErrorType.network),
+      );
+    });
+  });
+
   group('errors and urls', () {
     test('throws network when the server is unreachable', () async {
       final client = AuthApiClient(

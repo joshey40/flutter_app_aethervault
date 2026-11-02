@@ -5,6 +5,20 @@ import 'auth_api_client.dart';
 import 'auth_token_storage.dart';
 import 'device_name.dart';
 
+enum ServerStatus {
+  /// No server address is set.
+  none,
+
+  /// An address is set, but it was not checked yet.
+  unknown,
+  checking,
+  connected,
+  unreachable,
+
+  /// Something answers under the address, but it is no Aethervault server.
+  notAethervault,
+}
+
 class AuthController extends ChangeNotifier {
   AuthController({
     AuthApiClient? apiClient,
@@ -23,15 +37,20 @@ class AuthController extends ChangeNotifier {
 
   AuthSession? _session;
   Uri? _serverUrl;
-  bool _isOffline = false;
+  ServerStatus _serverStatus = ServerStatus.none;
+
+  /// Increased whenever session or address change, so answers of requests
+  /// started before can be recognized as outdated and ignored.
+  int _generation = 0;
 
   AuthSession? get session => _session;
   bool get isLoggedIn => _session != null;
 
-  /// Logged in, but the server could not be reached on the last check.
-  bool get isOffline => _isOffline;
-
   Uri? get serverUrl => _serverUrl;
+  ServerStatus get serverStatus => _serverStatus;
+
+  /// Logged in, but the server could not be reached on the last check.
+  bool get isOffline => isLoggedIn && _serverStatus == ServerStatus.unreachable;
 
   /// A logout request is running, further logout calls join it.
   bool get isLoggingOut => _logoutFuture != null;
@@ -43,39 +62,51 @@ class AuthController extends ChangeNotifier {
     final savedUrl = await _preferencesStorage.loadServerUrl();
     _serverUrl = savedUrl == null ? null : parseServerUrl(savedUrl);
     _session = await _tokenStorage.loadSession();
+    _serverStatus = _serverUrl == null && _session == null
+        ? ServerStatus.none
+        : ServerStatus.unknown;
   }
 
-  /// Asks the server whether the saved token is still valid and drops the session if it is not. An unreachable server only marks the app offline.
-  Future<void> verifySession() async {
+  /// Checks the connection to the server. When logged in, it also asks whether the saved token is still valid and drops the session if it is not.
+  Future<void> checkConnection() async {
     final session = _session;
-    if (session == null) {
+    final server = session?.server ?? _serverUrl;
+    if (server == null) {
       return;
     }
 
+    final generation = ++_generation;
+    _serverStatus = ServerStatus.checking;
+    notifyListeners();
+
+    ServerStatus result;
+    var tokenInvalid = false;
     try {
-      final status = await _apiClient.checkStatus(
-        session.server,
-        session.token,
-      );
-      // The user may have logged out or in again while the check was running.
-      if (!identical(_session, session)) {
-        return;
-      }
-      if (status == TokenStatus.invalid) {
-        await _clearSession();
+      if (session != null) {
+        final status = await _apiClient.checkStatus(server, session.token);
+        tokenInvalid = status == TokenStatus.invalid;
+        result = ServerStatus.connected;
       } else {
-        _isOffline = false;
+        result = await _apiClient.isAethervaultServer(server)
+            ? ServerStatus.connected
+            : ServerStatus.notAethervault;
       }
     } on AuthException {
-      if (!identical(_session, session)) {
-        return;
-      }
-      _isOffline = true;
+      result = ServerStatus.unreachable;
     }
+
+    // Address or session may have changed while the request was running.
+    if (generation != _generation) {
+      return;
+    }
+    if (tokenInvalid) {
+      await _clearSession();
+    }
+    _serverStatus = result;
     notifyListeners();
   }
 
-  /// Saves the server address typed by the user, empty input removes it.
+  /// Saves the server address typed by the user and checks it, empty input removes it.
   ///
   /// The address is locked while logged in, because the token is only valid
   /// on the server that issued it.
@@ -92,9 +123,13 @@ class AuthController extends ChangeNotifier {
       }
     }
 
+    _generation++;
     _serverUrl = url;
+    _serverStatus = url == null ? ServerStatus.none : ServerStatus.unknown;
     await _preferencesStorage.saveServerUrl(url?.toString());
     notifyListeners();
+
+    await checkConnection();
   }
 
   Future<void> login(String username, String password) {
@@ -117,6 +152,7 @@ class AuthController extends ChangeNotifier {
       return Future.value();
     }
 
+    _generation++;
     final logout = _logoutFuture = _logout(session);
     notifyListeners();
     return logout;
@@ -137,15 +173,30 @@ class AuthController extends ChangeNotifier {
     if (server == null) {
       throw const AuthException(AuthErrorType.noServer);
     }
+    if (_serverStatus != ServerStatus.connected) {
+      throw const AuthException(AuthErrorType.serverNotConnected);
+    }
 
     final name = username.trim();
     final deviceName = await _deviceNameLoader();
-    final token = await request(server, name, password, deviceName);
+
+    final String token;
+    try {
+      token = await request(server, name, password, deviceName);
+    } on AuthException catch (e) {
+      if (e.type == AuthErrorType.network) {
+        _generation++;
+        _serverStatus = ServerStatus.unreachable;
+        notifyListeners();
+      }
+      rethrow;
+    }
 
     final session = AuthSession(token: token, username: name, server: server);
     await _tokenStorage.saveSession(session);
+    _generation++;
     _session = session;
-    _isOffline = false;
+    _serverStatus = ServerStatus.connected;
     notifyListeners();
   }
 
@@ -153,8 +204,12 @@ class AuthController extends ChangeNotifier {
     try {
       try {
         await _apiClient.logout(session.server, session.token);
-      } on AuthException {
+        _serverStatus = ServerStatus.connected;
+      } on AuthException catch (e) {
         // the device entry stays on the server, the local session is gone anyway
+        _serverStatus = e.type == AuthErrorType.network
+            ? ServerStatus.unreachable
+            : ServerStatus.connected;
       }
       await _clearSession();
     } finally {
@@ -166,6 +221,5 @@ class AuthController extends ChangeNotifier {
   Future<void> _clearSession() async {
     await _tokenStorage.clearSession();
     _session = null;
-    _isOffline = false;
   }
 }

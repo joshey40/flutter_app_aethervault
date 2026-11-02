@@ -13,6 +13,7 @@ import 'package:flutter_app_aethervault/services/auth/auth_token_storage.dart';
 class FakeAuthApiClient implements AuthApiClient {
   String token = 'token-1';
   TokenStatus status = TokenStatus.valid;
+  bool isServer = true;
   AuthException? error;
 
   final calls = <String>[];
@@ -60,6 +61,11 @@ class FakeAuthApiClient implements AuthApiClient {
   }
 
   @override
+  Future<bool> isAethervaultServer(Uri server) {
+    return _answer('server', server, isServer);
+  }
+
+  @override
   void dispose() {}
 }
 
@@ -90,6 +96,13 @@ void main() {
       deviceNameLoader: () async => 'Pixel 8',
     );
   });
+
+  Future<void> connectedToServer() async {
+    await preferences.saveServerUrl(server.toString());
+    await controller.initialize();
+    await controller.checkConnection();
+    api.calls.clear();
+  }
 
   Future<void> loggedIn() async {
     await preferences.saveServerUrl(server.toString());
@@ -123,13 +136,13 @@ void main() {
     });
   });
 
-  group('verifySession', () {
+  group('checkConnection', () {
     test('ignores a late answer for a session that was replaced', () async {
       await loggedIn();
       final slowStatus = api.gates['status'] = Completer<void>();
       api.status = TokenStatus.invalid;
 
-      final check = controller.verifySession();
+      final check = controller.checkConnection();
       await controller.logout();
       await controller.login('liliana', 'secret');
       slowStatus.complete();
@@ -146,7 +159,7 @@ void main() {
       final slowStatus = api.gates['status'] = Completer<void>();
       api.error = const AuthException(AuthErrorType.network);
 
-      final check = controller.verifySession();
+      final check = controller.checkConnection();
       await controller.logout();
       slowStatus.complete();
       await check;
@@ -158,7 +171,7 @@ void main() {
     test('does nothing when logged out', () async {
       await controller.initialize();
 
-      await controller.verifySession();
+      await controller.checkConnection();
 
       expect(api.calls, isEmpty);
     });
@@ -166,7 +179,7 @@ void main() {
     test('keeps a valid session', () async {
       await loggedIn();
 
-      await controller.verifySession();
+      await controller.checkConnection();
 
       expect(api.calls, ['status saved-token']);
       expect(controller.isLoggedIn, isTrue);
@@ -177,7 +190,7 @@ void main() {
       await loggedIn();
       api.status = TokenStatus.invalid;
 
-      await controller.verifySession();
+      await controller.checkConnection();
 
       expect(controller.isLoggedIn, isFalse);
       expect(await tokenStorage.loadSession(), isNull);
@@ -187,7 +200,7 @@ void main() {
       await loggedIn();
       api.error = const AuthException(AuthErrorType.network);
 
-      await controller.verifySession();
+      await controller.checkConnection();
 
       expect(controller.isLoggedIn, isTrue);
       expect(controller.isOffline, isTrue);
@@ -196,10 +209,10 @@ void main() {
     test('clears offline flag once the server answers again', () async {
       await loggedIn();
       api.error = const AuthException(AuthErrorType.network);
-      await controller.verifySession();
+      await controller.checkConnection();
 
       api.error = null;
-      await controller.verifySession();
+      await controller.checkConnection();
 
       expect(controller.isOffline, isFalse);
     });
@@ -210,9 +223,178 @@ void main() {
       var notified = 0;
       controller.addListener(() => notified++);
 
-      await controller.verifySession();
+      await controller.checkConnection();
 
       expect(notified, greaterThan(0));
+    });
+  });
+
+  group('server connection', () {
+    test('has no status without server address', () async {
+      await controller.initialize();
+
+      expect(controller.serverStatus, ServerStatus.none);
+    });
+
+    test('is unknown after start until checked', () async {
+      await preferences.saveServerUrl(server.toString());
+
+      await controller.initialize();
+
+      expect(controller.serverStatus, ServerStatus.unknown);
+    });
+
+    test('is connected when an Aethervault server answers', () async {
+      await preferences.saveServerUrl(server.toString());
+      await controller.initialize();
+
+      await controller.checkConnection();
+
+      expect(api.calls, ['server']);
+      expect(api.lastServer, server);
+      expect(controller.serverStatus, ServerStatus.connected);
+    });
+
+    test('detects a server that is no Aethervault server', () async {
+      await preferences.saveServerUrl(server.toString());
+      await controller.initialize();
+      api.isServer = false;
+
+      await controller.checkConnection();
+
+      expect(controller.serverStatus, ServerStatus.notAethervault);
+    });
+
+    test('is unreachable when the server does not answer', () async {
+      await preferences.saveServerUrl(server.toString());
+      await controller.initialize();
+      api.error = const AuthException(AuthErrorType.network);
+
+      await controller.checkConnection();
+
+      expect(controller.serverStatus, ServerStatus.unreachable);
+    });
+
+    test('reports checking while the request runs', () async {
+      await preferences.saveServerUrl(server.toString());
+      await controller.initialize();
+      final slowServer = api.gates['server'] = Completer<void>();
+      final states = <ServerStatus>[];
+      controller.addListener(() => states.add(controller.serverStatus));
+
+      final check = controller.checkConnection();
+      slowServer.complete();
+      await check;
+
+      expect(states, [ServerStatus.checking, ServerStatus.connected]);
+    });
+
+    test('is connected when logged in with a valid token', () async {
+      await loggedIn();
+
+      await controller.checkConnection();
+
+      expect(controller.serverStatus, ServerStatus.connected);
+      expect(controller.isOffline, isFalse);
+    });
+
+    test('is unreachable and offline when logged in without server', () async {
+      await loggedIn();
+      api.error = const AuthException(AuthErrorType.network);
+
+      await controller.checkConnection();
+
+      expect(controller.serverStatus, ServerStatus.unreachable);
+      expect(controller.isOffline, isTrue);
+    });
+
+    test('checks a newly saved address', () async {
+      await controller.initialize();
+
+      await controller.setServerUrl('192.168.0.10:3333');
+
+      expect(api.calls, ['server']);
+      expect(controller.serverStatus, ServerStatus.connected);
+    });
+
+    test('has no status after the address is removed', () async {
+      await connectedToServer();
+
+      await controller.setServerUrl('');
+
+      expect(api.calls, isEmpty);
+      expect(controller.serverStatus, ServerStatus.none);
+    });
+
+    test('ignores a late answer for a previous address', () async {
+      await controller.initialize();
+      final slowServer = api.gates['server'] = Completer<void>();
+
+      final first = controller.setServerUrl('http://old.example.com');
+      await controller.setServerUrl('http://192.168.0.10:3333');
+      api.isServer = false;
+      slowServer.complete();
+      await first;
+
+      expect(controller.serverUrl, server);
+      expect(controller.serverStatus, ServerStatus.connected);
+    });
+
+    test('login requires a connected server', () async {
+      await preferences.saveServerUrl(server.toString());
+      await controller.initialize();
+      api.error = const AuthException(AuthErrorType.network);
+      await controller.checkConnection();
+      api.error = null;
+      api.calls.clear();
+
+      await expectLater(
+        controller.login('jace', 'secret'),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.type,
+            'type',
+            AuthErrorType.serverNotConnected,
+          ),
+        ),
+      );
+      expect(api.calls, isEmpty);
+    });
+
+    test('register requires a connected server', () async {
+      await preferences.saveServerUrl(server.toString());
+      await controller.initialize();
+
+      await expectLater(
+        controller.register('liliana', 'secret'),
+        throwsA(
+          isA<AuthException>().having(
+            (e) => e.type,
+            'type',
+            AuthErrorType.serverNotConnected,
+          ),
+        ),
+      );
+    });
+
+    test('marks the server unreachable when login fails offline', () async {
+      await connectedToServer();
+      api.error = const AuthException(AuthErrorType.network);
+
+      await expectLater(
+        controller.login('jace', 'secret'),
+        throwsA(isA<AuthException>()),
+      );
+
+      expect(controller.serverStatus, ServerStatus.unreachable);
+    });
+
+    test('stays connected after logout', () async {
+      await loggedIn();
+
+      await controller.logout();
+
+      expect(controller.serverStatus, ServerStatus.connected);
     });
   });
 
@@ -307,8 +489,7 @@ void main() {
     });
 
     test('logs in with the device name and stores the session', () async {
-      await preferences.saveServerUrl(server.toString());
-      await controller.initialize();
+      await connectedToServer();
 
       await controller.login(' jace ', 'secret');
 
@@ -324,8 +505,7 @@ void main() {
     });
 
     test('passes api errors on and stays logged out', () async {
-      await preferences.saveServerUrl(server.toString());
-      await controller.initialize();
+      await connectedToServer();
       api.error = const AuthException(AuthErrorType.invalidCredentials);
 
       await expectLater(
@@ -337,8 +517,7 @@ void main() {
     });
 
     test('notifies listeners after login', () async {
-      await preferences.saveServerUrl(server.toString());
-      await controller.initialize();
+      await connectedToServer();
       var notified = 0;
       controller.addListener(() => notified++);
 
@@ -350,8 +529,7 @@ void main() {
 
   group('register', () {
     test('registers and stores the session', () async {
-      await preferences.saveServerUrl(server.toString());
-      await controller.initialize();
+      await connectedToServer();
 
       await controller.register('liliana', 'secret');
 

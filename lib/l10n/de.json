@@ -95,8 +95,15 @@
     "parseData": "Daten parsen",
     "parseDataDescription": "Parst die heruntergeladenen Kartendaten und speichert sie in der lokalen Datenbank.",
     "loggedInAs": "Angemeldet als",
-    "offline": "Server nicht erreichbar, du bist offline.",
-    "serverLockedHint": "Melde dich ab, um den Server zu ändern."
+    "serverLockedHint": "Melde dich ab, um den Server zu ändern.",
+    "connection": {
+      "checking": "Verbindung zu {server} wird geprüft …",
+      "connected": "Verbunden mit {server}",
+      "unreachable": "{server} ist nicht erreichbar",
+      "notAethervault": "Unter {server} läuft kein Aethervault-Server",
+      "unknown": "Verbindung zu {server} noch nicht geprüft",
+      "retry": "Erneut prüfen"
+    }
   },
   "auth": {
     "login": "Anmelden",
@@ -122,7 +129,8 @@
       "network": "Server nicht erreichbar. Prüfe die Adresse und deine Verbindung.",
       "emptyFields": "Bitte gib Benutzername und Passwort ein.",
       "passwordMismatch": "Die Passwörter stimmen nicht überein.",
-      "serverLocked": "Melde dich ab, um die Server-Adresse zu ändern."
+      "serverLocked": "Melde dich ab, um die Server-Adresse zu ändern.",
+      "serverNotConnected": "Verbinde dich zuerst mit einem Server."
     }
   },
   "download": {

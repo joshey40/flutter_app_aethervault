@@ -95,8 +95,15 @@
     "parseData": "Parse data",
     "parseDataDescription": "Parse the downloaded card data and store it in the local database.",
     "loggedInAs": "Logged in as",
-    "offline": "Server not reachable, working offline.",
-    "serverLockedHint": "Log out to change the server."
+    "serverLockedHint": "Log out to change the server.",
+    "connection": {
+      "checking": "Checking connection to {server} …",
+      "connected": "Connected to {server}",
+      "unreachable": "{server} is not reachable",
+      "notAethervault": "No Aethervault server is running at {server}",
+      "unknown": "Connection to {server} not checked yet",
+      "retry": "Check again"
+    }
   },
   "auth": {
     "login": "Login",
@@ -122,7 +129,8 @@
       "network": "Could not reach the server. Check the address and your connection.",
       "emptyFields": "Please enter username and password.",
       "passwordMismatch": "The passwords do not match.",
-      "serverLocked": "Log out to change the server address."
+      "serverLocked": "Log out to change the server address.",
+      "serverNotConnected": "Connect to a server first."
     }
   },
   "download": {

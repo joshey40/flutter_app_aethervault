@@ -180,26 +180,31 @@ class _AccountSectionState extends State<_AccountSection> {
     super.dispose();
   }
 
-  /// Saves the typed address, returns false if it is invalid.
-  Future<bool> _saveServerUrl() async {
+  /// Saves and checks the typed address, unless it is already the saved one.
+  Future<void> _saveServerUrl() async {
+    final text = _serverController.text;
+    final unchanged = text.trim().isEmpty
+        ? _auth.serverUrl == null
+        : parseServerUrl(text) == _auth.serverUrl;
+    if (unchanged && _serverError == null) {
+      return;
+    }
+
     try {
-      await _auth.setServerUrl(_serverController.text);
+      await _auth.setServerUrl(text);
+      if (!mounted) {
+        return;
+      }
       _serverController.text = _auth.serverUrl?.toString() ?? '';
       setState(() {
         _serverError = null;
       });
-      return true;
     } on AuthException catch (e) {
-      setState(() {
-        _serverError = authErrorMessage(e);
-      });
-      return false;
-    }
-  }
-
-  Future<void> _open(String location) async {
-    if (await _saveServerUrl() && mounted) {
-      context.push(location);
+      if (mounted) {
+        setState(() {
+          _serverError = authErrorMessage(e);
+        });
+      }
     }
   }
 
@@ -211,7 +216,10 @@ class _AccountSectionState extends State<_AccountSection> {
       listenable: Listenable.merge([_auth, _serverController]),
       builder: (context, _) {
         final session = _auth.session;
-        final hasValidServer = parseServerUrl(_serverController.text) != null;
+        // Only a saved address that was checked successfully allows login.
+        final canAuthenticate =
+            _auth.serverStatus == ServerStatus.connected &&
+            parseServerUrl(_serverController.text) == _auth.serverUrl;
 
         return Card(
           child: Padding(
@@ -251,6 +259,11 @@ class _AccountSectionState extends State<_AccountSection> {
                   ),
                 ),
 
+                if (_auth.serverStatus != ServerStatus.none) ...[
+                  const SizedBox(height: 12),
+                  _ConnectionStatus(authController: _auth),
+                ],
+
                 const SizedBox(height: 16),
 
                 if (session == null)
@@ -260,8 +273,8 @@ class _AccountSectionState extends State<_AccountSection> {
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.login),
                           label: Text(appLocalizations.translate('auth.login')),
-                          onPressed: hasValidServer
-                              ? () => _open('/settings/login')
+                          onPressed: canAuthenticate
+                              ? () => context.push('/settings/login')
                               : null,
                         ),
                       ),
@@ -274,8 +287,8 @@ class _AccountSectionState extends State<_AccountSection> {
                           label: Text(
                             appLocalizations.translate('auth.register'),
                           ),
-                          onPressed: hasValidServer
-                              ? () => _open('/settings/register')
+                          onPressed: canAuthenticate
+                              ? () => context.push('/settings/register')
                               : null,
                         ),
                       ),
@@ -284,16 +297,11 @@ class _AccountSectionState extends State<_AccountSection> {
                 else ...[
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(
-                      _auth.isOffline ? Icons.cloud_off : Icons.account_circle,
-                    ),
+                    leading: const Icon(Icons.account_circle),
                     title: Text(
                       '${appLocalizations.translate('settings.loggedInAs')} '
                       '${session.username}',
                     ),
-                    subtitle: _auth.isOffline
-                        ? Text(appLocalizations.translate('settings.offline'))
-                        : null,
                   ),
 
                   const SizedBox(height: 8),
@@ -309,6 +317,81 @@ class _AccountSectionState extends State<_AccountSection> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Shows whether the app can reach the configured server.
+class _ConnectionStatus extends StatelessWidget {
+  const _ConnectionStatus({required this.authController});
+
+  final AuthController authController;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = authController.serverStatus;
+    final server =
+        (authController.session?.server ?? authController.serverUrl)
+            ?.toString() ??
+        '';
+
+    final (IconData icon, Color color, String key) = switch (status) {
+      ServerStatus.connected => (
+        Icons.cloud_done,
+        theme.colorScheme.primary,
+        'connected',
+      ),
+      ServerStatus.unreachable => (
+        Icons.cloud_off,
+        theme.colorScheme.error,
+        'unreachable',
+      ),
+      ServerStatus.notAethervault => (
+        Icons.error_outline,
+        theme.colorScheme.error,
+        'notAethervault',
+      ),
+      ServerStatus.checking => (
+        Icons.sync,
+        theme.colorScheme.onSurfaceVariant,
+        'checking',
+      ),
+      ServerStatus.unknown || ServerStatus.none => (
+        Icons.help_outline,
+        theme.colorScheme.onSurfaceVariant,
+        'unknown',
+      ),
+    };
+
+    return Row(
+      children: [
+        if (status == ServerStatus.checking)
+          const SizedBox.square(
+            dimension: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        else
+          Icon(icon, color: color, size: 20),
+
+        const SizedBox(width: 12),
+
+        Expanded(
+          child: Text(
+            appLocalizations
+                .translate('settings.connection.$key')
+                .replaceAll('{server}', server),
+            style: theme.textTheme.bodyMedium?.copyWith(color: color),
+          ),
+        ),
+
+        if (status != ServerStatus.checking && status != ServerStatus.connected)
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: appLocalizations.translate('settings.connection.retry'),
+            onPressed: authController.checkConnection,
+          ),
+      ],
     );
   }
 }

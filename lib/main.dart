@@ -30,7 +30,7 @@ Future<void> main() async {
   // Load the optional account session, the server check runs in background.
   final authController = AuthController(preferencesStorage: preferencesStorage);
   await authController.initialize();
-  unawaited(authController.verifySession());
+  unawaited(authController.checkConnection());
 
   // Check whether the initial Scryfall data download is required.
   final needsDownload = await _checkDownloadNeed();
