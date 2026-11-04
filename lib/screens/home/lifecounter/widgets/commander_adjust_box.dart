@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'hold_repeat_ink_well.dart';
+
 class CommanderAdjustBox extends StatelessWidget {
   final int value;
   final VoidCallback onIncrement;
@@ -42,7 +44,7 @@ class CommanderAdjustBox extends StatelessWidget {
                 child: Column(
                   children: [
                     Expanded(
-                      child: InkWell(
+                      child: HoldRepeatInkWell(
                         onTap: onIncrement,
                         onLongPress: onLongIncrement,
                         child: Align(
@@ -59,7 +61,7 @@ class CommanderAdjustBox extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: InkWell(
+                      child: HoldRepeatInkWell(
                         onTap: onDecrement,
                         onLongPress: onLongDecrement,
                         child: Align(

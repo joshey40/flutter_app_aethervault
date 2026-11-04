@@ -60,6 +60,12 @@
     "colorRed": "Rot",
     "colorPurple": "Lila",
     "colorOrange": "Orange",
+    "colorYellow": "Gelb",
+    "colorLime": "Limette",
+    "colorTeal": "Petrol",
+    "colorPink": "Pink",
+    "colorBrown": "Braun",
+    "colorGray": "Grau",
     "playerLabel": "Spieler {index}",
     "random": {
       "title": "Münze / Würfel",
@@ -159,7 +165,5 @@
   "save": "Speichern",
   "confirm": "Bestätigen",
   "back": "Zurück",
-  "errors": {
-    
-  }
+  "errors": {}
 }

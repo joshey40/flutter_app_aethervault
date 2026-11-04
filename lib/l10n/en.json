@@ -60,6 +60,12 @@
     "colorRed": "Red",
     "colorPurple": "Purple",
     "colorOrange": "Orange",
+    "colorYellow": "Yellow",
+    "colorLime": "Lime",
+    "colorTeal": "Teal",
+    "colorPink": "Pink",
+    "colorBrown": "Brown",
+    "colorGray": "Gray",
     "playerLabel": "Player {index}",
     "random": {
       "title": "Coin / Dice",
@@ -159,7 +165,5 @@
   "save": "Save",
   "confirm": "Confirm",
   "back": "Back",
-  "errors": {
-    
-  }
+  "errors": {}
 }

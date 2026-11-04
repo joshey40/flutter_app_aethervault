@@ -4,6 +4,7 @@ import 'package:icons_flutter/icons_flutter.dart';
 import '../../../../../services/localization_service.dart';
 import '../../../../../services/life_counter/lifecounter_model.dart';
 import 'commander_adjust_box.dart';
+import 'hold_repeat_ink_well.dart';
 
 class _PanelColorOption {
   final String key;
@@ -17,6 +18,34 @@ class _PanelColorOption {
     required this.color,
     required this.onColor,
   });
+}
+
+/// Lays out the color swatches in rows of [perRow], one row per palette line.
+class _ColorRows extends StatelessWidget {
+  const _ColorRows({required this.children});
+
+  static const perRow = 6;
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    for (var start = 0; start < children.length; start += perRow) {
+      final end = (start + perRow).clamp(0, children.length);
+      if (rows.isNotEmpty) {
+        rows.add(const SizedBox(height: 8));
+      }
+      rows.add(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 8,
+          children: children.sublist(start, end),
+        ),
+      );
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
+  }
 }
 
 class _CounterDefinition {
@@ -206,10 +235,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        spacing: 8,
-                        runSpacing: 8,
+                      _ColorRows(
                         children: _panelColorOptions(context).map((option) {
                           final selected = selectedColor == option.key;
                           return Tooltip(
@@ -307,32 +333,68 @@ class _PlayerPanelState extends State<PlayerPanel> {
       _PanelColorOption(
         key: 'green',
         label: appLocalizations.translate('lifecounter.colorGreen'),
-        color: isDark ? const Color(0xFF1D4D35) : const Color(0xFFD9F0DE),
+        color: isDark ? const Color(0xFF1D4D35) : const Color(0xFFC9EFD2),
         onColor: isDark ? Colors.white : const Color(0xFF173D27),
       ),
       _PanelColorOption(
         key: 'blue',
         label: appLocalizations.translate('lifecounter.colorBlue'),
-        color: isDark ? const Color(0xFF1E4468) : const Color(0xFFDCEBFA),
+        color: isDark ? const Color(0xFF1E4468) : const Color(0xFFCBE8FF),
         onColor: isDark ? Colors.white : const Color(0xFF173653),
       ),
       _PanelColorOption(
         key: 'red',
         label: appLocalizations.translate('lifecounter.colorRed'),
-        color: isDark ? const Color(0xFF5A2929) : const Color(0xFFF8DDDD),
+        color: isDark ? const Color(0xFF5A2929) : const Color(0xFFFFD4D4),
         onColor: isDark ? Colors.white : const Color(0xFF4B1D1D),
       ),
       _PanelColorOption(
         key: 'purple',
         label: appLocalizations.translate('lifecounter.colorPurple'),
-        color: isDark ? const Color(0xFF49305E) : const Color(0xFFE9DDF5),
+        color: isDark ? const Color(0xFF49305E) : const Color(0xFFE9D6FC),
         onColor: isDark ? Colors.white : const Color(0xFF362344),
       ),
       _PanelColorOption(
         key: 'orange',
         label: appLocalizations.translate('lifecounter.colorOrange'),
-        color: isDark ? const Color(0xFF67421F) : const Color(0xFFFCE5C7),
+        color: isDark ? const Color(0xFF67421F) : const Color(0xFFFFDFB4),
         onColor: isDark ? Colors.white : const Color(0xFF4A2C12),
+      ),
+      _PanelColorOption(
+        key: 'yellow',
+        label: appLocalizations.translate('lifecounter.colorYellow'),
+        color: isDark ? const Color(0xFF6E5C0E) : const Color(0xFFFDE885),
+        onColor: isDark ? Colors.white : const Color(0xFF4A3F0A),
+      ),
+      _PanelColorOption(
+        key: 'lime',
+        label: appLocalizations.translate('lifecounter.colorLime'),
+        color: isDark ? const Color(0xFF3F5A12) : const Color(0xFFCCEB8E),
+        onColor: isDark ? Colors.white : const Color(0xFF2F3D10),
+      ),
+      _PanelColorOption(
+        key: 'teal',
+        label: appLocalizations.translate('lifecounter.colorTeal'),
+        color: isDark ? const Color(0xFF0E6060) : const Color(0xFF8DE5DE),
+        onColor: isDark ? Colors.white : const Color(0xFF0F403E),
+      ),
+      _PanelColorOption(
+        key: 'pink',
+        label: appLocalizations.translate('lifecounter.colorPink'),
+        color: isDark ? const Color(0xFF8A2A6A) : const Color(0xFFFEB7DF),
+        onColor: isDark ? Colors.white : const Color(0xFF4E1A3B),
+      ),
+      _PanelColorOption(
+        key: 'brown',
+        label: appLocalizations.translate('lifecounter.colorBrown'),
+        color: isDark ? const Color(0xFF3B2A20) : const Color(0xFFCDA27B),
+        onColor: isDark ? Colors.white : const Color(0xFF3A281C),
+      ),
+      _PanelColorOption(
+        key: 'gray',
+        label: appLocalizations.translate('lifecounter.colorGray'),
+        color: isDark ? const Color(0xFF4A4A4A) : const Color(0xFFBFBFBF),
+        onColor: isDark ? Colors.white : const Color(0xFF2B2B2B),
       ),
     ];
   }
@@ -422,7 +484,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                             child: Column(
                                               children: [
                                                 Expanded(
-                                                  child: InkWell(
+                                                  child: HoldRepeatInkWell(
                                                     onTap: () =>
                                                         widget.onTaxChange(2),
                                                     onLongPress: () =>
@@ -451,7 +513,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                   ),
                                                 ),
                                                 Expanded(
-                                                  child: InkWell(
+                                                  child: HoldRepeatInkWell(
                                                     onTap: () =>
                                                         widget.onTaxChange(-2),
                                                     onLongPress: () =>
@@ -499,26 +561,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                   ),
                                 ),
                               ),
-                              SizedBox(
-                                width: 48,
-                                height: 48,
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: Icon(
-                                    RpgAwesome.crown,
-                                    size: 20,
-                                    color: widget.isMonarch
-                                        ? Theme.of(
-                                            context,
-                                          ).colorScheme.secondary
-                                        : null,
-                                  ),
-                                  tooltip: appLocalizations.translate(
-                                    'lifecounter.monarch',
-                                  ),
-                                  onPressed: widget.onMonarchPressed,
-                                ),
-                              ),
+                              // Same height as the settings button, keeps the
+                              // tax box centered.
+                              const SizedBox(width: 48, height: 48),
                             ],
                           ),
                         ),
@@ -529,31 +574,56 @@ class _PlayerPanelState extends State<PlayerPanel> {
                             children: [
                               SizedBox(
                                 height: 24,
-                                child: Center(
-                                  child: Text(
-                                    widget.playerName.trim().isEmpty
-                                        ? appLocalizations
-                                              .translate(
-                                                'lifecounter.playerLabel',
-                                              )
-                                              .replaceAll(
-                                                '{index}',
-                                                '${widget.index + 1}',
-                                              )
-                                        : widget.playerName,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          color: widget.isMonarch
-                                              ? Theme.of(
-                                                  context,
-                                                ).colorScheme.secondary
-                                              : null,
-                                          fontWeight: widget.isMonarch
-                                              ? FontWeight.bold
-                                              : null,
+                                child: InkWell(
+                                  // Tapping the name makes the player monarch.
+                                  onTap: widget.onMonarchPressed,
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Center(
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (widget.isMonarch) ...[
+                                          Icon(
+                                            RpgAwesome.crown,
+                                            size: 16,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
+                                            semanticLabel: appLocalizations
+                                                .translate('lifecounter.monarch'),
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Flexible(
+                                          child: Text(
+                                            widget.playerName.trim().isEmpty
+                                                ? appLocalizations
+                                                      .translate(
+                                                        'lifecounter.playerLabel',
+                                                      )
+                                                      .replaceAll(
+                                                        '{index}',
+                                                        '${widget.index + 1}',
+                                                      )
+                                                : widget.playerName,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  color: widget.isMonarch
+                                                      ? Theme.of(
+                                                          context,
+                                                        ).colorScheme.secondary
+                                                      : null,
+                                                  fontWeight: widget.isMonarch
+                                                      ? FontWeight.bold
+                                                      : null,
+                                                ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -579,7 +649,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                         child: Row(
                                           children: [
                                             Expanded(
-                                              child: InkWell(
+                                              child: HoldRepeatInkWell(
                                                 onTap: () =>
                                                     _handleIncrement(-1),
                                                 onLongPress: () =>
@@ -615,7 +685,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                               ),
                                             ),
                                             Expanded(
-                                              child: InkWell(
+                                              child: HoldRepeatInkWell(
                                                 onTap: () =>
                                                     _handleIncrement(1),
                                                 onLongPress: () =>

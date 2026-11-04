@@ -7,6 +7,7 @@ import '../../../services/localization_service.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import '../../../services/life_counter/lifecounter_model.dart';
 import '../../../services/life_counter/lifecounter_controller.dart';
+import 'widgets/hold_repeat_ink_well.dart';
 import 'widgets/lifecounter_random.dart';
 import 'widgets/player_panel.dart';
 
@@ -263,7 +264,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
             onPressed: () => _confirmReset(),
           ),
           IconButton(
-            icon: const Icon(Icons.auto_awesome),
+            icon: const Icon(Icons.landscape_rounded),
             tooltip: 'Mana',
             onPressed: () {
               setState(() {
@@ -373,7 +374,7 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
                                                   ),
                                                 ),
                                                 Expanded(
-                                                  child: InkWell(
+                                                  child: HoldRepeatInkWell(
                                                     onTap: () {
                                                       setState(() {
                                                         _manaCounts[i] =

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+/// Panel colors in the order they are shown and assigned to the players.
 const lifecounterPanelColorKeys = <String>{
   'default',
   'green',
@@ -7,7 +8,23 @@ const lifecounterPanelColorKeys = <String>{
   'red',
   'purple',
   'orange',
+  'yellow',
+  'lime',
+  'teal',
+  'pink',
+  'brown',
+  'gray',
 };
+
+List<String> initialPlayerColors(int playerCount) {
+  final colors = lifecounterPanelColorKeys
+      .where((key) => key != 'default')
+      .toList();
+  return List<String>.generate(
+    playerCount,
+    (i) => colors[i % colors.length],
+  );
+}
 
 const lifecounterCounterCount = 6;
 
