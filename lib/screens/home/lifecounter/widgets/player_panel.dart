@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:icons_flutter/icons_flutter.dart';
 import '../../../../../services/localization_service.dart';
 import '../../../../../services/life_counter/lifecounter_model.dart';
@@ -96,6 +97,10 @@ class PlayerPanel extends StatefulWidget {
   final String panelColor;
   final List<int> counters;
   final void Function(int counterIndex, int delta)? onCounterChange;
+
+  /// The counter overlay is opened and closed for all players together.
+  final bool showCounters;
+  final VoidCallback? onCountersClosed;
   final bool isMonarch;
   final VoidCallback? onMonarchPressed;
   final ValueChanged<String>? onPlayerNameChanged;
@@ -118,6 +123,8 @@ class PlayerPanel extends StatefulWidget {
     this.panelColor = 'default',
     this.counters = const [0, 0, 0, 0, 0, 0],
     this.onCounterChange,
+    this.showCounters = false,
+    this.onCountersClosed,
     this.isMonarch = false,
     this.onMonarchPressed,
     this.onPlayerNameChanged,
@@ -140,7 +147,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
   Timer? _hideTimer;
   Timer? _clearDeltaTimer;
   bool _isTempDeltaVisible = false;
-  bool _showCounters = false;
   late bool _partnerEnabled;
   // No measurement keys, layout uses stretch behavior for equal heights
 
@@ -588,7 +594,7 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                             size: 16,
                                             color: Theme.of(
                                               context,
-                                            ).colorScheme.secondary,
+                                            ).textTheme.titleMedium?.color,
                                             semanticLabel: appLocalizations
                                                 .translate('lifecounter.monarch'),
                                           ),
@@ -610,11 +616,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                 .textTheme
                                                 .titleMedium
                                                 ?.copyWith(
-                                                  color: widget.isMonarch
-                                                      ? Theme.of(
-                                                          context,
-                                                        ).colorScheme.secondary
-                                                      : null,
                                                   fontWeight: widget.isMonarch
                                                       ? FontWeight.bold
                                                       : null,
@@ -735,11 +736,6 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                                   ?.copyWith(
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 48,
-                                                    color: widget.isMonarch
-                                                        ? Theme.of(context)
-                                                              .colorScheme
-                                                              .secondary
-                                                        : null,
                                                   ),
                                               textAlign: TextAlign.center,
                                             ),
@@ -790,9 +786,18 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                 child: IconButton(
                                   padding: EdgeInsets.zero,
                                   alignment: Alignment.center,
-                                  icon: const Icon(
-                                    MaterialCommunityIcons.target,
-                                    size: 20,
+                                  icon: Builder(
+                                    builder: (context) => SvgPicture.asset(
+                                      'assets/icons/set_cmd.svg',
+                                      height: 20,
+                                      colorFilter: ColorFilter.mode(
+                                        IconTheme.of(context).color ??
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
                                   ),
                                   tooltip: appLocalizations.translate(
                                     'lifecounter.commanderDamage',
@@ -914,25 +919,9 @@ class _PlayerPanelState extends State<PlayerPanel> {
                                       ),
                                     )
                                   : const Expanded(child: SizedBox()),
-                              SizedBox(
-                                width: 48,
-                                height: 48,
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(
-                                    MaterialCommunityIcons.counter,
-                                    size: 20,
-                                  ),
-                                  tooltip: appLocalizations.translate(
-                                    'lifecounter.counters',
-                                  ),
-                                  onPressed: () {
-                                    setState(() {
-                                      _showCounters = !_showCounters;
-                                    });
-                                  },
-                                ),
-                              ),
+                              // Counters open from the table menu now, the
+                              // space keeps the column symmetric.
+                              const SizedBox(width: 48, height: 48),
                             ],
                           ),
                         ),
@@ -1033,16 +1022,12 @@ class _PlayerPanelState extends State<PlayerPanel> {
                     ),
                   ),
                 ),
-              if (_showCounters)
+              if (widget.showCounters)
                 Positioned.fill(
                   child: _CounterOverlay(
                     counters: widget.counters,
                     onCounterChange: widget.onCounterChange,
-                    onClose: () {
-                      setState(() {
-                        _showCounters = false;
-                      });
-                    },
+                    onClose: () => widget.onCountersClosed?.call(),
                   ),
                 ),
             ],

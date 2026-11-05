@@ -81,7 +81,9 @@
     "presetStandard": "Standard",
     "presetCommander": "Commander",
     "seatArrangement": "Sitzplatzanordnung",
-    "seatOption": "Option {index}"
+    "seatOption": "Option {index}",
+    "mana": "Mana",
+    "menu": "Menü"
   },
   "settings": {
     "title": "Einstellungen",
