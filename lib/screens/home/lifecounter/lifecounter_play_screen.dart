@@ -2,11 +2,14 @@
 
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
+import 'package:icons_flutter/icons_flutter.dart';
 
 import '../../../services/localization_service.dart';
 import 'package:multi_split_view/multi_split_view.dart';
 import '../../../services/life_counter/lifecounter_model.dart';
 import '../../../services/life_counter/lifecounter_controller.dart';
+import 'widgets/hold_repeat_ink_well.dart';
+import 'widgets/lifecounter_menu.dart';
 import 'widgets/lifecounter_random.dart';
 import 'widgets/player_panel.dart';
 
@@ -23,6 +26,11 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
   bool _loading = true;
   int? _commanderDamageTargetIndex;
   bool _showManaBar = false;
+  bool _showCounters = false;
+  static const _manaBarHeight = 40.0;
+
+  /// Distance of the resting menu button's center from the table corner.
+  static const _menuInset = 28.0;
   final List<int> _manaCounts = List<int>.filled(6, 0);
   // commanderDamage persisted on `_currentGame.commanderDamage` as [source][target] -> [slot0, slot1?]
 
@@ -124,6 +132,8 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
           counters: _currentGame.playerCounters[i],
           onCounterChange: (counterIndex, delta) =>
               _changeCounter(i, counterIndex, delta),
+          showCounters: _showCounters,
+          onCountersClosed: () => setState(() => _showCounters = false),
           isMonarch: _currentGame.monarchPlayerIndex == i,
           onMonarchPressed: () => _toggleMonarch(i),
           onPlayerNameChanged: (name) {
@@ -236,220 +246,249 @@ class _LifecounterPlayScreenState extends State<LifecounterPlayScreen> {
     _save();
   }
 
-  // Positioning-by-alignment removed in favor of grid layout.
-
   @override
   Widget build(BuildContext context) {
     if (_loading || _game == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final loc = appLocalizations;
-
     return Scaffold(
-      appBar: AppBar(
-        title: Text(loc.translate('lifecounter.title')),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: appLocalizations.translate('back'),
-          onPressed: () {
-            context.go('/lifecounter');
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: loc.translate('lifecounter.resetGame'),
-            onPressed: () => _confirmReset(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.auto_awesome),
-            tooltip: 'Mana',
-            onPressed: () {
-              setState(() {
-                _showManaBar = !_showManaBar;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.casino),
-            tooltip: 'Random',
-            onPressed: () => showRandomPicker(
-              context,
-              maxPlayers: _currentGame.playerCount,
-              playerNames: _currentGame.playerNames,
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        mainAxisSize: MainAxisSize.max,
+      body: Stack(
         children: [
-          // Animated mana bar that slides down under the AppBar
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            height: _showManaBar ? 40.0 : 0.0,
-            curve: Curves.easeInOut,
-            child: ClipRect(
-              child: Align(
-                alignment: Alignment.topCenter,
-                heightFactor: 1.0,
-                child: Container(
-                  color: Theme.of(context).colorScheme.surface,
-                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: List<Widget>.generate(6, (i) {
-                        final colors = [
-                          Colors.grey.shade200,
-                          Colors.blue,
-                          Colors.black,
-                          Colors.red,
-                          Colors.green,
-                          Colors.grey,
-                        ];
+          SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                // Animated mana bar that slides down
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  height: _showManaBar ? _manaBarHeight : 0.0,
+                  curve: Curves.easeInOut,
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      heightFactor: 1.0,
+                      child: Container(
+                        color: Theme.of(context).colorScheme.surface,
+                        padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: List<Widget>.generate(6, (i) {
+                              final colors = [
+                                Colors.grey.shade200,
+                                Colors.blue,
+                                Colors.black,
+                                Colors.red,
+                                Colors.green,
+                                Colors.grey,
+                              ];
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4.0,
-                            vertical: 2.0,
-                          ),
-                          child: SizedBox(
-                            child: Material(
-                              color: colors[i],
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6.0),
-                              ),
-                              child: Padding(
+                              return Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 2.0,
+                                  horizontal: 4.0,
                                   vertical: 2.0,
                                 ),
-                                child: Builder(
-                                  builder: (ctx) {
-                                    final textColor = (i == 0 || i == 5)
-                                        ? Colors.black87
-                                        : Colors.white;
-                                    return SizedBox(
-                                      width: 55,
-                                      height: 32,
-                                      child: Stack(
-                                        children: [
-                                          Positioned.fill(
-                                            child: Row(
+                                child: SizedBox(
+                                  child: Material(
+                                    color: colors[i],
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6.0),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 2.0,
+                                        vertical: 2.0,
+                                      ),
+                                      child: Builder(
+                                        builder: (ctx) {
+                                          final textColor = (i == 0 || i == 5)
+                                              ? Colors.black87
+                                              : Colors.white;
+                                          return SizedBox(
+                                            width: 55,
+                                            height: 32,
+                                            child: Stack(
                                               children: [
-                                                Expanded(
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _manaCounts[i] =
-                                                            (_manaCounts[i] - 1)
-                                                                .clamp(0, 9999);
-                                                      });
-                                                    },
-                                                    onLongPress: () {
-                                                      setState(() {
-                                                        _manaCounts[i] = 0;
-                                                      });
-                                                    },
-                                                    child: Align(
-                                                      alignment:
-                                                          Alignment.centerLeft,
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 0.0,
+                                                Positioned.fill(
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(
+                                                        child: InkWell(
+                                                          onTap: () {
+                                                            setState(() {
+                                                              _manaCounts[i] =
+                                                                  (_manaCounts[i] - 1)
+                                                                      .clamp(0, 9999);
+                                                            });
+                                                          },
+                                                          onLongPress: () {
+                                                            setState(() {
+                                                              _manaCounts[i] = 0;
+                                                            });
+                                                          },
+                                                          child: Align(
+                                                            alignment:
+                                                                Alignment.centerLeft,
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal: 0.0,
+                                                                  ),
+                                                              child: Icon(
+                                                                Icons
+                                                                    .remove_circle_outline,
+                                                                size: 16,
+                                                                color: textColor,
+                                                              ),
                                                             ),
-                                                        child: Icon(
-                                                          Icons
-                                                              .remove_circle_outline,
-                                                          size: 16,
-                                                          color: textColor,
+                                                          ),
                                                         ),
                                                       ),
-                                                    ),
+                                                      Expanded(
+                                                        child: HoldRepeatInkWell(
+                                                          onTap: () {
+                                                            setState(() {
+                                                              _manaCounts[i] =
+                                                                  (_manaCounts[i] + 1)
+                                                                      .clamp(0, 9999);
+                                                            });
+                                                          },
+                                                          onLongPress: () {
+                                                            setState(() {
+                                                              _manaCounts[i] =
+                                                                  _manaCounts[i] + 5;
+                                                            });
+                                                          },
+                                                          child: Align(
+                                                            alignment:
+                                                                Alignment.centerRight,
+                                                            child: Padding(
+                                                              padding:
+                                                                  const EdgeInsets.symmetric(
+                                                                    horizontal: 0.0,
+                                                                  ),
+                                                              child: Icon(
+                                                                Icons
+                                                                    .add_circle_outline,
+                                                                size: 16,
+                                                                color: textColor,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
-                                                Expanded(
-                                                  child: InkWell(
-                                                    onTap: () {
-                                                      setState(() {
-                                                        _manaCounts[i] =
-                                                            (_manaCounts[i] + 1)
-                                                                .clamp(0, 9999);
-                                                      });
-                                                    },
-                                                    onLongPress: () {
-                                                      setState(() {
-                                                        _manaCounts[i] =
-                                                            _manaCounts[i] + 5;
-                                                      });
-                                                    },
-                                                    child: Align(
-                                                      alignment:
-                                                          Alignment.centerRight,
-                                                      child: Padding(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 0.0,
-                                                            ),
-                                                        child: Icon(
-                                                          Icons
-                                                              .add_circle_outline,
-                                                          size: 16,
-                                                          color: textColor,
-                                                        ),
+                                                Center(
+                                                  child: IgnorePointer(
+                                                    child: Text(
+                                                      '${_manaCounts[i]}',
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: textColor,
                                                       ),
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                          Center(
-                                            child: IgnorePointer(
-                                              child: Text(
-                                                '${_manaCounts[i]}',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: textColor,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
+                                          );
+                                        },
                                       ),
-                                    );
-                                  },
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              );
+                            }),
                           ),
-                        );
-                      }),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+                Expanded(
+                  child: Builder(
+                    builder: (ctx) {
+                      final count = _currentGame.playerCount;
+                      const double gap = 2.0;
+                      return Padding(
+                        padding: const EdgeInsets.all(gap),
+                        child: _buildSeatLayout(count, _currentGame.seatLayout),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
-          Expanded(
-            child: Builder(
-              builder: (ctx) {
-                final count = _currentGame.playerCount;
-                const double gap = 2.0;
-                return Padding(
-                  padding: const EdgeInsets.all(gap),
-                  child: _buildSeatLayout(count, _currentGame.seatLayout),
-                );
-              },
-            ),
-          ),
+          Positioned.fill(child: _buildTableMenu()),
         ],
       ),
     );
+  }
+
+  /// The menu button rests in the top left corner of the table (below the
+  /// mana bar when it is open), and moves to the center of the table when
+  /// opened. In every seat layout that corner holds an empty slot of the
+  /// first player panel, so the button covers nothing there.
+  Widget _buildTableMenu() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final padding = MediaQuery.paddingOf(context);
+        final top = padding.top + (_showManaBar ? _manaBarHeight : 0);
+        final bottom = constraints.maxHeight - padding.bottom;
+        final centerX =
+            padding.left +
+            (constraints.maxWidth - padding.left - padding.right) / 2;
+
+        return LifecounterMenu(
+          anchor: Offset(padding.left + _menuInset, top + _menuInset),
+          openCenter: Offset(centerX, (top + bottom) / 2),
+          tooltip: appLocalizations.translate('lifecounter.menu'),
+          items: _menuItems(),
+        );
+      },
+    );
+  }
+
+  List<LifecounterMenuItem> _menuItems() {
+    final loc = appLocalizations;
+    return [
+      LifecounterMenuItem(
+        icon: Icons.arrow_back,
+        label: loc.translate('back'),
+        onPressed: () => context.go('/lifecounter'),
+      ),
+      LifecounterMenuItem(
+        icon: Icons.refresh,
+        label: loc.translate('lifecounter.resetGame'),
+        onPressed: () => _confirmReset(),
+      ),
+      LifecounterMenuItem(
+        icon: Icons.landscape_rounded,
+        label: loc.translate('lifecounter.mana'),
+        active: _showManaBar,
+        onPressed: () => setState(() => _showManaBar = !_showManaBar),
+      ),
+      LifecounterMenuItem(
+        icon: Icons.casino,
+        label: loc.translate('lifecounter.random.title'),
+        onPressed: () => showRandomPicker(
+          context,
+          maxPlayers: _currentGame.playerCount,
+          playerNames: _currentGame.playerNames,
+        ),
+      ),
+      LifecounterMenuItem(
+        icon: MaterialCommunityIcons.counter,
+        label: loc.translate('lifecounter.counters'),
+        active: _showCounters,
+        onPressed: () => setState(() => _showCounters = !_showCounters),
+      ),
+    ];
   }
 
   Widget _buildSeatLayout(int count, String layout) {

@@ -146,6 +146,7 @@ class _LifecounterStartScreenState extends State<LifecounterStartScreen> {
       playerCount: players,
       currentLives: List<int>.filled(players, startLife),
       commanderTax: List<int>.filled(players, 0),
+      playerColors: initialPlayerColors(players),
       seatLayout: _selectedSeatLayout,
       active: true,
     );

@@ -60,6 +60,12 @@
     "colorRed": "Red",
     "colorPurple": "Purple",
     "colorOrange": "Orange",
+    "colorYellow": "Yellow",
+    "colorLime": "Lime",
+    "colorTeal": "Teal",
+    "colorPink": "Pink",
+    "colorBrown": "Brown",
+    "colorGray": "Gray",
     "playerLabel": "Player {index}",
     "random": {
       "title": "Coin / Dice",
@@ -75,7 +81,9 @@
     "presetStandard": "Standard",
     "presetCommander": "Commander",
     "seatArrangement": "Seat arrangement",
-    "seatOption": "Option {index}"
+    "seatOption": "Option {index}",
+    "mana": "Mana",
+    "menu": "Menu"
   },
   "settings": {
     "title": "Settings",
