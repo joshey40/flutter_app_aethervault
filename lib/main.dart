@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'services/app_settings_scope.dart';
 import 'services/app_preferences_storage.dart';
+import 'services/auth/auth_controller.dart';
 import 'services/card_database/scryfall_download.dart';
 import 'services/localization_service.dart';
 import 'services/life_counter/lifecounter_controller.dart';
@@ -24,6 +27,11 @@ Future<void> main() async {
   final lifecounterController = LifecounterController();
   await lifecounterController.initialize();
 
+  // Load the optional account session, the server check runs in background.
+  final authController = AuthController(preferencesStorage: preferencesStorage);
+  await authController.initialize();
+  unawaited(authController.checkConnection());
+
   // Check whether the initial Scryfall data download is required.
   final needsDownload = await _checkDownloadNeed();
 
@@ -34,6 +42,7 @@ Future<void> main() async {
       initialLocale: initialLocale,
       needsDownload: needsDownload,
       lifecounterController: lifecounterController,
+      authController: authController,
     ),
   );
 }
@@ -61,6 +70,7 @@ class AetherVaultApp extends StatefulWidget {
     required this.initialLocale,
     required this.needsDownload,
     required this.lifecounterController,
+    required this.authController,
   });
 
   final AppPreferencesStorage preferencesStorage;
@@ -69,6 +79,7 @@ class AetherVaultApp extends StatefulWidget {
   final Locale initialLocale;
   final bool needsDownload;
   final LifecounterController lifecounterController;
+  final AuthController authController;
 
   @override
   State<AetherVaultApp> createState() => _AetherVaultAppState();
@@ -80,6 +91,7 @@ class _AetherVaultAppState extends State<AetherVaultApp> {
 
   late final router = createAppRouter(
     lifecounterController: widget.lifecounterController,
+    authController: widget.authController,
     initialLocation: widget.needsDownload
         ? '/download?forced=false'
         : '/overview',
