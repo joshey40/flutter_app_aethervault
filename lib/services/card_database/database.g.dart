@@ -9314,6 +9314,1546 @@ class ScryfallSetsCompanion extends UpdateCompanion<ScryfallSet> {
   }
 }
 
+class $FoldersTable extends Folders with TableInfo<$FoldersTable, Folder> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FoldersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _parentIdMeta = const VerificationMeta(
+    'parentId',
+  );
+  @override
+  late final GeneratedColumn<String> parentId = GeneratedColumn<String>(
+    'parent_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<FolderType, int> folderType =
+      GeneratedColumn<int>(
+        'folder_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<FolderType>($FoldersTable.$converterfolderType);
+  static const VerificationMeta _isPrivateMeta = const VerificationMeta(
+    'isPrivate',
+  );
+  @override
+  late final GeneratedColumn<bool> isPrivate = GeneratedColumn<bool>(
+    'is_private',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_private" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _formatMeta = const VerificationMeta('format');
+  @override
+  late final GeneratedColumn<String> format = GeneratedColumn<String>(
+    'format',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _bracketMeta = const VerificationMeta(
+    'bracket',
+  );
+  @override
+  late final GeneratedColumn<int> bracket = GeneratedColumn<int>(
+    'bracket',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<int> addedAt = GeneratedColumn<int>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionAtMeta = const VerificationMeta(
+    'versionAt',
+  );
+  @override
+  late final GeneratedColumn<int> versionAt = GeneratedColumn<int>(
+    'version_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _dirtyRevisionMeta = const VerificationMeta(
+    'dirtyRevision',
+  );
+  @override
+  late final GeneratedColumn<int> dirtyRevision = GeneratedColumn<int>(
+    'dirty_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    parentId,
+    folderType,
+    isPrivate,
+    color,
+    format,
+    bracket,
+    description,
+    addedAt,
+    versionAt,
+    isDeleted,
+    dirtyRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'folders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Folder> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    }
+    if (data.containsKey('parent_id')) {
+      context.handle(
+        _parentIdMeta,
+        parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
+      );
+    }
+    if (data.containsKey('is_private')) {
+      context.handle(
+        _isPrivateMeta,
+        isPrivate.isAcceptableOrUnknown(data['is_private']!, _isPrivateMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
+      );
+    }
+    if (data.containsKey('format')) {
+      context.handle(
+        _formatMeta,
+        format.isAcceptableOrUnknown(data['format']!, _formatMeta),
+      );
+    }
+    if (data.containsKey('bracket')) {
+      context.handle(
+        _bracketMeta,
+        bracket.isAcceptableOrUnknown(data['bracket']!, _bracketMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    if (data.containsKey('version_at')) {
+      context.handle(
+        _versionAtMeta,
+        versionAt.isAcceptableOrUnknown(data['version_at']!, _versionAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('dirty_revision')) {
+      context.handle(
+        _dirtyRevisionMeta,
+        dirtyRevision.isAcceptableOrUnknown(
+          data['dirty_revision']!,
+          _dirtyRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Folder map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Folder(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      parentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_id'],
+      ),
+      folderType: $FoldersTable.$converterfolderType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}folder_type'],
+        )!,
+      ),
+      isPrivate: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_private'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      ),
+      format: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}format'],
+      ),
+      bracket: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bracket'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}added_at'],
+      )!,
+      versionAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version_at'],
+      ),
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      dirtyRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dirty_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $FoldersTable createAlias(String alias) {
+    return $FoldersTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<FolderType, int> $converterfolderType =
+      FolderType.converter;
+}
+
+class Folder extends DataClass implements Insertable<Folder> {
+  final String id;
+  final String name;
+  final String? parentId;
+  final FolderType folderType;
+  final bool isPrivate;
+  final String? color;
+
+  /// Deck only.
+  final String? format;
+
+  /// Deck only.
+  final int? bracket;
+  final String? description;
+
+  /// Unix time in milliseconds.
+  final int addedAt;
+
+  /// Server version of this row, null if it was never synced.
+  final int? versionAt;
+  final bool isDeleted;
+
+  /// 0 = synced. Every local change increments it.
+  final int dirtyRevision;
+  const Folder({
+    required this.id,
+    required this.name,
+    this.parentId,
+    required this.folderType,
+    required this.isPrivate,
+    this.color,
+    this.format,
+    this.bracket,
+    this.description,
+    required this.addedAt,
+    this.versionAt,
+    required this.isDeleted,
+    required this.dirtyRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || parentId != null) {
+      map['parent_id'] = Variable<String>(parentId);
+    }
+    {
+      map['folder_type'] = Variable<int>(
+        $FoldersTable.$converterfolderType.toSql(folderType),
+      );
+    }
+    map['is_private'] = Variable<bool>(isPrivate);
+    if (!nullToAbsent || color != null) {
+      map['color'] = Variable<String>(color);
+    }
+    if (!nullToAbsent || format != null) {
+      map['format'] = Variable<String>(format);
+    }
+    if (!nullToAbsent || bracket != null) {
+      map['bracket'] = Variable<int>(bracket);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['added_at'] = Variable<int>(addedAt);
+    if (!nullToAbsent || versionAt != null) {
+      map['version_at'] = Variable<int>(versionAt);
+    }
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    map['dirty_revision'] = Variable<int>(dirtyRevision);
+    return map;
+  }
+
+  FoldersCompanion toCompanion(bool nullToAbsent) {
+    return FoldersCompanion(
+      id: Value(id),
+      name: Value(name),
+      parentId: parentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentId),
+      folderType: Value(folderType),
+      isPrivate: Value(isPrivate),
+      color: color == null && nullToAbsent
+          ? const Value.absent()
+          : Value(color),
+      format: format == null && nullToAbsent
+          ? const Value.absent()
+          : Value(format),
+      bracket: bracket == null && nullToAbsent
+          ? const Value.absent()
+          : Value(bracket),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      addedAt: Value(addedAt),
+      versionAt: versionAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(versionAt),
+      isDeleted: Value(isDeleted),
+      dirtyRevision: Value(dirtyRevision),
+    );
+  }
+
+  factory Folder.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Folder(
+      id: serializer.fromJson<String>(json['id']),
+      name: serializer.fromJson<String>(json['name']),
+      parentId: serializer.fromJson<String?>(json['parentId']),
+      folderType: serializer.fromJson<FolderType>(json['folderType']),
+      isPrivate: serializer.fromJson<bool>(json['isPrivate']),
+      color: serializer.fromJson<String?>(json['color']),
+      format: serializer.fromJson<String?>(json['format']),
+      bracket: serializer.fromJson<int?>(json['bracket']),
+      description: serializer.fromJson<String?>(json['description']),
+      addedAt: serializer.fromJson<int>(json['addedAt']),
+      versionAt: serializer.fromJson<int?>(json['versionAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      dirtyRevision: serializer.fromJson<int>(json['dirtyRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'name': serializer.toJson<String>(name),
+      'parentId': serializer.toJson<String?>(parentId),
+      'folderType': serializer.toJson<FolderType>(folderType),
+      'isPrivate': serializer.toJson<bool>(isPrivate),
+      'color': serializer.toJson<String?>(color),
+      'format': serializer.toJson<String?>(format),
+      'bracket': serializer.toJson<int?>(bracket),
+      'description': serializer.toJson<String?>(description),
+      'addedAt': serializer.toJson<int>(addedAt),
+      'versionAt': serializer.toJson<int?>(versionAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'dirtyRevision': serializer.toJson<int>(dirtyRevision),
+    };
+  }
+
+  Folder copyWith({
+    String? id,
+    String? name,
+    Value<String?> parentId = const Value.absent(),
+    FolderType? folderType,
+    bool? isPrivate,
+    Value<String?> color = const Value.absent(),
+    Value<String?> format = const Value.absent(),
+    Value<int?> bracket = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+    int? addedAt,
+    Value<int?> versionAt = const Value.absent(),
+    bool? isDeleted,
+    int? dirtyRevision,
+  }) => Folder(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    parentId: parentId.present ? parentId.value : this.parentId,
+    folderType: folderType ?? this.folderType,
+    isPrivate: isPrivate ?? this.isPrivate,
+    color: color.present ? color.value : this.color,
+    format: format.present ? format.value : this.format,
+    bracket: bracket.present ? bracket.value : this.bracket,
+    description: description.present ? description.value : this.description,
+    addedAt: addedAt ?? this.addedAt,
+    versionAt: versionAt.present ? versionAt.value : this.versionAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    dirtyRevision: dirtyRevision ?? this.dirtyRevision,
+  );
+  Folder copyWithCompanion(FoldersCompanion data) {
+    return Folder(
+      id: data.id.present ? data.id.value : this.id,
+      name: data.name.present ? data.name.value : this.name,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
+      folderType: data.folderType.present
+          ? data.folderType.value
+          : this.folderType,
+      isPrivate: data.isPrivate.present ? data.isPrivate.value : this.isPrivate,
+      color: data.color.present ? data.color.value : this.color,
+      format: data.format.present ? data.format.value : this.format,
+      bracket: data.bracket.present ? data.bracket.value : this.bracket,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      versionAt: data.versionAt.present ? data.versionAt.value : this.versionAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      dirtyRevision: data.dirtyRevision.present
+          ? data.dirtyRevision.value
+          : this.dirtyRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Folder(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('parentId: $parentId, ')
+          ..write('folderType: $folderType, ')
+          ..write('isPrivate: $isPrivate, ')
+          ..write('color: $color, ')
+          ..write('format: $format, ')
+          ..write('bracket: $bracket, ')
+          ..write('description: $description, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('versionAt: $versionAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('dirtyRevision: $dirtyRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    name,
+    parentId,
+    folderType,
+    isPrivate,
+    color,
+    format,
+    bracket,
+    description,
+    addedAt,
+    versionAt,
+    isDeleted,
+    dirtyRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Folder &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.parentId == this.parentId &&
+          other.folderType == this.folderType &&
+          other.isPrivate == this.isPrivate &&
+          other.color == this.color &&
+          other.format == this.format &&
+          other.bracket == this.bracket &&
+          other.description == this.description &&
+          other.addedAt == this.addedAt &&
+          other.versionAt == this.versionAt &&
+          other.isDeleted == this.isDeleted &&
+          other.dirtyRevision == this.dirtyRevision);
+}
+
+class FoldersCompanion extends UpdateCompanion<Folder> {
+  final Value<String> id;
+  final Value<String> name;
+  final Value<String?> parentId;
+  final Value<FolderType> folderType;
+  final Value<bool> isPrivate;
+  final Value<String?> color;
+  final Value<String?> format;
+  final Value<int?> bracket;
+  final Value<String?> description;
+  final Value<int> addedAt;
+  final Value<int?> versionAt;
+  final Value<bool> isDeleted;
+  final Value<int> dirtyRevision;
+  final Value<int> rowid;
+  const FoldersCompanion({
+    this.id = const Value.absent(),
+    this.name = const Value.absent(),
+    this.parentId = const Value.absent(),
+    this.folderType = const Value.absent(),
+    this.isPrivate = const Value.absent(),
+    this.color = const Value.absent(),
+    this.format = const Value.absent(),
+    this.bracket = const Value.absent(),
+    this.description = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.versionAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.dirtyRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FoldersCompanion.insert({
+    required String id,
+    this.name = const Value.absent(),
+    this.parentId = const Value.absent(),
+    required FolderType folderType,
+    this.isPrivate = const Value.absent(),
+    this.color = const Value.absent(),
+    this.format = const Value.absent(),
+    this.bracket = const Value.absent(),
+    this.description = const Value.absent(),
+    required int addedAt,
+    this.versionAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.dirtyRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       folderType = Value(folderType),
+       addedAt = Value(addedAt);
+  static Insertable<Folder> custom({
+    Expression<String>? id,
+    Expression<String>? name,
+    Expression<String>? parentId,
+    Expression<int>? folderType,
+    Expression<bool>? isPrivate,
+    Expression<String>? color,
+    Expression<String>? format,
+    Expression<int>? bracket,
+    Expression<String>? description,
+    Expression<int>? addedAt,
+    Expression<int>? versionAt,
+    Expression<bool>? isDeleted,
+    Expression<int>? dirtyRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (name != null) 'name': name,
+      if (parentId != null) 'parent_id': parentId,
+      if (folderType != null) 'folder_type': folderType,
+      if (isPrivate != null) 'is_private': isPrivate,
+      if (color != null) 'color': color,
+      if (format != null) 'format': format,
+      if (bracket != null) 'bracket': bracket,
+      if (description != null) 'description': description,
+      if (addedAt != null) 'added_at': addedAt,
+      if (versionAt != null) 'version_at': versionAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (dirtyRevision != null) 'dirty_revision': dirtyRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FoldersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? name,
+    Value<String?>? parentId,
+    Value<FolderType>? folderType,
+    Value<bool>? isPrivate,
+    Value<String?>? color,
+    Value<String?>? format,
+    Value<int?>? bracket,
+    Value<String?>? description,
+    Value<int>? addedAt,
+    Value<int?>? versionAt,
+    Value<bool>? isDeleted,
+    Value<int>? dirtyRevision,
+    Value<int>? rowid,
+  }) {
+    return FoldersCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      parentId: parentId ?? this.parentId,
+      folderType: folderType ?? this.folderType,
+      isPrivate: isPrivate ?? this.isPrivate,
+      color: color ?? this.color,
+      format: format ?? this.format,
+      bracket: bracket ?? this.bracket,
+      description: description ?? this.description,
+      addedAt: addedAt ?? this.addedAt,
+      versionAt: versionAt ?? this.versionAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      dirtyRevision: dirtyRevision ?? this.dirtyRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (parentId.present) {
+      map['parent_id'] = Variable<String>(parentId.value);
+    }
+    if (folderType.present) {
+      map['folder_type'] = Variable<int>(
+        $FoldersTable.$converterfolderType.toSql(folderType.value),
+      );
+    }
+    if (isPrivate.present) {
+      map['is_private'] = Variable<bool>(isPrivate.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
+    if (format.present) {
+      map['format'] = Variable<String>(format.value);
+    }
+    if (bracket.present) {
+      map['bracket'] = Variable<int>(bracket.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<int>(addedAt.value);
+    }
+    if (versionAt.present) {
+      map['version_at'] = Variable<int>(versionAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (dirtyRevision.present) {
+      map['dirty_revision'] = Variable<int>(dirtyRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FoldersCompanion(')
+          ..write('id: $id, ')
+          ..write('name: $name, ')
+          ..write('parentId: $parentId, ')
+          ..write('folderType: $folderType, ')
+          ..write('isPrivate: $isPrivate, ')
+          ..write('color: $color, ')
+          ..write('format: $format, ')
+          ..write('bracket: $bracket, ')
+          ..write('description: $description, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('versionAt: $versionAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('dirtyRevision: $dirtyRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CollectionEntriesTable extends CollectionEntries
+    with TableInfo<$CollectionEntriesTable, CollectionEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CollectionEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scryfallIdMeta = const VerificationMeta(
+    'scryfallId',
+  );
+  @override
+  late final GeneratedColumn<String> scryfallId = GeneratedColumn<String>(
+    'scryfall_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _folderIdMeta = const VerificationMeta(
+    'folderId',
+  );
+  @override
+  late final GeneratedColumn<String> folderId = GeneratedColumn<String>(
+    'folder_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isProxyMeta = const VerificationMeta(
+    'isProxy',
+  );
+  @override
+  late final GeneratedColumn<bool> isProxy = GeneratedColumn<bool>(
+    'is_proxy',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_proxy" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isAlteredMeta = const VerificationMeta(
+    'isAltered',
+  );
+  @override
+  late final GeneratedColumn<bool> isAltered = GeneratedColumn<bool>(
+    'is_altered',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_altered" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isSignedMeta = const VerificationMeta(
+    'isSigned',
+  );
+  @override
+  late final GeneratedColumn<bool> isSigned = GeneratedColumn<bool>(
+    'is_signed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_signed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isOwnedMeta = const VerificationMeta(
+    'isOwned',
+  );
+  @override
+  late final GeneratedColumn<bool> isOwned = GeneratedColumn<bool>(
+    'is_owned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_owned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<CardQuality, int> quality =
+      GeneratedColumn<int>(
+        'quality',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<CardQuality>($CollectionEntriesTable.$converterquality);
+  @override
+  late final GeneratedColumnWithTypeConverter<CardFinish, int> finish =
+      GeneratedColumn<int>(
+        'finish',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<CardFinish>($CollectionEntriesTable.$converterfinish);
+  static const VerificationMeta _addedAtMeta = const VerificationMeta(
+    'addedAt',
+  );
+  @override
+  late final GeneratedColumn<int> addedAt = GeneratedColumn<int>(
+    'added_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _versionAtMeta = const VerificationMeta(
+    'versionAt',
+  );
+  @override
+  late final GeneratedColumn<int> versionAt = GeneratedColumn<int>(
+    'version_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _dirtyRevisionMeta = const VerificationMeta(
+    'dirtyRevision',
+  );
+  @override
+  late final GeneratedColumn<int> dirtyRevision = GeneratedColumn<int>(
+    'dirty_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    scryfallId,
+    folderId,
+    isProxy,
+    isAltered,
+    isSigned,
+    isOwned,
+    quality,
+    finish,
+    addedAt,
+    versionAt,
+    isDeleted,
+    dirtyRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'collection_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CollectionEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('scryfall_id')) {
+      context.handle(
+        _scryfallIdMeta,
+        scryfallId.isAcceptableOrUnknown(data['scryfall_id']!, _scryfallIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scryfallIdMeta);
+    }
+    if (data.containsKey('folder_id')) {
+      context.handle(
+        _folderIdMeta,
+        folderId.isAcceptableOrUnknown(data['folder_id']!, _folderIdMeta),
+      );
+    }
+    if (data.containsKey('is_proxy')) {
+      context.handle(
+        _isProxyMeta,
+        isProxy.isAcceptableOrUnknown(data['is_proxy']!, _isProxyMeta),
+      );
+    }
+    if (data.containsKey('is_altered')) {
+      context.handle(
+        _isAlteredMeta,
+        isAltered.isAcceptableOrUnknown(data['is_altered']!, _isAlteredMeta),
+      );
+    }
+    if (data.containsKey('is_signed')) {
+      context.handle(
+        _isSignedMeta,
+        isSigned.isAcceptableOrUnknown(data['is_signed']!, _isSignedMeta),
+      );
+    }
+    if (data.containsKey('is_owned')) {
+      context.handle(
+        _isOwnedMeta,
+        isOwned.isAcceptableOrUnknown(data['is_owned']!, _isOwnedMeta),
+      );
+    }
+    if (data.containsKey('added_at')) {
+      context.handle(
+        _addedAtMeta,
+        addedAt.isAcceptableOrUnknown(data['added_at']!, _addedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_addedAtMeta);
+    }
+    if (data.containsKey('version_at')) {
+      context.handle(
+        _versionAtMeta,
+        versionAt.isAcceptableOrUnknown(data['version_at']!, _versionAtMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
+    if (data.containsKey('dirty_revision')) {
+      context.handle(
+        _dirtyRevisionMeta,
+        dirtyRevision.isAcceptableOrUnknown(
+          data['dirty_revision']!,
+          _dirtyRevisionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CollectionEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CollectionEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      scryfallId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scryfall_id'],
+      )!,
+      folderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}folder_id'],
+      ),
+      isProxy: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_proxy'],
+      )!,
+      isAltered: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_altered'],
+      )!,
+      isSigned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_signed'],
+      )!,
+      isOwned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_owned'],
+      )!,
+      quality: $CollectionEntriesTable.$converterquality.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}quality'],
+        )!,
+      ),
+      finish: $CollectionEntriesTable.$converterfinish.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}finish'],
+        )!,
+      ),
+      addedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}added_at'],
+      )!,
+      versionAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version_at'],
+      ),
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
+      dirtyRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}dirty_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $CollectionEntriesTable createAlias(String alias) {
+    return $CollectionEntriesTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<CardQuality, int> $converterquality =
+      CardQuality.converter;
+  static TypeConverter<CardFinish, int> $converterfinish = CardFinish.converter;
+}
+
+class CollectionEntry extends DataClass implements Insertable<CollectionEntry> {
+  final String id;
+
+  /// No foreign key: the Scryfall tables are wiped and re-downloaded.
+  final String scryfallId;
+  final String? folderId;
+  final bool isProxy;
+  final bool isAltered;
+  final bool isSigned;
+  final bool isOwned;
+  final CardQuality quality;
+  final CardFinish finish;
+
+  /// Unix time in milliseconds. Stays the same when the card is moved.
+  final int addedAt;
+  final int? versionAt;
+  final bool isDeleted;
+  final int dirtyRevision;
+  const CollectionEntry({
+    required this.id,
+    required this.scryfallId,
+    this.folderId,
+    required this.isProxy,
+    required this.isAltered,
+    required this.isSigned,
+    required this.isOwned,
+    required this.quality,
+    required this.finish,
+    required this.addedAt,
+    this.versionAt,
+    required this.isDeleted,
+    required this.dirtyRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['scryfall_id'] = Variable<String>(scryfallId);
+    if (!nullToAbsent || folderId != null) {
+      map['folder_id'] = Variable<String>(folderId);
+    }
+    map['is_proxy'] = Variable<bool>(isProxy);
+    map['is_altered'] = Variable<bool>(isAltered);
+    map['is_signed'] = Variable<bool>(isSigned);
+    map['is_owned'] = Variable<bool>(isOwned);
+    {
+      map['quality'] = Variable<int>(
+        $CollectionEntriesTable.$converterquality.toSql(quality),
+      );
+    }
+    {
+      map['finish'] = Variable<int>(
+        $CollectionEntriesTable.$converterfinish.toSql(finish),
+      );
+    }
+    map['added_at'] = Variable<int>(addedAt);
+    if (!nullToAbsent || versionAt != null) {
+      map['version_at'] = Variable<int>(versionAt);
+    }
+    map['is_deleted'] = Variable<bool>(isDeleted);
+    map['dirty_revision'] = Variable<int>(dirtyRevision);
+    return map;
+  }
+
+  CollectionEntriesCompanion toCompanion(bool nullToAbsent) {
+    return CollectionEntriesCompanion(
+      id: Value(id),
+      scryfallId: Value(scryfallId),
+      folderId: folderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(folderId),
+      isProxy: Value(isProxy),
+      isAltered: Value(isAltered),
+      isSigned: Value(isSigned),
+      isOwned: Value(isOwned),
+      quality: Value(quality),
+      finish: Value(finish),
+      addedAt: Value(addedAt),
+      versionAt: versionAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(versionAt),
+      isDeleted: Value(isDeleted),
+      dirtyRevision: Value(dirtyRevision),
+    );
+  }
+
+  factory CollectionEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CollectionEntry(
+      id: serializer.fromJson<String>(json['id']),
+      scryfallId: serializer.fromJson<String>(json['scryfallId']),
+      folderId: serializer.fromJson<String?>(json['folderId']),
+      isProxy: serializer.fromJson<bool>(json['isProxy']),
+      isAltered: serializer.fromJson<bool>(json['isAltered']),
+      isSigned: serializer.fromJson<bool>(json['isSigned']),
+      isOwned: serializer.fromJson<bool>(json['isOwned']),
+      quality: serializer.fromJson<CardQuality>(json['quality']),
+      finish: serializer.fromJson<CardFinish>(json['finish']),
+      addedAt: serializer.fromJson<int>(json['addedAt']),
+      versionAt: serializer.fromJson<int?>(json['versionAt']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      dirtyRevision: serializer.fromJson<int>(json['dirtyRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'scryfallId': serializer.toJson<String>(scryfallId),
+      'folderId': serializer.toJson<String?>(folderId),
+      'isProxy': serializer.toJson<bool>(isProxy),
+      'isAltered': serializer.toJson<bool>(isAltered),
+      'isSigned': serializer.toJson<bool>(isSigned),
+      'isOwned': serializer.toJson<bool>(isOwned),
+      'quality': serializer.toJson<CardQuality>(quality),
+      'finish': serializer.toJson<CardFinish>(finish),
+      'addedAt': serializer.toJson<int>(addedAt),
+      'versionAt': serializer.toJson<int?>(versionAt),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
+      'dirtyRevision': serializer.toJson<int>(dirtyRevision),
+    };
+  }
+
+  CollectionEntry copyWith({
+    String? id,
+    String? scryfallId,
+    Value<String?> folderId = const Value.absent(),
+    bool? isProxy,
+    bool? isAltered,
+    bool? isSigned,
+    bool? isOwned,
+    CardQuality? quality,
+    CardFinish? finish,
+    int? addedAt,
+    Value<int?> versionAt = const Value.absent(),
+    bool? isDeleted,
+    int? dirtyRevision,
+  }) => CollectionEntry(
+    id: id ?? this.id,
+    scryfallId: scryfallId ?? this.scryfallId,
+    folderId: folderId.present ? folderId.value : this.folderId,
+    isProxy: isProxy ?? this.isProxy,
+    isAltered: isAltered ?? this.isAltered,
+    isSigned: isSigned ?? this.isSigned,
+    isOwned: isOwned ?? this.isOwned,
+    quality: quality ?? this.quality,
+    finish: finish ?? this.finish,
+    addedAt: addedAt ?? this.addedAt,
+    versionAt: versionAt.present ? versionAt.value : this.versionAt,
+    isDeleted: isDeleted ?? this.isDeleted,
+    dirtyRevision: dirtyRevision ?? this.dirtyRevision,
+  );
+  CollectionEntry copyWithCompanion(CollectionEntriesCompanion data) {
+    return CollectionEntry(
+      id: data.id.present ? data.id.value : this.id,
+      scryfallId: data.scryfallId.present
+          ? data.scryfallId.value
+          : this.scryfallId,
+      folderId: data.folderId.present ? data.folderId.value : this.folderId,
+      isProxy: data.isProxy.present ? data.isProxy.value : this.isProxy,
+      isAltered: data.isAltered.present ? data.isAltered.value : this.isAltered,
+      isSigned: data.isSigned.present ? data.isSigned.value : this.isSigned,
+      isOwned: data.isOwned.present ? data.isOwned.value : this.isOwned,
+      quality: data.quality.present ? data.quality.value : this.quality,
+      finish: data.finish.present ? data.finish.value : this.finish,
+      addedAt: data.addedAt.present ? data.addedAt.value : this.addedAt,
+      versionAt: data.versionAt.present ? data.versionAt.value : this.versionAt,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      dirtyRevision: data.dirtyRevision.present
+          ? data.dirtyRevision.value
+          : this.dirtyRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CollectionEntry(')
+          ..write('id: $id, ')
+          ..write('scryfallId: $scryfallId, ')
+          ..write('folderId: $folderId, ')
+          ..write('isProxy: $isProxy, ')
+          ..write('isAltered: $isAltered, ')
+          ..write('isSigned: $isSigned, ')
+          ..write('isOwned: $isOwned, ')
+          ..write('quality: $quality, ')
+          ..write('finish: $finish, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('versionAt: $versionAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('dirtyRevision: $dirtyRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    scryfallId,
+    folderId,
+    isProxy,
+    isAltered,
+    isSigned,
+    isOwned,
+    quality,
+    finish,
+    addedAt,
+    versionAt,
+    isDeleted,
+    dirtyRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CollectionEntry &&
+          other.id == this.id &&
+          other.scryfallId == this.scryfallId &&
+          other.folderId == this.folderId &&
+          other.isProxy == this.isProxy &&
+          other.isAltered == this.isAltered &&
+          other.isSigned == this.isSigned &&
+          other.isOwned == this.isOwned &&
+          other.quality == this.quality &&
+          other.finish == this.finish &&
+          other.addedAt == this.addedAt &&
+          other.versionAt == this.versionAt &&
+          other.isDeleted == this.isDeleted &&
+          other.dirtyRevision == this.dirtyRevision);
+}
+
+class CollectionEntriesCompanion extends UpdateCompanion<CollectionEntry> {
+  final Value<String> id;
+  final Value<String> scryfallId;
+  final Value<String?> folderId;
+  final Value<bool> isProxy;
+  final Value<bool> isAltered;
+  final Value<bool> isSigned;
+  final Value<bool> isOwned;
+  final Value<CardQuality> quality;
+  final Value<CardFinish> finish;
+  final Value<int> addedAt;
+  final Value<int?> versionAt;
+  final Value<bool> isDeleted;
+  final Value<int> dirtyRevision;
+  final Value<int> rowid;
+  const CollectionEntriesCompanion({
+    this.id = const Value.absent(),
+    this.scryfallId = const Value.absent(),
+    this.folderId = const Value.absent(),
+    this.isProxy = const Value.absent(),
+    this.isAltered = const Value.absent(),
+    this.isSigned = const Value.absent(),
+    this.isOwned = const Value.absent(),
+    this.quality = const Value.absent(),
+    this.finish = const Value.absent(),
+    this.addedAt = const Value.absent(),
+    this.versionAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.dirtyRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CollectionEntriesCompanion.insert({
+    required String id,
+    required String scryfallId,
+    this.folderId = const Value.absent(),
+    this.isProxy = const Value.absent(),
+    this.isAltered = const Value.absent(),
+    this.isSigned = const Value.absent(),
+    this.isOwned = const Value.absent(),
+    required CardQuality quality,
+    required CardFinish finish,
+    required int addedAt,
+    this.versionAt = const Value.absent(),
+    this.isDeleted = const Value.absent(),
+    this.dirtyRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       scryfallId = Value(scryfallId),
+       quality = Value(quality),
+       finish = Value(finish),
+       addedAt = Value(addedAt);
+  static Insertable<CollectionEntry> custom({
+    Expression<String>? id,
+    Expression<String>? scryfallId,
+    Expression<String>? folderId,
+    Expression<bool>? isProxy,
+    Expression<bool>? isAltered,
+    Expression<bool>? isSigned,
+    Expression<bool>? isOwned,
+    Expression<int>? quality,
+    Expression<int>? finish,
+    Expression<int>? addedAt,
+    Expression<int>? versionAt,
+    Expression<bool>? isDeleted,
+    Expression<int>? dirtyRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (scryfallId != null) 'scryfall_id': scryfallId,
+      if (folderId != null) 'folder_id': folderId,
+      if (isProxy != null) 'is_proxy': isProxy,
+      if (isAltered != null) 'is_altered': isAltered,
+      if (isSigned != null) 'is_signed': isSigned,
+      if (isOwned != null) 'is_owned': isOwned,
+      if (quality != null) 'quality': quality,
+      if (finish != null) 'finish': finish,
+      if (addedAt != null) 'added_at': addedAt,
+      if (versionAt != null) 'version_at': versionAt,
+      if (isDeleted != null) 'is_deleted': isDeleted,
+      if (dirtyRevision != null) 'dirty_revision': dirtyRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CollectionEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? scryfallId,
+    Value<String?>? folderId,
+    Value<bool>? isProxy,
+    Value<bool>? isAltered,
+    Value<bool>? isSigned,
+    Value<bool>? isOwned,
+    Value<CardQuality>? quality,
+    Value<CardFinish>? finish,
+    Value<int>? addedAt,
+    Value<int?>? versionAt,
+    Value<bool>? isDeleted,
+    Value<int>? dirtyRevision,
+    Value<int>? rowid,
+  }) {
+    return CollectionEntriesCompanion(
+      id: id ?? this.id,
+      scryfallId: scryfallId ?? this.scryfallId,
+      folderId: folderId ?? this.folderId,
+      isProxy: isProxy ?? this.isProxy,
+      isAltered: isAltered ?? this.isAltered,
+      isSigned: isSigned ?? this.isSigned,
+      isOwned: isOwned ?? this.isOwned,
+      quality: quality ?? this.quality,
+      finish: finish ?? this.finish,
+      addedAt: addedAt ?? this.addedAt,
+      versionAt: versionAt ?? this.versionAt,
+      isDeleted: isDeleted ?? this.isDeleted,
+      dirtyRevision: dirtyRevision ?? this.dirtyRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (scryfallId.present) {
+      map['scryfall_id'] = Variable<String>(scryfallId.value);
+    }
+    if (folderId.present) {
+      map['folder_id'] = Variable<String>(folderId.value);
+    }
+    if (isProxy.present) {
+      map['is_proxy'] = Variable<bool>(isProxy.value);
+    }
+    if (isAltered.present) {
+      map['is_altered'] = Variable<bool>(isAltered.value);
+    }
+    if (isSigned.present) {
+      map['is_signed'] = Variable<bool>(isSigned.value);
+    }
+    if (isOwned.present) {
+      map['is_owned'] = Variable<bool>(isOwned.value);
+    }
+    if (quality.present) {
+      map['quality'] = Variable<int>(
+        $CollectionEntriesTable.$converterquality.toSql(quality.value),
+      );
+    }
+    if (finish.present) {
+      map['finish'] = Variable<int>(
+        $CollectionEntriesTable.$converterfinish.toSql(finish.value),
+      );
+    }
+    if (addedAt.present) {
+      map['added_at'] = Variable<int>(addedAt.value);
+    }
+    if (versionAt.present) {
+      map['version_at'] = Variable<int>(versionAt.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
+    if (dirtyRevision.present) {
+      map['dirty_revision'] = Variable<int>(dirtyRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CollectionEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('scryfallId: $scryfallId, ')
+          ..write('folderId: $folderId, ')
+          ..write('isProxy: $isProxy, ')
+          ..write('isAltered: $isAltered, ')
+          ..write('isSigned: $isSigned, ')
+          ..write('isOwned: $isOwned, ')
+          ..write('quality: $quality, ')
+          ..write('finish: $finish, ')
+          ..write('addedAt: $addedAt, ')
+          ..write('versionAt: $versionAt, ')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('dirtyRevision: $dirtyRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -9322,6 +10862,21 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ScryfallCardFacesTable(this);
   late final $ScryfallTagsTable scryfallTags = $ScryfallTagsTable(this);
   late final $ScryfallSetsTable scryfallSets = $ScryfallSetsTable(this);
+  late final $FoldersTable folders = $FoldersTable(this);
+  late final $CollectionEntriesTable collectionEntries =
+      $CollectionEntriesTable(this);
+  late final Index foldersParent = Index(
+    'folders_parent',
+    'CREATE INDEX folders_parent ON folders (parent_id)',
+  );
+  late final Index collectionEntriesFolder = Index(
+    'collection_entries_folder',
+    'CREATE INDEX collection_entries_folder ON collection_entries (folder_id)',
+  );
+  late final Index collectionEntriesScryfall = Index(
+    'collection_entries_scryfall',
+    'CREATE INDEX collection_entries_scryfall ON collection_entries (scryfall_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -9331,6 +10886,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     scryfallCardFaces,
     scryfallTags,
     scryfallSets,
+    folders,
+    collectionEntries,
+    foldersParent,
+    collectionEntriesFolder,
+    collectionEntriesScryfall,
   ];
 }
 
@@ -11868,7 +13428,7 @@ class $$ScryfallCardsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$ScryfallCardsTable, ScryfallCard>(table),
                   $$ScryfallCardsTableReferences(db, table, e),
                 ),
               )
@@ -12739,7 +14299,7 @@ class $$ScryfallCardFacesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$ScryfallCardFacesTable, ScryfallCardFace>(table),
                   $$ScryfallCardFacesTableReferences(db, table, e),
                 ),
               )
@@ -13077,7 +14637,16 @@ class $$ScryfallTagsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$ScryfallTagsTable, ScryfallTag>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ScryfallTagsTable,
+                    ScryfallTag
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -13420,7 +14989,16 @@ class $$ScryfallSetsTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$ScryfallSetsTable, ScryfallSet>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ScryfallSetsTable,
+                    ScryfallSet
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -13444,6 +15022,745 @@ typedef $$ScryfallSetsTableProcessedTableManager =
       ScryfallSet,
       PrefetchHooks Function()
     >;
+typedef $$FoldersTableCreateCompanionBuilder =
+    FoldersCompanion Function({
+      required String id,
+      Value<String> name,
+      Value<String?> parentId,
+      required FolderType folderType,
+      Value<bool> isPrivate,
+      Value<String?> color,
+      Value<String?> format,
+      Value<int?> bracket,
+      Value<String?> description,
+      required int addedAt,
+      Value<int?> versionAt,
+      Value<bool> isDeleted,
+      Value<int> dirtyRevision,
+      Value<int> rowid,
+    });
+typedef $$FoldersTableUpdateCompanionBuilder =
+    FoldersCompanion Function({
+      Value<String> id,
+      Value<String> name,
+      Value<String?> parentId,
+      Value<FolderType> folderType,
+      Value<bool> isPrivate,
+      Value<String?> color,
+      Value<String?> format,
+      Value<int?> bracket,
+      Value<String?> description,
+      Value<int> addedAt,
+      Value<int?> versionAt,
+      Value<bool> isDeleted,
+      Value<int> dirtyRevision,
+      Value<int> rowid,
+    });
+
+class $$FoldersTableFilterComposer
+    extends Composer<_$AppDatabase, $FoldersTable> {
+  $$FoldersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<FolderType, FolderType, int> get folderType =>
+      $composableBuilder(
+        column: $table.folderType,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<bool> get isPrivate => $composableBuilder(
+    column: $table.isPrivate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bracket => $composableBuilder(
+    column: $table.bracket,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get versionAt => $composableBuilder(
+    column: $table.versionAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dirtyRevision => $composableBuilder(
+    column: $table.dirtyRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$FoldersTableOrderingComposer
+    extends Composer<_$AppDatabase, $FoldersTable> {
+  $$FoldersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get folderType => $composableBuilder(
+    column: $table.folderType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isPrivate => $composableBuilder(
+    column: $table.isPrivate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get format => $composableBuilder(
+    column: $table.format,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bracket => $composableBuilder(
+    column: $table.bracket,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get versionAt => $composableBuilder(
+    column: $table.versionAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dirtyRevision => $composableBuilder(
+    column: $table.dirtyRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$FoldersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $FoldersTable> {
+  $$FoldersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get parentId =>
+      $composableBuilder(column: $table.parentId, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<FolderType, int> get folderType =>
+      $composableBuilder(
+        column: $table.folderType,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<bool> get isPrivate =>
+      $composableBuilder(column: $table.isPrivate, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
+  GeneratedColumn<String> get format =>
+      $composableBuilder(column: $table.format, builder: (column) => column);
+
+  GeneratedColumn<int> get bracket =>
+      $composableBuilder(column: $table.bracket, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get versionAt =>
+      $composableBuilder(column: $table.versionAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<int> get dirtyRevision => $composableBuilder(
+    column: $table.dirtyRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$FoldersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $FoldersTable,
+          Folder,
+          $$FoldersTableFilterComposer,
+          $$FoldersTableOrderingComposer,
+          $$FoldersTableAnnotationComposer,
+          $$FoldersTableCreateCompanionBuilder,
+          $$FoldersTableUpdateCompanionBuilder,
+          (Folder, BaseReferences<_$AppDatabase, $FoldersTable, Folder>),
+          Folder,
+          PrefetchHooks Function()
+        > {
+  $$FoldersTableTableManager(_$AppDatabase db, $FoldersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FoldersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FoldersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FoldersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> parentId = const Value.absent(),
+                Value<FolderType> folderType = const Value.absent(),
+                Value<bool> isPrivate = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<String?> format = const Value.absent(),
+                Value<int?> bracket = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> addedAt = const Value.absent(),
+                Value<int?> versionAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<int> dirtyRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FoldersCompanion(
+                id: id,
+                name: name,
+                parentId: parentId,
+                folderType: folderType,
+                isPrivate: isPrivate,
+                color: color,
+                format: format,
+                bracket: bracket,
+                description: description,
+                addedAt: addedAt,
+                versionAt: versionAt,
+                isDeleted: isDeleted,
+                dirtyRevision: dirtyRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                Value<String> name = const Value.absent(),
+                Value<String?> parentId = const Value.absent(),
+                required FolderType folderType,
+                Value<bool> isPrivate = const Value.absent(),
+                Value<String?> color = const Value.absent(),
+                Value<String?> format = const Value.absent(),
+                Value<int?> bracket = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                required int addedAt,
+                Value<int?> versionAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<int> dirtyRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => FoldersCompanion.insert(
+                id: id,
+                name: name,
+                parentId: parentId,
+                folderType: folderType,
+                isPrivate: isPrivate,
+                color: color,
+                format: format,
+                bracket: bracket,
+                description: description,
+                addedAt: addedAt,
+                versionAt: versionAt,
+                isDeleted: isDeleted,
+                dirtyRevision: dirtyRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$FoldersTable, Folder>(table),
+                  BaseReferences<_$AppDatabase, $FoldersTable, Folder>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$FoldersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $FoldersTable,
+      Folder,
+      $$FoldersTableFilterComposer,
+      $$FoldersTableOrderingComposer,
+      $$FoldersTableAnnotationComposer,
+      $$FoldersTableCreateCompanionBuilder,
+      $$FoldersTableUpdateCompanionBuilder,
+      (Folder, BaseReferences<_$AppDatabase, $FoldersTable, Folder>),
+      Folder,
+      PrefetchHooks Function()
+    >;
+typedef $$CollectionEntriesTableCreateCompanionBuilder =
+    CollectionEntriesCompanion Function({
+      required String id,
+      required String scryfallId,
+      Value<String?> folderId,
+      Value<bool> isProxy,
+      Value<bool> isAltered,
+      Value<bool> isSigned,
+      Value<bool> isOwned,
+      required CardQuality quality,
+      required CardFinish finish,
+      required int addedAt,
+      Value<int?> versionAt,
+      Value<bool> isDeleted,
+      Value<int> dirtyRevision,
+      Value<int> rowid,
+    });
+typedef $$CollectionEntriesTableUpdateCompanionBuilder =
+    CollectionEntriesCompanion Function({
+      Value<String> id,
+      Value<String> scryfallId,
+      Value<String?> folderId,
+      Value<bool> isProxy,
+      Value<bool> isAltered,
+      Value<bool> isSigned,
+      Value<bool> isOwned,
+      Value<CardQuality> quality,
+      Value<CardFinish> finish,
+      Value<int> addedAt,
+      Value<int?> versionAt,
+      Value<bool> isDeleted,
+      Value<int> dirtyRevision,
+      Value<int> rowid,
+    });
+
+class $$CollectionEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $CollectionEntriesTable> {
+  $$CollectionEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get folderId => $composableBuilder(
+    column: $table.folderId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isProxy => $composableBuilder(
+    column: $table.isProxy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isAltered => $composableBuilder(
+    column: $table.isAltered,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSigned => $composableBuilder(
+    column: $table.isSigned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isOwned => $composableBuilder(
+    column: $table.isOwned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<CardQuality, CardQuality, int> get quality =>
+      $composableBuilder(
+        column: $table.quality,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnWithTypeConverterFilters<CardFinish, CardFinish, int> get finish =>
+      $composableBuilder(
+        column: $table.finish,
+        builder: (column) => ColumnWithTypeConverterFilters(column),
+      );
+
+  ColumnFilters<int> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get versionAt => $composableBuilder(
+    column: $table.versionAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dirtyRevision => $composableBuilder(
+    column: $table.dirtyRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CollectionEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CollectionEntriesTable> {
+  $$CollectionEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get folderId => $composableBuilder(
+    column: $table.folderId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isProxy => $composableBuilder(
+    column: $table.isProxy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isAltered => $composableBuilder(
+    column: $table.isAltered,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isSigned => $composableBuilder(
+    column: $table.isSigned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isOwned => $composableBuilder(
+    column: $table.isOwned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get quality => $composableBuilder(
+    column: $table.quality,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get finish => $composableBuilder(
+    column: $table.finish,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get addedAt => $composableBuilder(
+    column: $table.addedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get versionAt => $composableBuilder(
+    column: $table.versionAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dirtyRevision => $composableBuilder(
+    column: $table.dirtyRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CollectionEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CollectionEntriesTable> {
+  $$CollectionEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get scryfallId => $composableBuilder(
+    column: $table.scryfallId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get folderId =>
+      $composableBuilder(column: $table.folderId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isProxy =>
+      $composableBuilder(column: $table.isProxy, builder: (column) => column);
+
+  GeneratedColumn<bool> get isAltered =>
+      $composableBuilder(column: $table.isAltered, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSigned =>
+      $composableBuilder(column: $table.isSigned, builder: (column) => column);
+
+  GeneratedColumn<bool> get isOwned =>
+      $composableBuilder(column: $table.isOwned, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CardQuality, int> get quality =>
+      $composableBuilder(column: $table.quality, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<CardFinish, int> get finish =>
+      $composableBuilder(column: $table.finish, builder: (column) => column);
+
+  GeneratedColumn<int> get addedAt =>
+      $composableBuilder(column: $table.addedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get versionAt =>
+      $composableBuilder(column: $table.versionAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<int> get dirtyRevision => $composableBuilder(
+    column: $table.dirtyRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$CollectionEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CollectionEntriesTable,
+          CollectionEntry,
+          $$CollectionEntriesTableFilterComposer,
+          $$CollectionEntriesTableOrderingComposer,
+          $$CollectionEntriesTableAnnotationComposer,
+          $$CollectionEntriesTableCreateCompanionBuilder,
+          $$CollectionEntriesTableUpdateCompanionBuilder,
+          (
+            CollectionEntry,
+            BaseReferences<
+              _$AppDatabase,
+              $CollectionEntriesTable,
+              CollectionEntry
+            >,
+          ),
+          CollectionEntry,
+          PrefetchHooks Function()
+        > {
+  $$CollectionEntriesTableTableManager(
+    _$AppDatabase db,
+    $CollectionEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CollectionEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CollectionEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CollectionEntriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> scryfallId = const Value.absent(),
+                Value<String?> folderId = const Value.absent(),
+                Value<bool> isProxy = const Value.absent(),
+                Value<bool> isAltered = const Value.absent(),
+                Value<bool> isSigned = const Value.absent(),
+                Value<bool> isOwned = const Value.absent(),
+                Value<CardQuality> quality = const Value.absent(),
+                Value<CardFinish> finish = const Value.absent(),
+                Value<int> addedAt = const Value.absent(),
+                Value<int?> versionAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<int> dirtyRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CollectionEntriesCompanion(
+                id: id,
+                scryfallId: scryfallId,
+                folderId: folderId,
+                isProxy: isProxy,
+                isAltered: isAltered,
+                isSigned: isSigned,
+                isOwned: isOwned,
+                quality: quality,
+                finish: finish,
+                addedAt: addedAt,
+                versionAt: versionAt,
+                isDeleted: isDeleted,
+                dirtyRevision: dirtyRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String scryfallId,
+                Value<String?> folderId = const Value.absent(),
+                Value<bool> isProxy = const Value.absent(),
+                Value<bool> isAltered = const Value.absent(),
+                Value<bool> isSigned = const Value.absent(),
+                Value<bool> isOwned = const Value.absent(),
+                required CardQuality quality,
+                required CardFinish finish,
+                required int addedAt,
+                Value<int?> versionAt = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
+                Value<int> dirtyRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CollectionEntriesCompanion.insert(
+                id: id,
+                scryfallId: scryfallId,
+                folderId: folderId,
+                isProxy: isProxy,
+                isAltered: isAltered,
+                isSigned: isSigned,
+                isOwned: isOwned,
+                quality: quality,
+                finish: finish,
+                addedAt: addedAt,
+                versionAt: versionAt,
+                isDeleted: isDeleted,
+                dirtyRevision: dirtyRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CollectionEntriesTable, CollectionEntry>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $CollectionEntriesTable,
+                    CollectionEntry
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CollectionEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CollectionEntriesTable,
+      CollectionEntry,
+      $$CollectionEntriesTableFilterComposer,
+      $$CollectionEntriesTableOrderingComposer,
+      $$CollectionEntriesTableAnnotationComposer,
+      $$CollectionEntriesTableCreateCompanionBuilder,
+      $$CollectionEntriesTableUpdateCompanionBuilder,
+      (
+        CollectionEntry,
+        BaseReferences<_$AppDatabase, $CollectionEntriesTable, CollectionEntry>,
+      ),
+      CollectionEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -13456,4 +15773,8 @@ class $AppDatabaseManager {
       $$ScryfallTagsTableTableManager(_db, _db.scryfallTags);
   $$ScryfallSetsTableTableManager get scryfallSets =>
       $$ScryfallSetsTableTableManager(_db, _db.scryfallSets);
+  $$FoldersTableTableManager get folders =>
+      $$FoldersTableTableManager(_db, _db.folders);
+  $$CollectionEntriesTableTableManager get collectionEntries =>
+      $$CollectionEntriesTableTableManager(_db, _db.collectionEntries);
 }

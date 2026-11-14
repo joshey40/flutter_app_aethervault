@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../collection/collection_enums.dart';
 import 'scryfall_query.dart';
 
 // The database.g.dart file is generated with the build_runner: dart run build_runner build or dart run build_runner watch
@@ -251,26 +252,98 @@ class ScryfallSets extends Table {
 // ==============================================================================
 // Collection Tables
 // ==============================================================================
+//
+// IDs are UUIDs generated on the client. Rows are never deleted directly:
+// they are marked with isDeleted and synced, and only purged afterwards.
+// A null folderId / parentId means the item lives in the (implicit) root.
 
-// Comming soon...
+/// A box, a deck or a board inside a deck.
+@TableIndex(name: 'folders_parent', columns: {#parentId})
+class Folders extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().withDefault(const Constant(''))();
+  TextColumn get parentId => text().nullable()();
+  IntColumn get folderType => integer().map(FolderType.converter)();
+  BoolColumn get isPrivate => boolean().withDefault(const Constant(false))();
+  TextColumn get color => text().nullable()();
+
+  /// Deck only.
+  TextColumn get format => text().nullable()();
+
+  /// Deck only.
+  IntColumn get bracket => integer().nullable()();
+  TextColumn get description => text().nullable()();
+
+  /// Unix time in milliseconds.
+  IntColumn get addedAt => integer()();
+
+  // Sync
+  /// Server version of this row, null if it was never synced.
+  IntColumn get versionAt => integer().nullable()();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+
+  /// 0 = synced. Every local change increments it.
+  IntColumn get dirtyRevision => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One physical card (or a placeholder inside a deck, if [isOwned] is false).
+@TableIndex(name: 'collection_entries_folder', columns: {#folderId})
+@TableIndex(name: 'collection_entries_scryfall', columns: {#scryfallId})
+class CollectionEntries extends Table {
+  TextColumn get id => text()();
+
+  /// No foreign key: the Scryfall tables are wiped and re-downloaded.
+  TextColumn get scryfallId => text()();
+  TextColumn get folderId => text().nullable()();
+  BoolColumn get isProxy => boolean().withDefault(const Constant(false))();
+  BoolColumn get isAltered => boolean().withDefault(const Constant(false))();
+  BoolColumn get isSigned => boolean().withDefault(const Constant(false))();
+  BoolColumn get isOwned => boolean().withDefault(const Constant(true))();
+  IntColumn get quality => integer().map(CardQuality.converter)();
+  IntColumn get finish => integer().map(CardFinish.converter)();
+
+  /// Unix time in milliseconds. Stays the same when the card is moved.
+  IntColumn get addedAt => integer()();
+
+  // Sync
+  IntColumn get versionAt => integer().nullable()();
+  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+  IntColumn get dirtyRevision => integer().withDefault(const Constant(0))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
 
 // =============================================================================
 // Deck Tables
 // =============================================================================
 
-// Comming soon...
+// Decks are folders (FolderType.deck) with board folders inside, see Folders.
 
 // ==============================================================================
 // AppDatabase and Queries
 // ==============================================================================
 
 @DriftDatabase(
-  tables: [ScryfallCards, ScryfallCardFaces, ScryfallTags, ScryfallSets],
+  tables: [
+    ScryfallCards,
+    ScryfallCardFaces,
+    ScryfallTags,
+    ScryfallSets,
+    Folders,
+    CollectionEntries,
+  ],
 )
 /// Provides access to the application's local Drift database.
 class AppDatabase extends _$AppDatabase {
   AppDatabase._internal([QueryExecutor? executor])
     : super(executor ?? _openConnection());
+
+  /// Creates a separate database on [executor], e.g. an in-memory one in tests.
+  AppDatabase.forTesting(super.executor);
 
   static AppDatabase? _instance;
 
@@ -278,8 +351,16 @@ class AppDatabase extends _$AppDatabase {
     return _instance ??= AppDatabase._internal();
   }
 
+  /// Version history:
+  /// 1: Scryfall tables
+  /// 2: Collection tables (Folders, CollectionEntries)
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// The last schema version that changed the Scryfall tables. Upgrades from
+  /// an older version drop and recreate them (the data gets re-downloaded).
+  /// Bump this to the new [schemaVersion] whenever a Scryfall table changes.
+  static const _lastScryfallSchemaChange = 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -288,16 +369,25 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (m, from, to) async {
       // Scryfall data doesn't need to be migrated. Will be deleted and redownloaded.
-      await m.deleteTable('scryfall_card_faces');
-      await m.deleteTable('scryfall_cards');
-      await m.deleteTable('scryfall_tags');
-      await m.deleteTable('scryfall_sets');
-      await m.createTable(scryfallCardFaces);
-      await m.createTable(scryfallCards);
-      await m.createTable(scryfallTags);
-      await m.createTable(scryfallSets);
-      // Other tables probably need migration. Add here :)
-      // Collection, decks etc
+      if (from < _lastScryfallSchemaChange) {
+        await m.deleteTable('scryfall_card_faces');
+        await m.deleteTable('scryfall_cards');
+        await m.deleteTable('scryfall_tags');
+        await m.deleteTable('scryfall_sets');
+        await m.createTable(scryfallCardFaces);
+        await m.createTable(scryfallCards);
+        await m.createTable(scryfallTags);
+        await m.createTable(scryfallSets);
+      }
+
+      // User data: never drop these tables, always migrate step by step.
+      if (from < 2) {
+        await m.createTable(folders);
+        await m.createTable(collectionEntries);
+        await m.createIndex(foldersParent);
+        await m.createIndex(collectionEntriesFolder);
+        await m.createIndex(collectionEntriesScryfall);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA journal_mode = WAL;');
