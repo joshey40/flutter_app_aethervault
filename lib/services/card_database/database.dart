@@ -537,6 +537,65 @@ class AppDatabase extends _$AppDatabase {
     return rows;
   }
 
+  /// All printings whose name (case-insensitive) is one of [names]. Also
+  /// matches the printed (e.g. German) name and the front face of
+  /// double-faced cards ("Delver of Secrets" finds "Delver of Secrets // ...").
+  Future<List<ScryfallCard>> findCardsByNames(Iterable<String> names) async {
+    final lowerNames = names.map((name) => name.toLowerCase()).toSet().toList();
+    final result = <ScryfallCard>[];
+    // Stay well below SQLite's limit for variables per statement.
+    const chunkSize = 500;
+    for (var start = 0; start < lowerNames.length; start += chunkSize) {
+      final chunk = lowerNames.sublist(
+        start,
+        (start + chunkSize).clamp(0, lowerNames.length),
+      );
+      final placeholders = List.filled(chunk.length, '?').join(', ');
+      final rows = await customSelect(
+        'SELECT * FROM scryfall_cards '
+        'WHERE lower(name) IN ($placeholders) '
+        'OR lower(printed_name) IN ($placeholders) '
+        "OR (instr(name, ' // ') > 0 AND "
+        "lower(substr(name, 1, instr(name, ' // ') - 1)) IN ($placeholders))",
+        variables: [
+          for (var i = 0; i < 3; i++)
+            for (final name in chunk) Variable<String>(name),
+        ],
+        readsFrom: {scryfallCards},
+      ).get();
+      result.addAll(rows.map((row) => scryfallCards.map(row.data)));
+    }
+    return result;
+  }
+
+  /// All printings with one of the given (set code, collector number) pairs,
+  /// in any language.
+  Future<List<ScryfallCard>> findCardsBySetAndNumber(
+    Iterable<(String, String)> printings,
+  ) async {
+    final pairs = printings.toSet().toList();
+    final result = <ScryfallCard>[];
+    const chunkSize = 300;
+    for (var start = 0; start < pairs.length; start += chunkSize) {
+      final chunk = pairs.sublist(
+        start,
+        (start + chunkSize).clamp(0, pairs.length),
+      );
+      final query = select(scryfallCards)
+        ..where(
+          (t) => chunk
+              .map(
+                (pair) =>
+                    t.setCode.equals(pair.$1.toLowerCase()) &
+                    t.collectorNumber.equals(pair.$2),
+              )
+              .reduce((a, b) => a | b),
+        );
+      result.addAll(await query.get());
+    }
+    return result;
+  }
+
   /// Of the cards [ids], returns the ones matching the Scryfall [syntax].
   ///
   /// Unlike [getCardsByScryfallSyntax], no default filters (language, tokens,

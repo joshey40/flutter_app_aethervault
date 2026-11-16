@@ -11,6 +11,7 @@ import '../../screens/home/search/search_page.dart';
 import '../../screens/home/search/scryfall_syntax_page.dart';
 import '../../screens/home/collection_page.dart';
 import '../../screens/home/collection/collection_card_page.dart';
+import '../../screens/home/collection/collection_import_page.dart';
 import '../../screens/home/decks_page.dart';
 import '../../screens/home/lifecounter/lifecounter_entry_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_start_screen.dart';
@@ -122,6 +123,14 @@ GoRouter createAppRouter({
                   );
                 },
                 routes: [
+                  GoRoute(
+                    path: 'import',
+                    builder: (context, state) {
+                      return CollectionImportPage(
+                        folderId: state.uri.queryParameters['folder'],
+                      );
+                    },
+                  ),
                   GoRoute(
                     path: 'entries',
                     builder: (context, state) {

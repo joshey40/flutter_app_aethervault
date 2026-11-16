@@ -33,7 +33,7 @@ class CollectionPage extends StatefulWidget {
 
 enum _SortBy { added, name, set, cmc }
 
-enum _MenuAction { toggleView, toggleSubfolders, newBox }
+enum _MenuAction { toggleView, toggleSubfolders, newBox, import }
 
 class _CollectionPageState extends State<CollectionPage> {
   final _repository = CollectionRepository.shared;
@@ -493,6 +493,11 @@ class _CollectionPageState extends State<CollectionPage> {
             _subscribeGroups();
           }),
           _MenuAction.newBox => _createFolder(FolderType.box),
+          _MenuAction.import => context.push(
+            widget.folderId == null
+                ? '/collection/import'
+                : '/collection/import?folder=${widget.folderId}',
+          ),
         },
         itemBuilder: (context) => [
           PopupMenuItem(
@@ -519,6 +524,14 @@ class _CollectionPageState extends State<CollectionPage> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.create_new_folder_outlined),
                 title: Text(tr('collection.new_box')),
+              ),
+            ),
+            PopupMenuItem(
+              value: _MenuAction.import,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.playlist_add),
+                title: Text(tr('collection.import.menu')),
               ),
             ),
           ],

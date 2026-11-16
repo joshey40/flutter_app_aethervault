@@ -335,6 +335,25 @@
       "attractions": "Attractions",
       "contraptions": "Contraptions",
       "stickers": "Stickers"
+    },
+    "import": {
+      "menu": "Import …",
+      "title": "Import cards",
+      "hint": "Paste a card list: text lists (e.g. \"4 Lightning Bolt (M10) 146\", also with *F* for foil), lines with set and number (e.g. \"2 msc 211 de foil\", amount, language and foil are optional) or CSV exports of Moxfield, ManaBox and Archidekt. All cards are added, nothing is replaced.",
+      "check": "Check",
+      "certain": "{count} certain",
+      "hinted": "{count} with a hint",
+      "missing": "{count} not found",
+      "submit": "Import {count} cards",
+      "done": "Imported {count} cards into \"{target}\"",
+      "note_ambiguous": "Printing not certain, the newest one was taken",
+      "note_language": "Language {language} not available, the English version was taken",
+      "note_not_found": "Not found: {line}",
+      "line_error": "Line {line}: {error}",
+      "change_printing": "Change printing",
+      "change_name": "Correct the name",
+      "skip": "Skip",
+      "include": "Import anyway"
     }
   }
 }

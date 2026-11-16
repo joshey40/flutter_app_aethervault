@@ -335,6 +335,25 @@
       "attractions": "Attractions",
       "contraptions": "Contraptions",
       "stickers": "Stickers"
+    },
+    "import": {
+      "menu": "Importieren …",
+      "title": "Karten importieren",
+      "hint": "Füge eine Kartenliste ein: Textlisten (z. B. „4 Lightning Bolt (M10) 146“, auch mit *F* für Foil), Zeilen mit Set und Nummer (z. B. „2 msc 211 de foil“, Anzahl, Sprache und Foil sind optional) oder CSV-Exporte von Moxfield, ManaBox und Archidekt. Alle Karten werden hinzugefügt, nichts wird ersetzt.",
+      "check": "Prüfen",
+      "certain": "{count} eindeutig",
+      "hinted": "{count} mit Hinweis",
+      "missing": "{count} nicht gefunden",
+      "submit": "{count} Karten importieren",
+      "done": "{count} Karten nach „{target}“ importiert",
+      "note_ambiguous": "Printing nicht eindeutig – neueste Version gewählt",
+      "note_language": "Sprache {language} nicht vorhanden – englische Version gewählt",
+      "note_not_found": "Nicht gefunden: {line}",
+      "line_error": "Zeile {line}: {error}",
+      "change_printing": "Printing ändern",
+      "change_name": "Name korrigieren",
+      "skip": "Überspringen",
+      "include": "Doch importieren"
     }
   }
 }

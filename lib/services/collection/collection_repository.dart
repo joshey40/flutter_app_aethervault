@@ -495,6 +495,45 @@ class CollectionRepository {
     });
   }
 
+  /// Adds many different cards into [folderId] (null = root) at once, e.g. for
+  /// an import. Either all are added or none. Returns how many cards were
+  /// added.
+  Future<int> addCardBatch(
+    List<
+      ({
+        String scryfallId,
+        int amount,
+        CardFinish finish,
+        CardQuality quality,
+        bool isProxy,
+        bool isAltered,
+        bool isSigned,
+      })
+    >
+    items, {
+    String? folderId,
+    FolderType? board,
+  }) {
+    return _db.transaction(() async {
+      var added = 0;
+      for (final item in items) {
+        final ids = await addCards(
+          scryfallId: item.scryfallId,
+          amount: item.amount,
+          folderId: folderId,
+          board: board,
+          finish: item.finish,
+          quality: item.quality,
+          isProxy: item.isProxy,
+          isAltered: item.isAltered,
+          isSigned: item.isSigned,
+        );
+        added += ids.length;
+      }
+      return added;
+    });
+  }
+
   /// Moves cards into [targetFolderId] (null = root; for a deck into [board],
   /// default main). Placeholders are skipped unless the target is a deck.
   Future<MoveResult> moveEntries(
