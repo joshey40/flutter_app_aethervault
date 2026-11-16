@@ -596,27 +596,36 @@ class ScryfallDataParser {
         throw FormatException('Invalid sets data format');
       }
 
+      final sets = <ScryfallSetsCompanion>[];
       for (final setData in decoded['data']) {
         if (setData is Map) {
           final setRecord = setData.cast<String, dynamic>();
-          final setCompanion = ScryfallSetsCompanion.insert(
-            scryfallId: _stringValue(setRecord, 'id'),
-            code: _stringValue(setRecord, 'code'),
-            name: _stringValue(setRecord, 'name'),
-            releasedAt: _stringValue(setRecord, 'released_at'),
-            setType: _stringValue(setRecord, 'set_type'),
-            cardCount: _doubleValue(setRecord, 'card_count').toInt(),
-            parentSetCode: Value(_stringField(setRecord, 'parent_set_code')),
-            blockCode: Value(_stringField(setRecord, 'block_code')),
-            blockName: Value(_stringField(setRecord, 'block_name')),
-            nonfoilOnly: _boolValue(setRecord, 'nonfoil_only'),
-            foilOnly: _boolValue(setRecord, 'foil_only'),
-            iconSvgUri: _stringValue(setRecord, 'icon_svg_uri'),
+          sets.add(
+            ScryfallSetsCompanion.insert(
+              scryfallId: _stringValue(setRecord, 'id'),
+              code: _stringValue(setRecord, 'code'),
+              name: _stringValue(setRecord, 'name'),
+              releasedAt: _stringValue(setRecord, 'released_at'),
+              setType: _stringValue(setRecord, 'set_type'),
+              cardCount: _doubleValue(setRecord, 'card_count').toInt(),
+              parentSetCode: Value(_stringField(setRecord, 'parent_set_code')),
+              blockCode: Value(_stringField(setRecord, 'block_code')),
+              blockName: Value(_stringField(setRecord, 'block_name')),
+              nonfoilOnly: _boolValue(setRecord, 'nonfoil_only'),
+              foilOnly: _boolValue(setRecord, 'foil_only'),
+              iconSvgUri: _stringValue(setRecord, 'icon_svg_uri'),
+            ),
           );
-
-          await _database.into(_database.scryfallSets).insert(setCompanion);
         }
       }
+
+      // Replace the old sets, otherwise parsing again fails on duplicates.
+      await _database.transaction(() async {
+        await _database.delete(_database.scryfallSets).go();
+        await _database.batch((batch) {
+          batch.insertAll(_database.scryfallSets, sets);
+        });
+      });
     } finally {
       client.close();
     }
