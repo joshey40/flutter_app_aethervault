@@ -222,6 +222,8 @@
     "empty_body": "Add cards from the search.",
     "empty_folder": "No cards in here yet.",
     "open_search": "Go to search",
+    "missing_card": "Unknown card",
+    "missing_card_hint": "Not in the Scryfall data",
     "deck_hint": "All boards together, only cards you own.",
     "new_box": "New box",
     "new_deck": "New deck",

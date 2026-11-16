@@ -222,6 +222,8 @@
     "empty_body": "Füge Karten über die Suche hinzu.",
     "empty_folder": "Hier liegen noch keine Karten.",
     "open_search": "Zur Suche",
+    "missing_card": "Unbekannte Karte",
+    "missing_card_hint": "Nicht in den Scryfall-Daten",
     "deck_hint": "Alle Boards zusammen, nur Karten in deinem Besitz.",
     "new_box": "Neue Box",
     "new_deck": "Neues Deck",

@@ -9,6 +9,7 @@ import '../../services/app_preferences_storage.dart';
 import '../../services/card_database/database.dart';
 import '../../services/collection/collection_enums.dart';
 import '../../services/collection/collection_repository.dart';
+import '../../services/collection/collection_search.dart';
 import 'collection/collection_dialogs.dart';
 import 'collection/collection_labels.dart';
 
@@ -54,12 +55,12 @@ class _CollectionPageState extends State<CollectionPage> {
   String _query = '';
   Timer? _searchDebounce;
 
-  /// Scryfall IDs matching [_query], null = no search active.
+  /// Keys of the card groups matching [_query], null = no search active.
   Set<String>? _matches;
 
-  /// The query and the cards [_matches] were computed for.
+  /// The query and the card groups [_matches] were computed for.
   String? _searchedQuery;
-  Set<String> _searchedIds = const {};
+  Set<String> _searchedKeys = const {};
   String? _searchError;
 
   /// Keys of the selected card groups. Not empty = selection mode.
@@ -73,6 +74,9 @@ class _CollectionPageState extends State<CollectionPage> {
   static final _faceImages = <String, String>{};
   static final _requestedCards = <String>{};
 
+  /// Cards that are not in the local Scryfall data (yet).
+  static final _missingCards = <String>{};
+
   Folder? get _folder => (_path?.isEmpty ?? true) ? null : _path!.last;
   bool get _isDeck => _folder?.folderType == FolderType.deck;
   bool get _folderMissing =>
@@ -82,6 +86,9 @@ class _CollectionPageState extends State<CollectionPage> {
   @override
   void initState() {
     super.initState();
+    // The Scryfall data may have been updated since, so look again.
+    _requestedCards.removeAll(_missingCards);
+    _missingCards.clear();
     _path = widget.initialPath;
     _childFolders = _repository.watchChildFolders(widget.folderId);
     _folderCounts = _repository.watchFolderCardCounts(widget.folderId);
@@ -129,6 +136,7 @@ class _CollectionPageState extends State<CollectionPage> {
     setState(() {
       _cards.addAll(cards);
       _faceImages.addAll(faceImages);
+      _missingCards.addAll(missing.where((id) => !cards.containsKey(id)));
     });
   }
 
@@ -138,12 +146,13 @@ class _CollectionPageState extends State<CollectionPage> {
     _searchDebounce = Timer(const Duration(milliseconds: 300), _runSearch);
   }
 
-  /// Filters the shown cards with the Scryfall syntax in [_query].
+  /// Filters the shown cards with the syntax in [_query] (Scryfall syntax
+  /// plus own: and cond:, see [CollectionSearch]).
   Future<void> _runSearch() async {
     final query = _query.trim();
-    final ids = _currentGroups.map((group) => group.scryfallId).toSet();
+    final groups = _currentGroups;
     _searchedQuery = query;
-    _searchedIds = ids;
+    _searchedKeys = groups.map((group) => group.key).toSet();
     if (query.isEmpty) {
       setState(() {
         _matches = null;
@@ -155,7 +164,7 @@ class _CollectionPageState extends State<CollectionPage> {
     Set<String> matches;
     String? error;
     try {
-      matches = await _database.filterCardIdsByScryfallSyntax(query, ids);
+      matches = await CollectionSearch(_database).filter(query, groups);
     } catch (e) {
       matches = const {};
       error = e is FormatException ? e.message : '$e';
@@ -171,9 +180,9 @@ class _CollectionPageState extends State<CollectionPage> {
   /// Searches again if the shown cards changed while a search is active.
   void _refreshSearchFor(List<CardGroup> groups) {
     if (_query.trim().isEmpty) return;
-    final ids = groups.map((group) => group.scryfallId).toSet();
+    final keys = groups.map((group) => group.key).toSet();
     final unchanged =
-        ids.length == _searchedIds.length && ids.containsAll(_searchedIds);
+        keys.length == _searchedKeys.length && keys.containsAll(_searchedKeys);
     if (!unchanged) _runSearch();
   }
 
@@ -184,7 +193,7 @@ class _CollectionPageState extends State<CollectionPage> {
     final matches = _matches;
     final visible = matches == null
         ? [...groups]
-        : groups.where((group) => matches.contains(group.scryfallId)).toList();
+        : groups.where((group) => matches.contains(group.key)).toList();
 
     int compare(CardGroup a, CardGroup b) {
       final cardA = _cards[a.scryfallId];
@@ -757,7 +766,8 @@ class _CollectionPageState extends State<CollectionPage> {
   void _onCardTap(CardGroup group) {
     if (_selecting) {
       _toggleSelection(group);
-    } else {
+    } else if (!_missingCards.contains(group.scryfallId)) {
+      // Cards without Scryfall data can't be shown in detail.
       context.push('/collection/entries?ids=${group.entryIds.join(',')}');
     }
   }
@@ -778,6 +788,7 @@ class _CollectionPageState extends State<CollectionPage> {
             group: group,
             card: _cards[group.scryfallId],
             imageUrl: _imageUrl(group.scryfallId),
+            missing: _missingCards.contains(group.scryfallId),
             selecting: _selecting,
             selected: _selected.contains(group.key),
             onTap: () => _onCardTap(group),
@@ -800,6 +811,7 @@ class _CollectionPageState extends State<CollectionPage> {
             group: group,
             card: _cards[group.scryfallId],
             showBoard: _isDeck,
+            missing: _missingCards.contains(group.scryfallId),
             selecting: _selecting,
             selected: _selected.contains(group.key),
             onTap: () => _onCardTap(group),
@@ -1044,6 +1056,7 @@ class _CardGridTile extends StatelessWidget {
     required this.group,
     required this.card,
     required this.imageUrl,
+    required this.missing,
     required this.selecting,
     required this.selected,
     required this.onTap,
@@ -1053,6 +1066,9 @@ class _CardGridTile extends StatelessWidget {
   final CardGroup group;
   final ScryfallCard? card;
   final String? imageUrl;
+
+  /// The card is not in the local Scryfall data.
+  final bool missing;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -1061,15 +1077,37 @@ class _CardGridTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final placeholder = Container(
       color: colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(10),
       alignment: Alignment.center,
-      child: Text(
-        card?.name ?? '',
-        textAlign: TextAlign.center,
-        style: Theme.of(context).textTheme.bodySmall,
-      ),
+      child: missing
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.help_outline, color: colorScheme.primary, size: 32),
+                const SizedBox(height: 8),
+                Text(
+                  tr('collection.missing_card'),
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tr('collection.missing_card_hint'),
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodySmall,
+                ),
+              ],
+            )
+          : Text(
+              card?.name ?? '',
+              textAlign: TextAlign.center,
+              style: textTheme.bodySmall,
+            ),
     );
 
     final isFoil = group.finish != CardFinish.nonfoil;
@@ -1169,6 +1207,7 @@ class _CardListTile extends StatelessWidget {
     required this.group,
     required this.card,
     required this.showBoard,
+    required this.missing,
     required this.selecting,
     required this.selected,
     required this.onTap,
@@ -1178,6 +1217,9 @@ class _CardListTile extends StatelessWidget {
   final CardGroup group;
   final ScryfallCard? card;
   final bool showBoard;
+
+  /// The card is not in the local Scryfall data.
+  final bool missing;
   final bool selecting;
   final bool selected;
   final VoidCallback onTap;
@@ -1219,14 +1261,23 @@ class _CardListTile extends StatelessWidget {
               width: 32,
               height: 45,
               child: thumbnail == null
-                  ? ColoredBox(color: colorScheme.surfaceContainerHighest)
+                  ? ColoredBox(
+                      color: colorScheme.surfaceContainerHighest,
+                      child: missing
+                          ? Icon(
+                              Icons.help_outline,
+                              size: 18,
+                              color: colorScheme.primary,
+                            )
+                          : null,
+                    )
                   : CachedNetworkImage(imageUrl: thumbnail, fit: BoxFit.cover),
             ),
           ),
         ],
       ),
       title: Text(
-        card?.name ?? group.scryfallId,
+        missing ? tr('collection.missing_card') : card?.name ?? '',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1234,7 +1285,11 @@ class _CardListTile extends StatelessWidget {
       subtitle: Text.rich(
         TextSpan(
           children: [
-            TextSpan(text: details),
+            TextSpan(
+              text: missing
+                  ? '${tr('collection.missing_card_hint')} · $details'
+                  : details,
+            ),
             if (showBoard && group.board != null)
               TextSpan(
                 text: ' · ${boardLabel(group.board!)}',

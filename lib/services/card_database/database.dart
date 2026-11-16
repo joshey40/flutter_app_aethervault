@@ -546,9 +546,17 @@ class AppDatabase extends _$AppDatabase {
     String syntax,
     Iterable<String> ids,
   ) async {
+    return filterCardIdsByTokens(tokenizeScryfallSyntax(syntax), ids);
+  }
+
+  /// Like [filterCardIdsByScryfallSyntax], for already parsed [tokens]
+  /// (all of them must match).
+  Future<Set<String>> filterCardIdsByTokens(
+    List<QueryToken> tokens,
+    Iterable<String> ids,
+  ) async {
     final idList = ids.toList();
     if (idList.isEmpty) return {};
-    final tokens = tokenizeScryfallSyntax(syntax);
     if (tokens.isEmpty) return idList.toSet();
 
     final oracleTagIds = await _resolveTagLookups(
