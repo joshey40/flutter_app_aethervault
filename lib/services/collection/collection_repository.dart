@@ -25,7 +25,7 @@ class CardGroup {
     required this.isAltered,
     required this.isSigned,
     required this.isOwned,
-    required this.count,
+    required this.entryIds,
     required this.lastAddedAt,
     this.board,
   });
@@ -37,7 +37,16 @@ class CardGroup {
   final bool isAltered;
   final bool isSigned;
   final bool isOwned;
-  final int count;
+
+  /// The IDs of the cards in this group.
+  final List<String> entryIds;
+
+  int get count => entryIds.length;
+
+  /// Identifies the group, e.g. to keep a selection across updates.
+  String get key =>
+      '$scryfallId|${finish.value}|${quality.value}|$isProxy|$isAltered|'
+      '$isSigned|$isOwned|${board?.value}';
 
   /// Newest addedAt of the cards in this group (Unix ms).
   final int lastAddedAt;
@@ -64,6 +73,11 @@ class CollectionRepository {
   CollectionRepository(this._db, {Uuid? uuid, int Function()? now})
     : _uuid = uuid ?? const Uuid(),
       _now = now ?? (() => DateTime.now().millisecondsSinceEpoch);
+
+  /// The repository on the app's database.
+  static final CollectionRepository shared = CollectionRepository(
+    AppDatabase(),
+  );
 
   final AppDatabase _db;
   final Uuid _uuid;
@@ -127,6 +141,38 @@ class CollectionRepository {
       currentId = folder.parentId;
     }
     return path;
+  }
+
+  /// For every box and deck directly inside [parentId] (null = root): how
+  /// many owned cards are in it, including all its subfolders.
+  Stream<Map<String, int>> watchFolderCardCounts(String? parentId) {
+    return _db
+        .customSelect(
+          '''
+          WITH RECURSIVE tree(top, id) AS (
+            SELECT id, id FROM folders
+            WHERE parent_id IS ?1 AND is_deleted = 0
+              AND folder_type IN (${FolderType.box.value}, ${FolderType.deck.value})
+            UNION ALL
+            SELECT t.top, f.id FROM folders f JOIN tree t ON f.parent_id = t.id
+            WHERE f.is_deleted = 0
+          )
+          SELECT t.top AS folder_id, COUNT(e.id) AS card_count
+          FROM tree t
+          LEFT JOIN collection_entries e
+            ON e.folder_id = t.id AND e.is_deleted = 0 AND e.is_owned = 1
+          GROUP BY t.top
+          ''',
+          variables: [Variable<String>(parentId)],
+          readsFrom: {_folders, _entries},
+        )
+        .watch()
+        .map(
+          (rows) => {
+            for (final row in rows)
+              row.read<String>('folder_id'): row.read<int>('card_count'),
+          },
+        );
   }
 
   // ===========================================================================
@@ -336,7 +382,7 @@ class CollectionRepository {
       '''
       SELECT e.scryfall_id, e.finish, e.quality, e.is_proxy, e.is_altered,
              e.is_signed, e.is_owned, $boardColumn,
-             COUNT(*) AS card_count, MAX(e.added_at) AS last_added_at
+             GROUP_CONCAT(e.id) AS entry_ids, MAX(e.added_at) AS last_added_at
       FROM collection_entries e
       $boardJoin
       WHERE e.is_deleted = 0
@@ -361,7 +407,8 @@ class CollectionRepository {
             isAltered: row.read<bool>('is_altered'),
             isSigned: row.read<bool>('is_signed'),
             isOwned: row.read<bool>('is_owned'),
-            count: row.read<int>('card_count'),
+            // UUIDs never contain commas.
+            entryIds: row.read<String>('entry_ids').split(','),
             lastAddedAt: row.read<int>('last_added_at'),
             board: row.readNullable<int>('board_type') == null
                 ? null
@@ -369,6 +416,17 @@ class CollectionRepository {
           ),
       ],
     );
+  }
+
+  /// The given cards that are not deleted, oldest first.
+  Stream<List<CollectionEntry>> watchEntries(List<String> ids) {
+    return (_db.select(_entries)
+          ..where(_activeEntries(ids))
+          ..orderBy([
+            (e) => OrderingTerm.asc(e.addedAt),
+            (e) => OrderingTerm.asc(e.id),
+          ]))
+        .watch();
   }
 
   /// All copies of one printing, wherever they are (for "Your copies").
@@ -463,8 +521,11 @@ class CollectionRepository {
   }
 
   /// Changes the given properties of cards. Null values stay unchanged.
+  ///
+  /// [scryfallId] switches the cards to another printing or language.
   Future<void> updateEntries(
     Iterable<String> ids, {
+    String? scryfallId,
     CardFinish? finish,
     CardQuality? quality,
     bool? isProxy,
@@ -474,6 +535,7 @@ class CollectionRepository {
     await _writeEntries(
       _activeEntries(ids.toList()),
       CollectionEntriesCompanion.custom(
+        scryfallId: scryfallId == null ? null : Variable<String>(scryfallId),
         finish: finish == null ? null : Variable<int>(finish.value),
         quality: quality == null ? null : Variable<int>(quality.value),
         isProxy: isProxy == null ? null : Variable<bool>(isProxy),
@@ -481,6 +543,73 @@ class CollectionRepository {
         isSigned: isSigned == null ? null : Variable<bool>(isSigned),
       ),
     );
+  }
+
+  /// Changes a group of identical cards ([ids]) as a whole: all of them get the
+  /// given properties, and the group grows or shrinks to [amount].
+  ///
+  /// New copies go into the folder of the first card and get its owned state.
+  /// When shrinking, the most recently added copies are removed.
+  /// Returns the IDs of the group afterwards.
+  Future<List<String>> updateGroup(
+    List<String> ids, {
+    required int amount,
+    required String scryfallId,
+    required CardFinish finish,
+    required CardQuality quality,
+    required bool isProxy,
+    required bool isAltered,
+    required bool isSigned,
+  }) async {
+    if (amount < 1) {
+      throw const CollectionException('Amount must be at least 1.');
+    }
+
+    return _db.transaction(() async {
+      final entries =
+          await (_db.select(_entries)
+                ..where(_activeEntries(ids))
+                ..orderBy([
+                  (e) => OrderingTerm.asc(e.addedAt),
+                  (e) => OrderingTerm.asc(e.id),
+                ]))
+              .get();
+      if (entries.isEmpty) {
+        throw const CollectionException('The cards do not exist anymore.');
+      }
+
+      await updateEntries(
+        ids,
+        scryfallId: scryfallId,
+        finish: finish,
+        quality: quality,
+        isProxy: isProxy,
+        isAltered: isAltered,
+        isSigned: isSigned,
+      );
+
+      final result = [for (final entry in entries) entry.id];
+      if (amount > entries.length) {
+        result.addAll(
+          await addCards(
+            scryfallId: scryfallId,
+            amount: amount - entries.length,
+            folderId: entries.first.folderId,
+            finish: finish,
+            quality: quality,
+            isProxy: isProxy,
+            isAltered: isAltered,
+            isSigned: isSigned,
+            isOwned: entries.first.isOwned,
+          ),
+        );
+      } else if (amount < entries.length) {
+        final removed = result.sublist(amount);
+        await deleteEntries(removed);
+        result.removeRange(amount, result.length);
+      }
+      return result;
+    });
   }
 
   /// Turns cards into placeholders or back into owned cards.

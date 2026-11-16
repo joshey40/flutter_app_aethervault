@@ -164,6 +164,22 @@ void main() {
     });
   });
 
+  test('folder card counts include subfolders but not placeholders', () async {
+    final box = await repo.createFolder(name: 'Box');
+    final inner = await repo.createFolder(name: 'Inner', parentId: box.id);
+    final deck = await repo.createFolder(name: 'D', type: FolderType.deck);
+    await repo.addCards(scryfallId: 'a', folderId: box.id, amount: 2);
+    await repo.addCards(scryfallId: 'b', folderId: inner.id);
+    await repo.addCards(scryfallId: 'c', folderId: deck.id, amount: 3);
+    await repo.addCards(scryfallId: 'd', folderId: deck.id, isOwned: false);
+
+    expect(await repo.watchFolderCardCounts(null).first, {
+      box.id: 3,
+      deck.id: 3,
+    });
+    expect(await repo.watchFolderCardCounts(box.id).first, {inner.id: 1});
+  });
+
   group('card groups', () {
     test('identical copies are grouped with their count', () async {
       await repo.addCards(scryfallId: 'island', amount: 4);
@@ -280,6 +296,65 @@ void main() {
       expect(row.quality, CardQuality.played);
       expect(row.dirtyRevision, 3);
       expect((await repo.watchCardGroups(null).first).single.count, 1);
+    });
+  });
+
+  group('updating a group', () {
+    test('grows the group in the folder of its cards', () async {
+      final deck = await repo.createFolder(name: 'D', type: FolderType.deck);
+      final ids = await repo.addCards(
+        scryfallId: 'old',
+        folderId: deck.id,
+        board: FolderType.sideboard,
+        amount: 2,
+      );
+
+      final result = await repo.updateGroup(
+        ids,
+        amount: 4,
+        scryfallId: 'new',
+        finish: CardFinish.foil,
+        quality: CardQuality.played,
+        isProxy: true,
+        isAltered: false,
+        isSigned: false,
+      );
+
+      expect(result, hasLength(4));
+      expect(result.take(2).toSet(), ids.toSet());
+      for (final id in result) {
+        final row = await entry(id);
+        expect(row.scryfallId, 'new');
+        expect(row.finish, CardFinish.foil);
+        expect(row.quality, CardQuality.played);
+        expect(row.isProxy, isTrue);
+        expect(
+          row.folderId,
+          CollectionRepository.boardFolderId(deck.id, FolderType.sideboard),
+        );
+      }
+    });
+
+    test('shrinks the group by removing the newest cards', () async {
+      final first = await repo.addCards(scryfallId: 'a');
+      final newer = await repo.addCards(scryfallId: 'a', amount: 2);
+
+      final result = await repo.updateGroup(
+        [...first, ...newer],
+        amount: 1,
+        scryfallId: 'a',
+        finish: CardFinish.nonfoil,
+        quality: CardQuality.unknown,
+        isProxy: false,
+        isAltered: false,
+        isSigned: false,
+      );
+
+      expect(result, first);
+      for (final id in newer) {
+        expect((await entry(id)).isDeleted, isTrue);
+      }
+      expect(await repo.watchEntries([...first, ...newer]).first, hasLength(1));
     });
   });
 

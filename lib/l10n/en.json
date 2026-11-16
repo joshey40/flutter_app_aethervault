@@ -208,5 +208,131 @@
   "save": "Save",
   "confirm": "Confirm",
   "back": "Back",
-  "errors": {}
+  "errors": {},
+  "collection": {
+    "search_hint": "Search with Scryfall syntax",
+    "view_list": "List view",
+    "view_grid": "Image view",
+    "more": "More",
+    "include_subfolders": "Incl. subfolders",
+    "cards": "Cards",
+    "sort": "Sort",
+    "sort_added": "Date added",
+    "empty_title": "Your collection is empty",
+    "empty_body": "Add cards from the search.",
+    "empty_folder": "No cards in here yet.",
+    "open_search": "Go to search",
+    "deck_hint": "All boards together, only cards you own.",
+    "new_box": "New box",
+    "new_deck": "New deck",
+    "edit": "Edit",
+    "delete": "Delete",
+    "private": "Private",
+    "selected": "{count} selected",
+    "move": "Move",
+    "edit_cards": "Edit properties",
+    "delete_cards": "Delete",
+    "delete_cards_title": "Delete cards?",
+    "delete_cards_body": "{count} cards will be removed from your collection.",
+    "folder_moved": "Moved \"{name}\" to \"{target}\"",
+    "moved": "Moved {count} cards",
+    "skipped_placeholders": "Skipped {count} placeholders (they only exist in decks)",
+    "deleted": "Deleted {count} cards",
+    "added": "Added {count}× {name}",
+    "error": "That didn't work: {error}",
+    "folder_form": {
+      "new_box": "New box",
+      "new_deck": "New deck",
+      "edit": "Edit folder",
+      "name": "Name",
+      "name_required": "Enter a name.",
+      "color": "Color",
+      "no_color": "None",
+      "private_hint": "Hidden from others",
+      "format": "Format",
+      "no_format": "No format",
+      "bracket": "Bracket",
+      "no_bracket": "None",
+      "description": "Description"
+    },
+    "delete_folder": {
+      "title_box": "Delete box?",
+      "title_deck": "Delete deck?",
+      "contents": "\"{name}\" contains {count} cards.",
+      "boards_note": "The deck's boards are always deleted with it.",
+      "keep": "Keep contents",
+      "keep_on": "Cards and folders move to \"{target}\".",
+      "keep_on_deck": "Cards move to \"{target}\". Placeholders are deleted.",
+      "keep_off": "Everything inside is deleted too."
+    },
+    "picker": {
+      "title": "Choose a destination",
+      "choose_here": "Put it here",
+      "choose_board": "Choose a board in \"{name}\""
+    },
+    "add": {
+      "title": "Add to collection",
+      "amount": "Amount",
+      "target": "Folder",
+      "finish": "Finish",
+      "quality": "Condition",
+      "proxy": "Proxy",
+      "altered": "Altered",
+      "signed": "Signed",
+      "submit": "Add"
+    },
+    "edit_entry": {
+      "title": "Edit entry",
+      "language": "Language",
+      "printing": "Printing"
+    },
+    "edit_entries": {
+      "title": "Edit properties",
+      "unchanged": "Unchanged"
+    },
+    "copies": {
+      "title": "Your copies",
+      "placeholder": "Placeholder",
+      "remove_one": "Remove one",
+      "remove_all": "Remove all"
+    },
+    "finish": {
+      "nonfoil": "Nonfoil",
+      "foil": "Foil",
+      "etched": "Etched"
+    },
+    "quality": {
+      "unknown": "Unknown",
+      "mint": "Mint",
+      "nearMint": "Near Mint",
+      "excellent": "Excellent",
+      "good": "Good",
+      "lightPlayed": "Light Played",
+      "played": "Played",
+      "poor": "Poor"
+    },
+    "quality_short": {
+      "unknown": "?",
+      "mint": "M",
+      "nearMint": "NM",
+      "excellent": "EX",
+      "good": "GD",
+      "lightPlayed": "LP",
+      "played": "PL",
+      "poor": "PO"
+    },
+    "board": {
+      "commander": "Commander",
+      "main": "Main",
+      "sideboard": "Sideboard",
+      "considering": "Considering",
+      "companion": "Companion",
+      "planes": "Planes",
+      "schemes": "Schemes",
+      "dungeon": "Dungeon",
+      "attractions": "Attractions",
+      "contraptions": "Contraptions",
+      "stickers": "Stickers"
+    }
+  }
 }

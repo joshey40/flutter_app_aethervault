@@ -20,36 +20,12 @@ class CardDetailRoute extends StatefulWidget {
 }
 
 class _CardDetailRouteState extends State<CardDetailRoute> {
-  late final Future<_CardDetailData?> _cardFuture;
+  late final Future<CardDetailData?> _cardFuture;
 
   @override
   void initState() {
     super.initState();
-    _cardFuture = _loadCard();
-  }
-
-  /// Loads the selected card, its printed variants, and all variant faces.
-  Future<_CardDetailData?> _loadCard() async {
-    final database = AppDatabase();
-    final card = await database.getCardById(widget.cardId);
-    if (card == null) return null;
-
-    final variants = card.oracleId == null
-        ? <ScryfallCard>[card]
-        : await database.getCardVariantsByOracleId(card.oracleId!);
-    final facesByCardId = <String, List<ScryfallCardFace>>{};
-    for (final variant in variants) {
-      facesByCardId[variant.scryfallId] = await database.getCardFacesByCardId(
-        variant.scryfallId,
-      );
-    }
-
-    return _CardDetailData(
-      card: card,
-      faces: facesByCardId[card.scryfallId] ?? const [],
-      variants: variants,
-      variantFaces: facesByCardId,
-    );
+    _cardFuture = loadCardDetailData(widget.cardId);
   }
 
   @override
@@ -63,7 +39,7 @@ class _CardDetailRouteState extends State<CardDetailRoute> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: FutureBuilder<_CardDetailData?>(
+      body: FutureBuilder<CardDetailData?>(
         future: _cardFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
@@ -98,8 +74,9 @@ class _CardDetailRouteState extends State<CardDetailRoute> {
   }
 }
 
-class _CardDetailData {
-  const _CardDetailData({
+/// A card with everything the detail sheet needs.
+class CardDetailData {
+  const CardDetailData({
     required this.card,
     required this.faces,
     required this.variants,
@@ -108,6 +85,33 @@ class _CardDetailData {
 
   final ScryfallCard card;
   final List<ScryfallCardFace> faces;
+
+  /// All printings (every set and language) of the card.
   final List<ScryfallCard> variants;
   final Map<String, List<ScryfallCardFace>> variantFaces;
+}
+
+/// Loads a card, its printed variants, and all variant faces.
+/// Null if the card is not in the local Scryfall data.
+Future<CardDetailData?> loadCardDetailData(String cardId) async {
+  final database = AppDatabase();
+  final card = await database.getCardById(cardId);
+  if (card == null) return null;
+
+  final variants = card.oracleId == null
+      ? <ScryfallCard>[card]
+      : await database.getCardVariantsByOracleId(card.oracleId!);
+  final facesByCardId = <String, List<ScryfallCardFace>>{};
+  for (final variant in variants) {
+    facesByCardId[variant.scryfallId] = await database.getCardFacesByCardId(
+      variant.scryfallId,
+    );
+  }
+
+  return CardDetailData(
+    card: card,
+    faces: facesByCardId[card.scryfallId] ?? const [],
+    variants: variants,
+    variantFaces: facesByCardId,
+  );
 }

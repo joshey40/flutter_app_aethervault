@@ -418,6 +418,34 @@ class AppDatabase extends _$AppDatabase {
     )..where((tbl) => tbl.scryfallId.equals(scryfallId))).getSingleOrNull();
   }
 
+  /// Get several cards by their Scryfall IDs, keyed by ID. Unknown IDs are
+  /// missing from the result.
+  Future<Map<String, ScryfallCard>> getCardsByIds(List<String> ids) async {
+    if (ids.isEmpty) return {};
+    final rows = await (select(
+      scryfallCards,
+    )..where((tbl) => tbl.scryfallId.isIn(ids))).get();
+    return {for (final row in rows) row.scryfallId: row};
+  }
+
+  /// The image of the first face for each of the given cards (for cards
+  /// without a top-level image, like double-faced cards), keyed by card ID.
+  Future<Map<String, String>> getFrontFaceImages(List<String> cardIds) async {
+    if (cardIds.isEmpty) return {};
+    final rows =
+        await (select(scryfallCardFaces)
+              ..where(
+                (tbl) => tbl.cardId.isIn(cardIds) & tbl.imageNormal.isNotNull(),
+              )
+              ..orderBy([(t) => OrderingTerm(expression: t.faceIndex)]))
+            .get();
+    final result = <String, String>{};
+    for (final face in rows) {
+      result.putIfAbsent(face.cardId, () => face.imageNormal!);
+    }
+    return result;
+  }
+
   /// Get all printed variants that share an Oracle ID.
   Future<List<ScryfallCard>> getCardVariantsByOracleId(String oracleId) async {
     return (select(scryfallCards)
@@ -507,6 +535,49 @@ class AppDatabase extends _$AppDatabase {
     scopeCards(rows, searchScope);
     sortCards(rows, orderBy, orderDir, allSets);
     return rows;
+  }
+
+  /// Of the cards [ids], returns the ones matching the Scryfall [syntax].
+  ///
+  /// Unlike [getCardsByScryfallSyntax], no default filters (language, tokens,
+  /// promos, ...) apply: everything the user owns can be found. Throws a
+  /// [FormatException] for invalid syntax.
+  Future<Set<String>> filterCardIdsByScryfallSyntax(
+    String syntax,
+    Iterable<String> ids,
+  ) async {
+    final idList = ids.toList();
+    if (idList.isEmpty) return {};
+    final tokens = tokenizeScryfallSyntax(syntax);
+    if (tokens.isEmpty) return idList.toSet();
+
+    final oracleTagIds = await _resolveTagLookups(
+      collectOracleTagLookups(tokens),
+      'oracle',
+    );
+    final illustrationTagIds = await _resolveTagLookups(
+      collectIllustrationTagLookups(tokens),
+      'illustration',
+    );
+    final allSets = await select(scryfallSets).get();
+
+    final matches = tokens
+        .map(
+          (token) => compileQueryToken(
+            scryfallCards,
+            token,
+            oracleTagIds,
+            illustrationTagIds,
+            allSets,
+            this,
+          ),
+        )
+        .reduce((a, b) => a & b);
+    final query = selectOnly(scryfallCards)
+      ..addColumns([scryfallCards.scryfallId])
+      ..where(scryfallCards.scryfallId.isIn(idList) & matches);
+    final rows = await query.get();
+    return {for (final row in rows) row.read(scryfallCards.scryfallId)!};
   }
 
   /// Resolve tag lookups for a set of [slugs] and a specific [tagType], returning a map of slugs to their associated tag IDs.

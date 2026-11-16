@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../services/card_database/database.dart';
 import '../../../../services/localization_service.dart';
 import '../../../../services/scryfall_symbol_service.dart';
+import 'add_to_collection_dialog.dart';
+import 'collection_copies_section.dart';
 
 // =============================================================================
 // Card detail sheet
@@ -23,6 +25,9 @@ class CardDetailSheet extends StatefulWidget {
     this.showSearchActions = false,
     this.showLegalities = true,
     this.showMetadata = true,
+    this.showAddToCollection = true,
+    this.showCopies = true,
+    this.info,
     super.key,
   });
 
@@ -33,6 +38,15 @@ class CardDetailSheet extends StatefulWidget {
   final bool showSearchActions;
   final bool showLegalities;
   final bool showMetadata;
+
+  /// Shows the "Add to collection" button.
+  final bool showAddToCollection;
+
+  /// Shows where the user's copies of this card are.
+  final bool showCopies;
+
+  /// Extra information shown above the actions, e.g. about collection cards.
+  final Widget? info;
 
   @override
   State<CardDetailSheet> createState() => _CardDetailSheetState();
@@ -47,6 +61,11 @@ class _CardDetailSheetState extends State<CardDetailSheet> {
   void initState() {
     super.initState();
     _selectedLanguage = widget.card.lang;
+    // Start with the given printing, not the newest one.
+    final index = _languageVariants.indexWhere(
+      (variant) => variant.scryfallId == widget.card.scryfallId,
+    );
+    _variantIndex = index < 0 ? 0 : index;
   }
 
   List<ScryfallCard> get _languageVariants {
@@ -100,10 +119,18 @@ class _CardDetailSheetState extends State<CardDetailSheet> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildHeader(context, isWide),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               const Divider(height: 1),
-              const SizedBox(height: 14),
-              if (widget.showSearchActions) _buildSearchActions(context),
+              const SizedBox(height: 12),
+              if (widget.info != null) ...[
+                widget.info!,
+                const SizedBox(height: 12),
+              ],
+              _buildActions(context),
+              if (widget.showCopies) ...[
+                const SizedBox(height: 12),
+                CollectionCopiesSection(card: _card),
+              ],
             ],
           ),
         );
@@ -200,7 +227,7 @@ class _CardDetailSheetState extends State<CardDetailSheet> {
     );
   }
 
-  Widget _buildSearchActions(BuildContext context) {
+  Widget _buildActions(BuildContext context) {
     return Row(
       children: [
         Expanded(
@@ -212,18 +239,18 @@ class _CardDetailSheetState extends State<CardDetailSheet> {
             label: Text(appLocalizations.translate('card_detail.add_to_deck')),
           ),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: FilledButton.icon(
-            onPressed: () => _showActionPlaceholder(
-              appLocalizations.translate('card_detail.add_to_collection'),
-            ),
-            icon: const Icon(Icons.add),
-            label: Text(
-              appLocalizations.translate('card_detail.add_to_collection'),
+        if (widget.showAddToCollection) ...[
+          const SizedBox(width: 10),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: () => showAddToCollectionDialog(context, _card),
+              icon: const Icon(Icons.add),
+              label: Text(
+                appLocalizations.translate('card_detail.add_to_collection'),
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -318,17 +345,17 @@ class CardDetailInfo extends StatelessWidget {
               _name,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: textTheme.headlineMedium,
+              style: textTheme.titleLarge,
             ),
           ),
           if (_hasValue(_manaCost)) ...[
             const SizedBox(width: 8),
-            ScryfallSymbolText(text: _manaCost!, style: textTheme.titleMedium),
+            ScryfallSymbolText(text: _manaCost!, style: textTheme.titleSmall),
           ],
         ],
       ),
       const CardDetailSectionDivider(),
-      Text(_typeLine, style: textTheme.titleMedium),
+      Text(_typeLine, style: textTheme.titleSmall),
       const CardDetailSectionDivider(),
     ];
 
@@ -341,7 +368,7 @@ class CardDetailInfo extends StatelessWidget {
     if (stats != null) {
       info.addAll([
         const CardDetailSectionDivider(),
-        Text(stats, style: textTheme.titleMedium),
+        Text(stats, style: textTheme.titleSmall),
       ]);
     }
 
@@ -458,10 +485,10 @@ class _LegalitiesGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: rows.length,
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 120,
-        mainAxisExtent: 28,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
+        maxCrossAxisExtent: 96,
+        mainAxisExtent: 18,
+        crossAxisSpacing: 3,
+        mainAxisSpacing: 3,
       ),
       itemBuilder: (context, index) =>
           _LegalityTile(format: rows[index].key, status: rows[index].value!),
@@ -487,10 +514,10 @@ class _LegalityTile extends StatelessWidget {
       message: appLocalizations.translate('card_detail.status.$status'),
       child: Container(
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(5),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: Text(
           format,
@@ -498,7 +525,8 @@ class _LegalityTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 11,
+            fontSize: 10,
+            height: 1,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -592,7 +620,7 @@ class CardDetailSectionDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 10),
+      padding: EdgeInsets.symmetric(vertical: 7),
       child: Divider(height: 1),
     );
   }

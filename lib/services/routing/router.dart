@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/register_screen.dart';
@@ -9,6 +10,7 @@ import '../../screens/home/overview_page.dart';
 import '../../screens/home/search/search_page.dart';
 import '../../screens/home/search/scryfall_syntax_page.dart';
 import '../../screens/home/collection_page.dart';
+import '../../screens/home/collection/collection_card_page.dart';
 import '../../screens/home/decks_page.dart';
 import '../../screens/home/lifecounter/lifecounter_entry_screen.dart';
 import '../../screens/home/lifecounter/lifecounter_start_screen.dart';
@@ -16,6 +18,7 @@ import '../../screens/home/lifecounter/lifecounter_play_screen.dart';
 import '../../screens/home/settings/settings_page.dart';
 import '../auth/auth_controller.dart';
 import '../life_counter/lifecounter_controller.dart';
+import '../card_database/database.dart';
 import 'card_detail_route.dart';
 
 GoRouter createAppRouter({
@@ -105,9 +108,33 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: '/collection',
-                builder: (context, state) {
-                  return const CollectionPage();
+                // No animation when switching between folders.
+                pageBuilder: (context, state) {
+                  final folderId = state.uri.queryParameters['folder'];
+                  final extra = state.extra;
+                  return NoTransitionPage(
+                    key: state.pageKey,
+                    child: CollectionPage(
+                      key: ValueKey('collection-$folderId'),
+                      folderId: folderId,
+                      initialPath: extra is List<Folder> ? extra : null,
+                    ),
+                  );
                 },
+                routes: [
+                  GoRoute(
+                    path: 'entries',
+                    builder: (context, state) {
+                      final ids = state.uri.queryParameters['ids'] ?? '';
+                      return CollectionCardPage(
+                        entryIds: ids
+                            .split(',')
+                            .where((id) => id.isNotEmpty)
+                            .toList(),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

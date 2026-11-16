@@ -208,5 +208,131 @@
   "save": "Speichern",
   "confirm": "Bestätigen",
   "back": "Zurück",
-  "errors": {}
+  "errors": {},
+  "collection": {
+    "search_hint": "Suchen mit Scryfall-Syntax",
+    "view_list": "Listenansicht",
+    "view_grid": "Bildansicht",
+    "more": "Mehr",
+    "include_subfolders": "inkl. Unterordner",
+    "cards": "Karten",
+    "sort": "Sortierung",
+    "sort_added": "Hinzugefügt",
+    "empty_title": "Deine Kollektion ist noch leer",
+    "empty_body": "Füge Karten über die Suche hinzu.",
+    "empty_folder": "Hier liegen noch keine Karten.",
+    "open_search": "Zur Suche",
+    "deck_hint": "Alle Boards zusammen, nur Karten in deinem Besitz.",
+    "new_box": "Neue Box",
+    "new_deck": "Neues Deck",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "private": "Privat",
+    "selected": "{count} ausgewählt",
+    "move": "Verschieben",
+    "edit_cards": "Eigenschaften ändern",
+    "delete_cards": "Löschen",
+    "delete_cards_title": "Karten löschen?",
+    "delete_cards_body": "{count} Karten werden aus deiner Kollektion entfernt.",
+    "folder_moved": "„{name}“ nach „{target}“ verschoben",
+    "moved": "{count} Karten verschoben",
+    "skipped_placeholders": "{count} Platzhalter übersprungen (die gibt es nur in Decks)",
+    "deleted": "{count} Karten gelöscht",
+    "added": "{count}× {name} hinzugefügt",
+    "error": "Das hat nicht geklappt: {error}",
+    "folder_form": {
+      "new_box": "Neue Box",
+      "new_deck": "Neues Deck",
+      "edit": "Ordner bearbeiten",
+      "name": "Name",
+      "name_required": "Gib einen Namen ein.",
+      "color": "Farbe",
+      "no_color": "Keine",
+      "private_hint": "Für andere nicht sichtbar",
+      "format": "Format",
+      "no_format": "Kein Format",
+      "bracket": "Bracket",
+      "no_bracket": "Keins",
+      "description": "Beschreibung"
+    },
+    "delete_folder": {
+      "title_box": "Box löschen?",
+      "title_deck": "Deck löschen?",
+      "contents": "„{name}“ enthält {count} Karten.",
+      "boards_note": "Die Boards des Decks werden immer mitgelöscht.",
+      "keep": "Inhalt behalten",
+      "keep_on": "Karten und Ordner wandern nach „{target}“.",
+      "keep_on_deck": "Karten wandern nach „{target}“. Platzhalter werden gelöscht.",
+      "keep_off": "Alles darin wird mitgelöscht."
+    },
+    "picker": {
+      "title": "Ziel auswählen",
+      "choose_here": "Hier ablegen",
+      "choose_board": "Board in „{name}“ wählen"
+    },
+    "add": {
+      "title": "Zur Kollektion hinzufügen",
+      "amount": "Anzahl",
+      "target": "Zielordner",
+      "finish": "Finish",
+      "quality": "Zustand",
+      "proxy": "Proxy",
+      "altered": "Altered",
+      "signed": "Signiert",
+      "submit": "Hinzufügen"
+    },
+    "edit_entry": {
+      "title": "Eintrag bearbeiten",
+      "language": "Sprache",
+      "printing": "Printing"
+    },
+    "edit_entries": {
+      "title": "Eigenschaften ändern",
+      "unchanged": "Unverändert"
+    },
+    "copies": {
+      "title": "Deine Exemplare",
+      "placeholder": "Platzhalter",
+      "remove_one": "Eins entfernen",
+      "remove_all": "Alle entfernen"
+    },
+    "finish": {
+      "nonfoil": "Nonfoil",
+      "foil": "Foil",
+      "etched": "Etched"
+    },
+    "quality": {
+      "unknown": "Unbekannt",
+      "mint": "Mint",
+      "nearMint": "Near Mint",
+      "excellent": "Excellent",
+      "good": "Good",
+      "lightPlayed": "Light Played",
+      "played": "Played",
+      "poor": "Poor"
+    },
+    "quality_short": {
+      "unknown": "?",
+      "mint": "M",
+      "nearMint": "NM",
+      "excellent": "EX",
+      "good": "GD",
+      "lightPlayed": "LP",
+      "played": "PL",
+      "poor": "PO"
+    },
+    "board": {
+      "commander": "Commander",
+      "main": "Main",
+      "sideboard": "Sideboard",
+      "considering": "Considering",
+      "companion": "Companion",
+      "planes": "Planes",
+      "schemes": "Schemes",
+      "dungeon": "Dungeon",
+      "attractions": "Attractions",
+      "contraptions": "Contraptions",
+      "stickers": "Stickers"
+    }
+  }
 }

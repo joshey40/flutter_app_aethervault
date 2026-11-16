@@ -131,4 +131,46 @@ class AppPreferencesStorage {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_scryfallBulkDataMetadataKeyPrefix$bulkDataType');
   }
+
+  // ==============================================================================
+  // Collection
+  // =============================================================================
+
+  static const String _collectionListViewKey = 'collection.listView';
+  static const String _collectionLastTargetKey = 'collection.lastAddTarget';
+  static const String _collectionLastQualityKey = 'collection.lastAddQuality';
+
+  /// Whether the collection shows a list instead of the image grid.
+  Future<bool> loadCollectionListView() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_collectionListViewKey) ?? false;
+  }
+
+  Future<void> saveCollectionListView(bool listView) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_collectionListViewKey, listView);
+  }
+
+  /// The folder (and board value, for decks) cards were last added to, as
+  /// "folderId|boardValue". Empty folderId = root. Null if never set.
+  Future<String?> loadCollectionLastAddTarget() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_collectionLastTargetKey);
+  }
+
+  Future<void> saveCollectionLastAddTarget(String target) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_collectionLastTargetKey, target);
+  }
+
+  /// The card quality value that was last used when adding cards.
+  Future<int?> loadCollectionLastAddQuality() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_collectionLastQualityKey);
+  }
+
+  Future<void> saveCollectionLastAddQuality(int quality) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_collectionLastQualityKey, quality);
+  }
 }
